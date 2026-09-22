@@ -34,15 +34,16 @@ describe("toHotspotUserInput", () => {
   it("maps a data plan to username=password=code with a byte limit", () => {
     const plan = findPlan(plans, "weekly-5gb");
     if (!plan) throw new Error("missing plan");
+    const code = "GWAB2C3";
     const input = toHotspotUserInput(plan, {
-      code: "GWAB2C3",
+      code,
       owner: "order-1",
       phone: "+2348012345678",
       server: "hotspot1",
     });
     expect(input).toEqual({
-      name: "GWAB2C3",
-      password: "GWAB2C3",
+      name: code,
+      password: code,
       profile: "Weekly-5GB",
       comment: `${VOUCHER_COMMENT_PREFIX}|order-1|+2348012345678`,
       limitBytesTotal: 5 * 1024 ** 3,
