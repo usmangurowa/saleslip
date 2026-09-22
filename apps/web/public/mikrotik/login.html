@@ -237,9 +237,11 @@
           placeholder="e.g. 8f3k2m"
         />
 
-        $(if error)
-        <p class="error" role="alert">$(error)</p>
-        $(endif)
+        <div id="router-error">
+          $(if error)
+          <p class="error" role="alert">$(error)</p>
+          $(endif)
+        </div>
 
         <p class="error" id="client-error" role="alert" hidden></p>
 
@@ -277,6 +279,11 @@
         );
         document.sendin.submit();
         return false;
+      }
+
+      var routerError = document.getElementById("router-error");
+      if (routerError && routerError.textContent.indexOf("$(error)") !== -1) {
+        routerError.remove();
       }
 
       document.getElementById("voucher").focus();
