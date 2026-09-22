@@ -76,6 +76,8 @@ const todayLabel = () =>
  */
 export const WifiBatchDialog = () => {
   const [open, setOpen] = React.useState(false);
+  const [labelPlaceholder, setLabelPlaceholder] =
+    React.useState("Counter batch");
   const [minted, setMinted] = React.useState<MintedBatch | null>(null);
   const mintBatch = useMintVoucherBatch();
   const { data: plans } = useWifiPlans();
@@ -98,7 +100,9 @@ export const WifiBatchDialog = () => {
 
   const onOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (!nextOpen) {
+    if (nextOpen) {
+      setLabelPlaceholder(`Counter — ${todayLabel()}`);
+    } else {
       setMinted(null);
       reset();
     }
@@ -203,7 +207,7 @@ export const WifiBatchDialog = () => {
                 <FieldLabel htmlFor="wifi-batch-label">Batch label</FieldLabel>
                 <Input
                   id="wifi-batch-label"
-                  placeholder={`Counter — ${todayLabel()}`}
+                  placeholder={labelPlaceholder}
                   {...register("label")}
                 />
                 <FieldError errors={[errors.label]} />

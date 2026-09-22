@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { env } from "@/env";
 
-const SERVER_URL = env.SERVER_URL.replace(/\/+$/, "");
-
 /**
  * Same-origin proxy to the router-backed console on `apps/server`.
  *
@@ -21,7 +19,8 @@ const proxy = async (
   { params }: { params: Promise<{ path: string[] }> },
 ) => {
   const { path } = await params;
-  const target = new URL(`${SERVER_URL}/wifi-router/${path.join("/")}`);
+  const serverUrl = env.SERVER_URL.replace(/\/+$/, "");
+  const target = new URL(`${serverUrl}/wifi-router/${path.join("/")}`);
   target.search = request.nextUrl.search;
 
   const headers = new Headers();
@@ -64,4 +63,3 @@ export const POST = proxy;
 export const PUT = proxy;
 export const PATCH = proxy;
 export const DELETE = proxy;
-export const dynamic = "force-dynamic";

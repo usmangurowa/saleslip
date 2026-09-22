@@ -2,6 +2,7 @@ import { readJson, readText } from "./_lib.mjs";
 
 const DOCKERFILES = ["apps/web/Dockerfile", "apps/server/Dockerfile"];
 const ENV_FILE = "apps/web/src/env.ts";
+const SERVER_ENTRYPOINT = "apps/server/docker-entrypoint.sh";
 
 const findLine = (lines, regex) => {
   for (let index = 0; index < lines.length; index += 1) {
@@ -141,6 +142,19 @@ const main = async () => {
     }
   }
 
+  const entrypointLines = (await readText(SERVER_ENTRYPOINT)).split("\n");
+  const ipv4Resolver = entrypointLines.findIndex((line) =>
+    /getent\s+ahostsv4\s+"\$WG_GATEWAY_HOST"/.test(line),
+  );
+  if (ipv4Resolver === -1) {
+    findings.push({
+      file: SERVER_ENTRYPOINT,
+      line: 1,
+      rule: "wireguard-gateway-ipv4",
+      message: "WireGuard gateway resolution must explicitly select IPv4",
+    });
+  }
+
   findings.sort(
     (left, right) =>
       left.file.localeCompare(right.file) || left.line - right.line,
@@ -162,7 +176,7 @@ const main = async () => {
   const envText = await readText(ENV_FILE);
   const buildArgCount = (extractClientKeys(envText.split("\n")) ?? []).length;
   console.log(
-    `Docker contract matches .nvmrc, packageManager, and apps/web/src/env.ts (${buildArgCount} build args).`,
+    `Docker contract matches .nvmrc, packageManager, apps/web/src/env.ts (${buildArgCount} build args), and the server IPv4 route requirement.`,
   );
 };
 

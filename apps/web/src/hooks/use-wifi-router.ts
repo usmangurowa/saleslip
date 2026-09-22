@@ -4,7 +4,7 @@ import type { InferResponseType } from "hono/client";
 import { env } from "@/env";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createWifiRouterClient } from "@turbo/api";
+import { createWifiRouterClient } from "@turbo/api/wifi-router-client";
 
 /**
  * The client instance, built lazily so the origin is the browser's own.
