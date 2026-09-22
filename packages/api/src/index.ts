@@ -15,6 +15,7 @@ import apiKeyRouter from "./router/api-key";
 import authRouter from "./router/auth";
 import supportRouter from "./router/support";
 import taskRouter from "./router/task";
+import wifiRouter from "./router/wifi";
 
 /**
  * Options for creating the API app
@@ -50,6 +51,7 @@ export const createApp = (
     .route("/apikeys", apiKeyRouter)
     .route("/support", supportRouter)
     .route("/tasks", taskRouter)
+    .route("/wifi", wifiRouter)
     .route("/ai", aiRouter)
     // Health check (not rate limited in security config)
     .get("/health", (c) => c.text("OK"));
@@ -62,6 +64,19 @@ export type AppType = ReturnType<typeof createApp>;
 
 // Type helper for creating a typed client
 export type Client = ReturnType<typeof hc<AppType>>;
+
+// Router-backed console app. Deliberately *not* part of `createApp`: it needs a
+// WireGuard route to the hotspot, which only `apps/server` has.
+export { createWifiRouterApp } from "./router/wifi-router";
+export type {
+  WifiRouterAppOptions,
+  WifiRouterAppType,
+} from "./router/wifi-router";
+export {
+  createWifiRouterClient,
+  WIFI_ROUTER_BASE_PATH,
+} from "./wifi/router-client";
+export type { WifiRouterClient } from "./wifi/router-client";
 
 /**
  * Create a typed Hono client

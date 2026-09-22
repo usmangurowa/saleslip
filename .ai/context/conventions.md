@@ -167,10 +167,19 @@ Example: `packages/api/src/router/api-key.ts`
 - Column naming: `snake_case` in DB, `camelCase` in TypeScript
 - All tables include `createdAt` and `updatedAt` timestamps
 - Foreign keys with `onDelete: "cascade"` for user-owned data
+- Exclusive-ownership columns use a table-level CHECK instead of two nullable FKs. `wifi_voucher` is the precedent: `num_nonnulls(order_id, batch_id) = 1`, so a voucher belongs to either a paid order or a counter batch, never both and never neither. Drizzle declares it in the table callback with `check("name", sql\`...\`)`.
 - Raw SQL reads bypass Drizzle's UTC decoder for `timestamp without time zone`. When reading those stored UTC instants through `db.execute`, select `column AT TIME ZONE 'UTC'` before parsing them as JavaScript dates.
 - Schema changes: `pnpm db:generate` then `pnpm db:migrate` — never edit applied migrations, never `db:push` against durable databases. `packages/db/src/__tests__/migrations.test.ts` locks the chain's ability to bootstrap an empty database.
 
 Example: `packages/db/src/auth-schema.ts`
+
+## Router-Only Routes
+
+- A route that only one runtime can serve does **not** belong in `createApp`. Both `apps/web` and `apps/server` mount that app, so adding one there advertises an endpoint one host cannot answer.
+- Give it its own Hono app with its own exported type (`createWifiRouterApp` / `WifiRouterAppType` is the precedent), mount it on the capable runtime only, and reach it from the web app through a same-origin Next route handler that forwards the session cookie. That avoids CORS, a `Domain=.saleslip.app` cookie change, and a `SameSite` regression.
+- Use a **static** first path segment (`/api/wifi-router/*`, never `/api/wifi/*`) so the proxy resolves ahead of the optional catch-all at `/api/[[...route]]`.
+- The separate app does not inherit `createApp`'s middleware: re-apply `secureHeadersMiddleware()` and `contextMiddleware(auth, db)` yourself, and omit browser-only middleware (CORS, rate limiting, CSRF, timing).
+- Client code cannot use the shared `hc<AppType>` client for these routes — build one from the app's own type (`createWifiRouterClient`).
 
 ## Commit Messages
 

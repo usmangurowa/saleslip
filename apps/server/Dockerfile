@@ -16,6 +16,10 @@
 # base directory "/", port 3001, health check GET /health, and no custom
 # install/build/start command (the CMD is baked in).
 #
+# WiFi voucher deployments also set WG_GATEWAY_HOST (the wg-easy container)
+# and `cap_add: [NET_ADMIN]`: the entrypoint routes 10.8.0.0/24 through it so
+# the RouterOS API on the hotspot is reachable. See deploy/coolify-compose.snippet.yaml.
+#
 # Keep NODE_VERSION in sync with .nvmrc and PNPM_VERSION with
 # package.json#packageManager.
 
@@ -113,7 +117,8 @@ RUN apk add --no-cache rdfind \
 FROM node:${NODE_VERSION}-alpine AS runner
 ARG PNPM_VERSION
 # pnpm stays because packages/db/scripts/drizzle.mjs spawns `pnpm drizzle-kit`.
-RUN apk add --no-cache libc6-compat \
+# iproute2 adds the WireGuard route at boot; su-exec drops root afterwards.
+RUN apk add --no-cache libc6-compat iproute2 su-exec \
   && npm install -g pnpm@${PNPM_VERSION} \
   && npm cache clean --force
 ENV NODE_ENV=production \
@@ -131,9 +136,11 @@ COPY --from=prune --chown=node:node /out ./
 COPY --from=build --chown=node:node /app/scripts/infisical-run.sh ./scripts/infisical-run.sh
 COPY --from=build --chown=node:node /app/.infisical.json ./.infisical.json
 COPY --from=build /app/node_modules/@infisical/cli/bin/infisical /usr/local/bin/infisical
+COPY --from=build /app/apps/server/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-USER node
+# The entrypoint starts as root only to add the route, then `su-exec node`.
 EXPOSE 3001
+ENTRYPOINT ["sh", "/usr/local/bin/docker-entrypoint.sh"]
 
 # Equivalent to `pnpm with-secrets pnpm start:server`. `pnpm deploy` flattens
 # the workspace, so packages/db lives at node_modules/@turbo/db. There is no

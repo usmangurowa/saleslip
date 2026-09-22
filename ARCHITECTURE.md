@@ -7,7 +7,10 @@ lives in `tooling/`.
 ## Mental Model
 
 - `apps/web` is the Next.js App Router application and public web runtime.
-- `apps/server` is the standalone Node/Hono runtime for the shared API app.
+- `apps/server` is the standalone Node/Hono runtime for the shared API app. It
+  also hosts the single-tenant WiFi voucher shop (`apps/server/src/wifi`):
+  server-rendered buy/receipt pages, the Paystack webhook, fulfilment against
+  the router, and the Telegram bot.
 - `apps/mobile` is the Expo Router mobile application.
 - `packages/api` owns business API routes through Hono routers.
 - `packages/auth` owns Better Auth runtime configuration and auth generation.
@@ -15,6 +18,16 @@ lives in `tooling/`.
 - `packages/ui` owns shared web UI components following shadcn/ui patterns.
 - `packages/validators` owns shared Zod contracts.
 - `packages/jobs` owns Trigger.dev background tasks.
+- `packages/routeros` owns the typed MikroTik RouterOS API wrapper (hotspot
+  users, active sessions, kick, system resource).
+- `packages/wifi` owns WiFi domain logic shared by `apps/server` and
+  `packages/api`: voucher codes, order state machine, plan catalogue, naira and
+  data formatting, and counter batch minting. It is runtime-agnostic; nothing in
+  it may import Next.js, React, or `node-routeros` at module scope except
+  `plans.ts`, which is why `apps/web` client code imports the `@turbo/wifi/format`
+  subpath instead of the barrel.
+- `packages/paystack` owns the Paystack client (initialize/verify) and webhook
+  signature verification.
 - `tooling/*` owns reusable ESLint, Prettier, TypeScript, Tailwind, and Vitest
   configuration.
 
@@ -38,6 +51,23 @@ the routers in `packages/api/src/providers/` and hold no business logic
 (`.ai/patterns/external-provider-boundary.md`; none exist yet). The API app is
 created in `packages/api/src/index.ts` and exports `AppType` for typed clients.
 
+### Router-only routes
+
+Some routes are only servable by one runtime. The WiFi console needs the
+MikroTik router, and only `apps/server` has a WireGuard route to `10.8.0.0/24`,
+so those routes cannot live in `createApp` — both runtimes mount it, and adding
+them there would advertise endpoints one host cannot serve.
+
+They live in `packages/api/src/router/wifi-router.ts`
+(`createWifiRouterApp`, exporting its own `WifiRouterAppType`), which
+`apps/server/src/app.ts` mounts at `/wifi-router` only when a `HotspotService`
+exists. `apps/web` reaches them through the same-origin proxy at
+`apps/web/src/app/api/wifi-router/[...path]/route.ts`, which forwards the
+session cookie to `SERVER_URL`. This is why `AppType` deliberately excludes the
+router app and the web hooks build a client with `createWifiRouterClient`
+instead of the shared `hc<AppType>` client. Follow the same shape for any future
+route that one runtime alone can serve.
+
 ## Frontend Data Flow
 
 - Use server components by default in `apps/web/src/app` when no client
@@ -52,7 +82,10 @@ created in `packages/api/src/index.ts` and exports `AppType` for typed clients.
 
 - Hono routers live in `packages/api/src/router/` and use `Hono<AppContext>`.
 - Runtime entrypoints such as `apps/web` and `apps/server` may host the shared
-  API app, but must not own business API logic.
+  API app, but must not own business API logic. The WiFi voucher shop is the
+  documented exception: it is a server-rendered product surface for one runtime
+  (`.ai/specs/active/wifi-voucher-mvp.spec.md`), and its reusable logic lives in
+  `packages/routeros` and `packages/paystack`.
 - Protected routes apply `authMiddleware` or another explicit auth guard.
 - Shared request/response validation lives in `packages/validators` when reused
   across packages or apps.

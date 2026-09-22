@@ -9,6 +9,7 @@ import {
   SparklesIcon,
   Task01Icon,
   UserGroupIcon,
+  Wifi01Icon,
 } from "@hugeicons/core-free-icons";
 
 export interface DashboardNavItem {
@@ -42,6 +43,10 @@ export const platformNav: DashboardNavItem[] = [
     UserGroupIcon,
     "Everyone your team works with.",
   ),
+];
+
+export const wifiNav: DashboardNavItem[] = [
+  item("WiFi", "wifi", Wifi01Icon, "Vouchers, hotspot orders, and revenue."),
 ];
 
 export const aiNav: DashboardNavItem[] = [
@@ -78,7 +83,19 @@ export const settingsNavItem: DashboardNavItem = item(
 
 export const sectionNavItems: DashboardNavItem[] = [
   ...platformNav,
+  ...wifiNav,
   ...aiNav,
   ...analyticsNav,
   settingsNavItem,
 ].filter((navItem) => navItem.slug !== null);
+
+/**
+ * Slugs with a hand-written route under `app/dashboard/`. The `[section]`
+ * catch-all must not generate placeholder pages for them, or Next builds two
+ * routes for one path.
+ */
+export const CUSTOM_ROUTE_SLUGS: readonly string[] = [
+  "settings",
+  "assistant",
+  "wifi",
+];

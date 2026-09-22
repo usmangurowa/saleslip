@@ -53,6 +53,10 @@ packages/
   │   └─ Authentication using Better Auth
   ├─ db/                              # @turbo/db
   │   └─ Type-safe database using Drizzle ORM & Supabase
+  ├─ paystack/                        # @turbo/paystack
+  │   └─ Paystack initialize/verify client + webhook signature check
+  ├─ routeros/                        # @turbo/routeros
+  │   └─ Typed MikroTik RouterOS API wrapper (hotspot users, kick, resource)
   ├─ ui/                              # @turbo/ui
   │   └─ Shared UI components using shadcn/ui
   └─ validators/                      # @turbo/validators
@@ -358,6 +362,68 @@ Shared watch paths for both apps: `packages/**`, `tooling/**`, `scripts/**`, `pa
 Auto-deploy needs a webhook. Coolify rebuilds on push only when GitHub tells it about the push: a **GitHub App** source sets that up for you, a **Public Repository** source does not, and pushes to `main` then sit undeployed until someone clicks Deploy. If you keep a public source, add a repository webhook per app — payload URL `https://<coolify-host>/webhooks/source/github/events/manual`, content type `application/json`, `push` events, secret = that app's GitHub webhook secret from its Webhooks tab. Each app has its own secret, so one webhook per app; keep the secrets out of the repo.
 
 With Infisical, the only runtime variables Coolify needs are the four `INFISICAL_*` credentials above (plus anything you deliberately keep out of Infisical). Without it, `POSTGRES_URL`, `AUTH_SECRET`, `RESEND_API_KEY`, … are normal Coolify environment variables. Layout and invariants: `.ai/patterns/docker-images.md`.
+
+### WiFi voucher shop (Saleslip)
+
+`apps/server` also hosts a single-tenant WiFi voucher shop for the Saleslip Starlink hotspot: a mobile-first buy page, Paystack checkout, a Telegram bot, and fulfilment that creates hotspot users on a MikroTik router over WireGuard. The long-term plan is in [`docs/wifi-platform-plan.md`](docs/wifi-platform-plan.md).
+
+Routes (all on the server, port 3001):
+
+| Route                                | Purpose                                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `GET /`                              | Plan list. Accepts `mac`, `ip`, `login` from the MikroTik captive portal and carries them on. |
+| `POST /orders`                       | Creates an order and redirects to Paystack.                                                   |
+| `GET /orders/:id`                    | Receipt: polls until fulfilled, shows the code, a QR, and a **Connect now** button.           |
+| `POST /webhooks/paystack`            | Paystack webhook. The only path that fulfils an order.                                        |
+| `GET /webhooks/paystack/verify/:ref` | Manual recovery: asks Paystack to verify a reference and fulfils if paid.                     |
+| `POST /webhooks/telegram/:secret`    | grammY webhook; 404 unless the secret matches `TELEGRAM_WEBHOOK_SECRET`.                      |
+| `GET /health`                        | Database and router reachability.                                                             |
+
+Plans are a TypeScript array in `packages/wifi/src/plans.ts` (shared by both runtimes as `@turbo/wifi`). Each plan references an existing RouterOS hotspot user profile, and the profile's on-login script owns expiry. Profile names come from `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB` and `WIFI_PROFILE_WEEKLY_5GB`.
+
+Environment (see `.env.example`):
+
+| Variable                                                               | Notes                                                                                                                                   |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `PUBLIC_BASE_URL`, `BRAND_NAME`, `SUPPORT_PHONE`                       | Public URL used in Paystack callbacks and Telegram links; shop branding.                                                                |
+| `ROUTER_HOST`, `ROUTER_PORT`, `ROUTER_API_USER`, `ROUTER_API_PASSWORD` | RouterOS API over the tunnel (`10.8.0.2:8728`, plain API). `ROUTER_DISABLED=1` runs without a router (orders park in `pending_router`). |
+| `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`                           | Paystack keys. `PAYSTACK_DISABLED=1` disables checkout.                                                                                 |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_ADMIN_IDS`  | Bot token, a random path secret, comma-separated owner user IDs (`/status`, outage alerts).                                             |
+| `WG_GATEWAY_HOST`                                                      | Container only: the wg-easy container the entrypoint routes `10.8.0.0/24` through.                                                      |
+| `WIFI_HOTSPOT_SERVER`                                                  | Optional: the RouterOS hotspot server name when the router runs more than one (`server=` on created users). Unset means all servers.   |
+| `SERVER_URL`                                                           | Web only: where the console proxy forwards `/api/wifi-router/*` (for example `http://server:3001`).                                     |
+| `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB`, `WIFI_PROFILE_WEEKLY_5GB` | RouterOS hotspot user profile names per plan; both runtimes must resolve the same values.                                  |
+
+Fulfilment: `charge.success` (signature-checked, idempotent by reference) marks the order paid, generates a `GW#####` code, creates the hotspot user (`username = password = code`, the plan's profile, comment `saleslip|<orderId>|<phone>`, `limit-bytes-total` for data plans), stores the voucher and marks the order fulfilled. Telegram orders get the code by DM. If the router is unreachable the order becomes `pending_router` and an in-process retry with backoff finishes it; the sweep also runs on boot. A watchdog DMs the admins when the router has been down for five minutes and again when it recovers.
+
+### WiFi admin console (Saleslip)
+
+The web dashboard at `/dashboard/wifi` is the operator surface: revenue and order stats, every order, every issued code, counter batches, and a **Live** tab showing who is online. It reads through `/api/wifi/*`.
+
+Minting is the part that has to be right. A counter batch is created and activated in one step: the codes are inserted **and** the corresponding RouterOS hotspot users are created inside a single database transaction, so a batch that cannot be fully activated rolls back and returns an error instead of printing a sheet of codes that do not work. Revoking removes the hotspot user *before* marking the row revoked — if the router is unreachable the voucher stays active and the request 503s, because a "revoked" code that still connects is worse than a failed revoke.
+
+Those routes need a route to the router, which only `apps/server` has. They therefore live in their own Hono app (`createWifiRouterApp` in `packages/api/src/router/wifi-router.ts`), mounted at `/wifi-router` on `apps/server` and never on `apps/web`; the browser reaches them through the same-origin proxy at `/api/wifi-router/*`, which forwards the session cookie to `SERVER_URL`. See "Router-only routes" in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+| Console route (browser-facing)           | Purpose                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------ |
+| `GET /api/wifi-router/health`            | Router reachability plus `/system/resource`. A down router is `reachable: false`, still HTTP 200. |
+| `GET /api/wifi-router/sessions`          | Live hotspot sessions resolved back to their voucher, plan and phone, with today's revenue. |
+| `POST /api/wifi-router/sessions/sync`    | Snapshots `bytes-in + bytes-out` per code onto `wifi_voucher.bytes_used`.       |
+| `POST /api/wifi-router/sessions/:user/kick` | Disconnects a live session.                                                  |
+| `POST /api/wifi-router/vouchers/batch`   | Mints and activates a counter batch.                                            |
+| `POST /api/wifi-router/vouchers/:id/activate` | Activates one voucher; 409 when it already is.                             |
+| `POST /api/wifi-router/vouchers/:id/revoke` | Removes the hotspot user, then marks the voucher revoked.                     |
+
+Usage is a snapshot, not a live meter: there is no `expires_at` column in the database, because expiry lives in the router profile's on-login script and RouterOS does not expose a per-user expiry to read back. Uptime in the Live tab comes from the active session instead.
+
+Setup checklist:
+
+1. **Paystack** — in the dashboard set the webhook URL to `${PUBLIC_BASE_URL}/webhooks/paystack` (for example `https://wifi.saleslip.app/webhooks/paystack`) and copy the secret key into `PAYSTACK_SECRET_KEY`. The redirect back to `/orders/:id` never fulfils; only the webhook does.
+2. **Telegram** — create the bot with [@BotFather](https://t.me/BotFather) (`/newbot`), put the token in `TELEGRAM_BOT_TOKEN`, generate a random `TELEGRAM_WEBHOOK_SECRET` (`openssl rand -hex 24`), and put the owners' numeric user IDs in `TELEGRAM_ADMIN_IDS`. The server calls `setWebhook` to `${PUBLIC_BASE_URL}/webhooks/telegram/<secret>` on boot.
+3. **MikroTik** — the API user needs `api` + `write` policy on the hotspot. Add walled-garden entries so unpaid clients can reach the shop, Paystack and Telegram: `*.saleslip.app`, `*.paystack.co`, `*.paystack.com`, `*.telegram.org`, `t.me`, and the VPS IP `195.179.227.24`. Point the login page's buy link at `${PUBLIC_BASE_URL}/?mac=$(mac)&ip=$(ip)&login=$(link-login-only)`.
+4. **Database** — the app reads `POSTGRES_URL`; migrations run on boot. In production point it at the shared Coolify Postgres with a dedicated `saleslip` role and database.
+5. **Deploy** — add the block in [`deploy/coolify-compose.snippet.yaml`](deploy/coolify-compose.snippet.yaml) to the `saleslip-wifi` stack. It needs `cap_add: NET_ADMIN` and `WG_GATEWAY_HOST=wg-easy`; `apps/server/docker-entrypoint.sh` adds `ip route replace 10.8.0.0/24 via <wg-easy>` before dropping to the `node` user.
+6. **Router check** — the tunnel is only reachable from the VPS, so verify from the deployed container: `pnpm --filter @turbo/server routeros:check` prints `/system/resource`.
 
 ### Auth Proxy
 

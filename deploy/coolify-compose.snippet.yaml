@@ -1,0 +1,80 @@
+# Service block to add to the existing Coolify compose for `saleslip-wifi`
+# (the stack that already runs `wg-easy` and `mikhmon`).
+#
+# - Build pack: dockerfile, base directory `/`, dockerfile `/apps/server/Dockerfile`.
+# - Domain: https://wifi.saleslip.app → port 3001 (Coolify's Traefik terminates TLS).
+# - `POSTGRES_URL` points at the shared `infra-postgres` service over the
+#   `coolify` network; create the `saleslip` role and database there first.
+# - `cap_add: NET_ADMIN` lets the entrypoint add the WireGuard route the same
+#   way the Mikhmon container does. Coolify does not support
+#   `network_mode: service:`.
+# - Values in ${...} are Coolify secrets; never commit real values.
+
+services:
+  saleslip-server:
+    build:
+      context: https://github.com/usmangurowa/saleslip.git#main
+      dockerfile: apps/server/Dockerfile
+    container_name: saleslip-server
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - wg-easy
+    networks:
+      - default
+      - coolify
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-qO-",
+          "--tries=1",
+          "--timeout=5",
+          "http://127.0.0.1:3001/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    environment:
+      NODE_ENV: production
+      SERVER_PORT: "3001"
+      SERVER_URL: https://wifi.saleslip.app
+      APP_URL: https://wifi.saleslip.app
+      PUBLIC_BASE_URL: https://wifi.saleslip.app
+      BRAND_NAME: Saleslip Starlink
+      SUPPORT_PHONE: ${SUPPORT_PHONE}
+
+      # Shared Coolify Postgres (infra-postgres, pg16) over the coolify network.
+      POSTGRES_URL: postgresql://saleslip:${SALESLIP_DB_PASSWORD}@9zys4j2es8yckii5gtfzy3vl:5432/saleslip
+      AUTH_SECRET: ${AUTH_SECRET}
+
+      # MikroTik hEX over the WireGuard tunnel (wg-easy is the gateway).
+      WG_GATEWAY_HOST: wg-easy
+      ROUTER_HOST: 10.8.0.2
+      ROUTER_PORT: "8728"
+      ROUTER_API_USER: mikhmon
+      ROUTER_API_PASSWORD: ${ROUTER_API_PASSWORD}
+      WIFI_PROFILE_DAILY_UNLIMITED: Daily-Unlimited
+      WIFI_PROFILE_DAILY_1GB: Daily-1GB
+      WIFI_PROFILE_WEEKLY_5GB: Weekly-5GB
+
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
+      PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY}
+
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
+      TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.saleslip-server.rule=Host(`wifi.saleslip.app`)
+      - traefik.http.routers.saleslip-server.entryPoints=https
+      - traefik.http.routers.saleslip-server.tls=true
+      - traefik.http.routers.saleslip-server.tls.certresolver=letsencrypt
+      - traefik.http.services.saleslip-server.loadbalancer.server.port=3001
+
+networks:
+  coolify:
+    external: true

@@ -198,7 +198,10 @@ lives in `tooling/`.
 ## Mental Model
 
 - `apps/web` is the Next.js App Router application and public web runtime.
-- `apps/server` is the standalone Node/Hono runtime for the shared API app.
+- `apps/server` is the standalone Node/Hono runtime for the shared API app. It
+  also hosts the single-tenant WiFi voucher shop (`apps/server/src/wifi`):
+  server-rendered buy/receipt pages, the Paystack webhook, fulfilment against
+  the router, and the Telegram bot.
 - `apps/mobile` is the Expo Router mobile application.
 - `packages/api` owns business API routes through Hono routers.
 - `packages/auth` owns Better Auth runtime configuration and auth generation.
@@ -206,6 +209,16 @@ lives in `tooling/`.
 - `packages/ui` owns shared web UI components following shadcn/ui patterns.
 - `packages/validators` owns shared Zod contracts.
 - `packages/jobs` owns Trigger.dev background tasks.
+- `packages/routeros` owns the typed MikroTik RouterOS API wrapper (hotspot
+  users, active sessions, kick, system resource).
+- `packages/wifi` owns WiFi domain logic shared by `apps/server` and
+  `packages/api`: voucher codes, order state machine, plan catalogue, naira and
+  data formatting, and counter batch minting. It is runtime-agnostic; nothing in
+  it may import Next.js, React, or `node-routeros` at module scope except
+  `plans.ts`, which is why `apps/web` client code imports the `@turbo/wifi/format`
+  subpath instead of the barrel.
+- `packages/paystack` owns the Paystack client (initialize/verify) and webhook
+  signature verification.
 - `tooling/*` owns reusable ESLint, Prettier, TypeScript, Tailwind, and Vitest
   configuration.
 
@@ -229,6 +242,23 @@ the routers in `packages/api/src/providers/` and hold no business logic
 (`.ai/patterns/external-provider-boundary.md`; none exist yet). The API app is
 created in `packages/api/src/index.ts` and exports `AppType` for typed clients.
 
+### Router-only routes
+
+Some routes are only servable by one runtime. The WiFi console needs the
+MikroTik router, and only `apps/server` has a WireGuard route to `10.8.0.0/24`,
+so those routes cannot live in `createApp` — both runtimes mount it, and adding
+them there would advertise endpoints one host cannot serve.
+
+They live in `packages/api/src/router/wifi-router.ts`
+(`createWifiRouterApp`, exporting its own `WifiRouterAppType`), which
+`apps/server/src/app.ts` mounts at `/wifi-router` only when a `HotspotService`
+exists. `apps/web` reaches them through the same-origin proxy at
+`apps/web/src/app/api/wifi-router/[...path]/route.ts`, which forwards the
+session cookie to `SERVER_URL`. This is why `AppType` deliberately excludes the
+router app and the web hooks build a client with `createWifiRouterClient`
+instead of the shared `hc<AppType>` client. Follow the same shape for any future
+route that one runtime alone can serve.
+
 ## Frontend Data Flow
 
 - Use server components by default in `apps/web/src/app` when no client
@@ -243,7 +273,10 @@ created in `packages/api/src/index.ts` and exports `AppType` for typed clients.
 
 - Hono routers live in `packages/api/src/router/` and use `Hono<AppContext>`.
 - Runtime entrypoints such as `apps/web` and `apps/server` may host the shared
-  API app, but must not own business API logic.
+  API app, but must not own business API logic. The WiFi voucher shop is the
+  documented exception: it is a server-rendered product surface for one runtime
+  (`.ai/specs/active/wifi-voucher-mvp.spec.md`), and its reusable logic lives in
+  `packages/routeros` and `packages/paystack`.
 - Protected routes apply `authMiddleware` or another explicit auth guard.
 - Shared request/response validation lives in `packages/validators` when reused
   across packages or apps.
@@ -287,8 +320,8 @@ architecture, contracts, or conventions.
 ## Current Focus
 
 - Phase: Phase 1 - Template Hardening
-- Active initiative: Inherit silo's design language and AI rules
-- Last updated: 2026-09-11
+- Active initiative: WiFi voucher sales MVP for Saleslip (`docs/wifi-platform-plan.md`)
+- Last updated: 2026-09-23
 
 ## Active Sprint
 
@@ -327,18 +360,24 @@ architecture, contracts, or conventions.
 | 2026-09-11 | Silo design language + house primitives                              | `packages/ui/src/components/card.tsx` (`variant="dashed"`), `badge.tsx` (`success`/`warning`, `size`), `theme.tsx` (one-click toggle), `packages/ui/src/__tests__/registry-patches.test.ts`, `apps/web/src/components/dashboard/{stat-card,table-card,table-pagination,page-toolbar,hint-label,query-error}.tsx`, `stat-cards.tsx`, `tasks-table.tsx`, `api-keys-card.tsx`, `integrations.tsx`, `overview-view.tsx`, `DESIGN.md`, `.ai/context/design-system.md`, `.ai/patterns/ui-composition.md`                    | Back-ported from `usmangurowa/silo`. The dashed border is now a documented `Card` registry patch instead of hand-written `div` classes; `StatCard`, `TableCard`, `TablePagination`, `PageToolbar`, `HintLabel`, and `QueryError` are the house recipes every dashboard screen composes. `Badge` gains `success`/`warning` status variants and an `xs`/`sm` size axis; `ThemeToggle` flips the resolved theme in one click. Runtime tokens and `DESIGN.md` front matter are unchanged; the prose documents dashed frames, flat-first depth, squircle tiles, status-badge rules, and the precedent-first UI workflow. Silo's finance-only category palette was deliberately not ported. Spec: `.ai/specs/active/inherit-silo-design-and-rules.spec.md`.                                                                                                           |
 | 2026-09-11 | Generic AI rules + tooling inherited from silo                       | `AGENTS.md`, `.ai/context/conventions.md`, `.ai/patterns/turbo-dev-tasks.md` (new), `.ai/patterns/external-provider-boundary.md` (new), `.ai/specs/README.md` (new), `.ai/decisions/ADR-0003-single-job-ci.md` (new), `.ai/skills/{anti-slop-ui,create-page,debug-failure,feature-spec,pr-description,setup-project,write-tests}.md`, `.github/workflows/ci.yml`, `tooling/github/setup/action.yml`, `package.json` (`ci`, `dev`), `packages/{ai,analytics,mail,shared,jobs}/package.json`, `.gitignore`, `README.md` | CI is one Node job mirrored by `pnpm run ci` (ADR-0003); the setup action caches the pnpm store and drops the global turbo install. Package `dev` scripts are one-shot `tsc` (`tsc --watch` and the trigger.dev loop blocked `turbo watch dev` via `dependsOn: ["^dev"]`); trigger.dev moved to `pnpm -F @turbo/jobs dev:trigger`; root `dev` excludes the interactive mobile task. Spec lifecycle: finished specs stay in `active/` as `implemented`, archive only when no longer decision-relevant. Committed `.playwright-mcp/` browser artifacts removed and ignored.                                                                                                                                                                                                                                                                                       |
 | 2026-09-11 | Review round: test harnesses, hydration-safe toggle, landing on Card | `apps/web/vitest.config.ts`, `apps/web/src/__tests__/*.test.tsx`, `packages/ui/src/__tests__/theme.test.tsx`, `packages/ui/vitest.config.ts`, `packages/ui/src/components/theme.tsx`, `apps/web/src/components/dashboard/{table-card,stat-card,hint-label,query-error,api-keys-card,integrations,nav-user}.tsx`, `apps/web/src/app/page.tsx`, `.github/workflows/ci.yml`, `.ai/decisions/ADR-0003-single-job-ci.md`, `.ai/skills/write-tests.md`                                                                      | `apps/web` gains a node-only Vitest harness (`renderToStaticMarkup`, `oxc` automatic JSX, `@` alias) and `packages/ui` a jsdom hydration harness; `ThemeToggle` decides its direction only after mount (neutral SSR label, no hydration mismatch) and the user menu offers "Use system theme"; `StatCard` `href` is a stretched link (label anchor + overlay, no button inside the anchor); `TableCard` titles are real headings at the `title` role; the landing page's feature grids and CTA compose `Card`; CI steps run only after Setup succeeds and the docker job has a 30-minute cap. Reviews: Copilot PR review + five persona reviews on #11.                                                                                                                                                                                                         |
+| 2026-09-12 | WiFi voucher sales MVP (Saleslip)                                    | `packages/routeros/*`, `packages/paystack/*`, `packages/db/src/wifi-schema.ts`, `packages/db/drizzle/0003_add-wifi-orders-vouchers.sql`, `apps/server/src/wifi/**`, `apps/server/Dockerfile`, `apps/server/docker-entrypoint.sh`, `deploy/coolify-compose.snippet.yaml`, `docs/wifi-platform-plan.md`, `README.md`                                                                                                                                                                                                    | Buy page + Paystack checkout, webhook-only fulfilment that creates MikroTik hotspot users, receipt with QR and Connect now, grammY Telegram bot with owner `/status`, router watchdog, `/health`. Spec: `.ai/specs/active/wifi-voucher-mvp.spec.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-09-23 | WiFi admin console (`@turbo/wifi` + `/api/wifi` + dashboard) | `packages/wifi/**`, `packages/db/src/wifi-schema.ts`, `packages/db/drizzle/0004_wifi_voucher_batches.sql`, `packages/api/src/router/wifi.ts`, `packages/api/src/wifi/repository.ts`, `packages/api/src/index.ts`, `apps/server/src/wifi/**`, `apps/web/src/hooks/use-wifi.ts`, `apps/web/src/components/dashboard/wifi/**`, `apps/web/src/app/dashboard/wifi/**`, `apps/web/src/components/dashboard/nav-config.ts`, `apps/web/src/env.ts` | Voucher domain logic moved out of `apps/server` into `@turbo/wifi` (codes, order state machine, plans, naira/data formatters, batch minting) so `packages/api` can share it. New authenticated `/api/wifi/*` reads revenue, orders, vouchers and stats, and mints/revokes counter batches atomically. Dashboard gains a WiFi nav group with an orders view and a vouchers view. Authored client code must import `@turbo/wifi/format`, never the barrel, because `plans.ts` pulls in node-only `@turbo/routeros`. Slice C (live sessions, kick, usage sync, router health) is deliberately deferred at this point: `apps/web` has no WireGuard route to the hotspot, so counter codes are recorded in Postgres but still activated on RouterOS manually. Spec: `.ai/specs/active/wifi-admin-console.spec.md`. |
+| 2026-09-24 | WiFi console slice C: activation + live sessions                       | `packages/api/src/router/wifi-router.ts`, `packages/api/src/wifi/router-client.ts`, `packages/api/src/wifi/activation-errors.ts`, `packages/api/src/wifi/repository.ts`, `packages/api/src/__tests__/wifi-router.test.ts`, `apps/server/src/app.ts`, `apps/web/src/app/api/wifi-router/[...path]/route.ts`, `apps/web/src/hooks/use-wifi-router.ts`, `apps/web/src/components/dashboard/wifi/**`, `packages/db/drizzle/0005_wifi_voucher_activation.sql` | Vouchers now activate on RouterOS the moment they are minted, and the console shows who is online — no Mikhmon. Because only `apps/server` has a WireGuard route to the hotspot, the router-backed routes live in a **separate Hono app** (`createWifiRouterApp`) mounted at `/wifi-router` on `apps/server` only, and the browser reaches them through the same-origin proxy at `/api/wifi-router/*`. Minting is fail-closed: any router refusal rolls the whole batch back. Revoke removes the hotspot user before marking the row revoked, so a router outage leaves the code live rather than falsely revoked. Usage is snapshotted by `POST /sessions/sync`; there is no `expires_at` because expiry lives in the router profile's on-login script. Spec: `.ai/specs/active/wifi-admin-console.spec.md`. |
 
 ## Architectural Change Log
 
-| Date       | Decision                                                    | ADR / Files                                                                               | Regression Guard                                                                                                                                                            |
-| ---------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-05-17 | Adopt `.ai/` as the canonical agent memory system           | `.ai/decisions/ADR-0001-adopt-agent-native-architecture.md`                               | New patterns, dependencies, and decisions must update `.ai/` in the same PR.                                                                                                |
-| 2026-05-17 | Keep tool-specific agent files thin                         | `.github/copilot-instructions.md`, `.cursor/rules/*`, `CLAUDE.md`                         | Do not duplicate long-form rules across tools; link back to `.ai/`.                                                                                                         |
-| 2026-05-17 | Generate machine-readable contract snapshots                | `scripts/ai/generate-contracts.mjs`, `.ai/context/data-contracts.md`                      | Run `pnpm ai:contracts` after API, DB, env, package export, or dependency changes.                                                                                          |
-| 2026-09-02 | Treat design language and composition as contracts          | `DESIGN.md`, `.ai/patterns/ui-composition.md`, `scripts/ai/check-*.mjs`                   | CI runs the pinned design.md linter plus token-parity and authored-JSX composition checks.                                                                                  |
-| 2026-09-05 | Docker is an additional deploy path, never a replacement    | `apps/web/Dockerfile`, `apps/server/Dockerfile`, `.ai/patterns/docker-images.md`          | Standalone output stays behind `DOCKER_BUILD=1`; server runtime deps (`tsx`, `drizzle-kit`) stay in `dependencies`; images never carry Infisical, `.env`, or `apps/mobile`. |
-| 2026-09-11 | CI is one job mirrored by a root `pnpm run ci` script       | `.ai/decisions/ADR-0003-single-job-ci.md`, `.github/workflows/ci.yml`, `package.json`     | Any step added to or removed from the workflow is mirrored in the `ci` script, and vice versa; the Docker matrix stays a separate job.                                      |
-| 2026-09-11 | Dashed frames and house primitives are the dashboard recipe | `packages/ui/src/components/card.tsx`, `apps/web/src/components/dashboard/*`, `DESIGN.md` | `pnpm ui:composition` enforces Card anatomy; `registry-patches.test.ts` guards the `dashed`, `success`/`warning`, and `ThemeToggle` patches after any `pnpm ui-add`.        |
+| Date       | Decision                                                                     | ADR / Files                                                                                                   | Regression Guard                                                                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-17 | Adopt `.ai/` as the canonical agent memory system                            | `.ai/decisions/ADR-0001-adopt-agent-native-architecture.md`                                                   | New patterns, dependencies, and decisions must update `.ai/` in the same PR.                                                                                                |
+| 2026-05-17 | Keep tool-specific agent files thin                                          | `.github/copilot-instructions.md`, `.cursor/rules/*`, `CLAUDE.md`                                             | Do not duplicate long-form rules across tools; link back to `.ai/`.                                                                                                         |
+| 2026-05-17 | Generate machine-readable contract snapshots                                 | `scripts/ai/generate-contracts.mjs`, `.ai/context/data-contracts.md`                                          | Run `pnpm ai:contracts` after API, DB, env, package export, or dependency changes.                                                                                          |
+| 2026-09-02 | Treat design language and composition as contracts                           | `DESIGN.md`, `.ai/patterns/ui-composition.md`, `scripts/ai/check-*.mjs`                                       | CI runs the pinned design.md linter plus token-parity and authored-JSX composition checks.                                                                                  |
+| 2026-09-05 | Docker is an additional deploy path, never a replacement                     | `apps/web/Dockerfile`, `apps/server/Dockerfile`, `.ai/patterns/docker-images.md`                              | Standalone output stays behind `DOCKER_BUILD=1`; server runtime deps (`tsx`, `drizzle-kit`) stay in `dependencies`; images never carry Infisical, `.env`, or `apps/mobile`. |
+| 2026-09-11 | CI is one job mirrored by a root `pnpm run ci` script                        | `.ai/decisions/ADR-0003-single-job-ci.md`, `.github/workflows/ci.yml`, `package.json`                         | Any step added to or removed from the workflow is mirrored in the `ci` script, and vice versa; the Docker matrix stays a separate job.                                      |
+| 2026-09-11 | Dashed frames and house primitives are the dashboard recipe                  | `packages/ui/src/components/card.tsx`, `apps/web/src/components/dashboard/*`, `DESIGN.md`                     | `pnpm ui:composition` enforces Card anatomy; `registry-patches.test.ts` guards the `dashed`, `success`/`warning`, and `ThemeToggle` patches after any `pnpm ui-add`.        |
+| 2026-09-12 | Provider integrations are packages; product surfaces may live in the runtime | `packages/routeros`, `packages/paystack`, `apps/server/src/wifi`, `.ai/specs/active/wifi-voucher-mvp.spec.md` |
+| 2026-09-23 | WiFi domain logic is a package once a second runtime needs it                 | `packages/wifi/**`, `packages/api/src/router/wifi.ts`, `apps/server/src/wifi/**`                              | Voucher codes, order state, plans, and formatters live in `@turbo/wifi`; `apps/server` and `packages/api` both import them. Client components must import `@turbo/wifi/format`, never the barrel — `plans.ts` reaches node-only `@turbo/routeros`. |
+| 2026-09-24 | Router-only routes get their own Hono app, not a flag in `createApp`          | `packages/api/src/router/wifi-router.ts`, `apps/server/src/app.ts`, `apps/web/src/app/api/wifi-router/[...path]/route.ts` | `createApp` is mounted by both runtimes, and only `apps/server` can reach the hotspot. Router-backed routes therefore live in a separate app with its own exported type and are mounted on `apps/server` alone; the browser reaches them through a same-origin proxy so no CORS, cookie-domain, or `SameSite` change is needed. |
 
 ## Known TODOs
 
@@ -354,6 +393,8 @@ architecture, contracts, or conventions.
 - Do not move business API logic into `apps/server`; it is a runtime host for
   `@turbo/api`.
 - Do not bypass the typed Hono client for application API calls.
+- Do not import `@turbo/wifi`'s barrel from `"use client"` files; `plans.ts`
+  imports node-only `@turbo/routeros`. Use the `@turbo/wifi/format` subpath.
 - Do not introduce database schema changes without updating Drizzle exports and
   generated contract snapshots.
 - Do not change runtime design tokens without updating `DESIGN.md` in the same
@@ -371,6 +412,11 @@ architecture, contracts, or conventions.
 - Do not set Next `output: "standalone"` unconditionally (Vercel and local
   `next start` must stay untouched); do not move `tsx` or `drizzle-kit` back to
   `devDependencies` (the server image is built with `pnpm deploy --prod`).
+
+- Do not fulfil a WiFi order from the Paystack redirect; only the signed webhook (or the explicit verify fallback) may mark an order paid and create a hotspot user.
+- Do not reimplement hotspot expiry in `apps/server`; plans reference existing RouterOS user profiles, and the profile's on-login script owns expiry.
+- Do not add router-backed routes to `createApp`; both runtimes mount it and only `apps/server` can reach the hotspot. Add them to `createWifiRouterApp` and let the web console go through the `/api/wifi-router` proxy.
+- Do not call the router from `apps/web`; it has no WireGuard route to `10.8.0.0/24`. The browser talks to the proxy, the proxy talks to `apps/server`.
 
 ## Update Checklist
 
@@ -510,6 +556,7 @@ packages/
   supabase/     → Supabase client setup
   ui/           → shadcn/ui component library (50+ components)
   validators/   → Zod validation schemas
+  wifi/         → WiFi domain logic (voucher codes, order state, plans, batches)
 tooling/
   eslint/       → Shared ESLint configs (@turbo/eslint-config)
   github/       → GitHub Actions setup composite action
@@ -567,6 +614,11 @@ tooling/
 | API runtime     | Standalone Node/Hono app (`apps/server`)                                                                                                       |
 | Database        | Supabase (Postgres)                                                                                                                            |
 | Email           | Resend                                                                                                                                         |
+| Payments        | Paystack via `@turbo/paystack` (initialize/verify, HMAC-SHA512 webhook check)                                                                  |
+| Hotspot router  | MikroTik RouterOS API via `@turbo/routeros` (`node-routeros` ^1.6.9), reached over WireGuard from the server container                         |
+| WiFi domain     | `@turbo/wifi` — voucher codes, order state machine, plans, naira/data formatting, batch minting; shared by `apps/server` and `packages/api`      |
+| WiFi console    | `/dashboard/wifi` in `apps/web`, reading `/api/wifi/*`; router-backed actions live in `createWifiRouterApp` (`packages/api/src/router/wifi-router.ts`), mounted on `apps/server` only and proxied same-origin at `/api/wifi-router/*` |
+| Telegram        | grammY ^1.46 in webhook mode (`apps/server/src/wifi/telegram`)                                                                                 |
 | Background jobs | Trigger.dev                                                                                                                                    |
 | Analytics       | PostHog                                                                                                                                        |
 | Error tracking  | Sentry (@sentry/nextjs, @sentry/react-native)                                                                                                  |
@@ -797,10 +849,19 @@ Example: `packages/api/src/router/api-key.ts`
 - Column naming: `snake_case` in DB, `camelCase` in TypeScript
 - All tables include `createdAt` and `updatedAt` timestamps
 - Foreign keys with `onDelete: "cascade"` for user-owned data
+- Exclusive-ownership columns use a table-level CHECK instead of two nullable FKs. `wifi_voucher` is the precedent: `num_nonnulls(order_id, batch_id) = 1`, so a voucher belongs to either a paid order or a counter batch, never both and never neither. Drizzle declares it in the table callback with `check("name", sql\`...\`)`.
 - Raw SQL reads bypass Drizzle's UTC decoder for `timestamp without time zone`. When reading those stored UTC instants through `db.execute`, select `column AT TIME ZONE 'UTC'` before parsing them as JavaScript dates.
 - Schema changes: `pnpm db:generate` then `pnpm db:migrate` — never edit applied migrations, never `db:push` against durable databases. `packages/db/src/__tests__/migrations.test.ts` locks the chain's ability to bootstrap an empty database.
 
 Example: `packages/db/src/auth-schema.ts`
+
+## Router-Only Routes
+
+- A route that only one runtime can serve does **not** belong in `createApp`. Both `apps/web` and `apps/server` mount that app, so adding one there advertises an endpoint one host cannot answer.
+- Give it its own Hono app with its own exported type (`createWifiRouterApp` / `WifiRouterAppType` is the precedent), mount it on the capable runtime only, and reach it from the web app through a same-origin Next route handler that forwards the session cookie. That avoids CORS, a `Domain=.saleslip.app` cookie change, and a `SameSite` regression.
+- Use a **static** first path segment (`/api/wifi-router/*`, never `/api/wifi/*`) so the proxy resolves ahead of the optional catch-all at `/api/[[...route]]`.
+- The separate app does not inherit `createApp`'s middleware: re-apply `secureHeadersMiddleware()` and `contextMiddleware(auth, db)` yourself, and omit browser-only middleware (CORS, rate limiting, CSRF, timing).
+- Client code cannot use the shared `hc<AppType>` client for these routes — build one from the app's own type (`createWifiRouterClient`).
 
 ## Commit Messages
 
@@ -889,7 +950,14 @@ summary.
 | Database   | `packages/db`         | Drizzle/Postgres schema and client       |
 | UI         | `packages/ui`         | Shared web components                    |
 | Validators | `packages/validators` | Shared Zod schemas and inferred types    |
+| WiFi       | `packages/wifi`       | WiFi domain logic (codes, orders, plans) |
 | Jobs       | `packages/jobs`       | Trigger.dev tasks                        |
+
+Router-only routes are the one exception to "one API app": `createWifiRouterApp`
+in `packages/api/src/router/wifi-router.ts` is mounted on `apps/server` alone
+(the only runtime with a WireGuard route to the hotspot) and reached from
+`apps/web` through the `/api/wifi-router` proxy. See "Router-only routes" in
+`ARCHITECTURE.md`.
 
 ## Dependency Direction
 
@@ -1256,6 +1324,11 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | GET | `/auth/session` | `packages/api/src/router/auth.ts` | no |
 | GET | `/health` | `packages/api/src/index.ts` | no |
 | GET | `/tasks` | `packages/api/src/router/task.ts` | no |
+| GET | `/wifi/batches` | `packages/api/src/router/wifi.ts` | no |
+| GET | `/wifi/orders` | `packages/api/src/router/wifi.ts` | no |
+| GET | `/wifi/plans` | `packages/api/src/router/wifi.ts` | no |
+| GET | `/wifi/stats` | `packages/api/src/router/wifi.ts` | no |
+| GET | `/wifi/vouchers` | `packages/api/src/router/wifi.ts` | no |
 | POST | `/ai/chat` | `packages/api/src/router/ai.ts` | yes |
 | POST | `/apikeys` | `packages/api/src/router/api-key.ts` | yes |
 | POST | `/support` | `packages/api/src/router/support.ts` | yes |
@@ -1280,6 +1353,7 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `packages/db/src/app-schema.ts`
 - `packages/db/src/auth-schema.ts`
 - `packages/db/src/schema.ts`
+- `packages/db/src/wifi-schema.ts`
 
 ## Tables
 
@@ -1291,6 +1365,9 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | `account` | `account` | `packages/db/src/auth-schema.ts` |
 | `verification` | `verification` | `packages/db/src/auth-schema.ts` |
 | `apikey` | `apikey` | `packages/db/src/auth-schema.ts` |
+| `wifiOrder` | `wifi_order` | `packages/db/src/wifi-schema.ts` |
+| `wifiVoucherBatch` | `wifi_voucher_batch` | `packages/db/src/wifi-schema.ts` |
+| `wifiVoucher` | `wifi_voucher` | `packages/db/src/wifi-schema.ts` |
 
 ## Relations
 
@@ -1314,6 +1391,7 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 
 - `APP_URL`
 - `AUTH_SECRET`
+- `BRAND_NAME`
 - `EXPO_PUBLIC_API_URL`
 - `EXPO_PUBLIC_POSTHOG_KEY`
 - `EXPO_PUBLIC_SENTRY_DSN`
@@ -1330,20 +1408,39 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `OPENROUTER_API_KEY`
+- `PAYSTACK_DISABLED`
+- `PAYSTACK_PUBLIC_KEY`
+- `PAYSTACK_SECRET_KEY`
 - `POSTGRES_URL`
 - `POSTHOG_API_KEY`
+- `PUBLIC_BASE_URL`
 - `RESEND_API_KEY`
+- `ROUTER_API_PASSWORD`
+- `ROUTER_API_USER`
+- `ROUTER_DISABLED`
+- `ROUTER_HOST`
+- `ROUTER_PORT`
 - `SENTRY_DSN`
 - `SERVER_PORT`
 - `SERVER_URL`
 - `SUPABASE_JWT_SECRET`
 - `SUPPORT_INBOX_EMAIL`
+- `SUPPORT_PHONE`
+- `TELEGRAM_ADMIN_IDS`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
 - `TRIGGER_SECRET_KEY`
+- `WG_GATEWAY_HOST`
+- `WIFI_HOTSPOT_SERVER`
+- `WIFI_PROFILE_DAILY_1GB`
+- `WIFI_PROFILE_DAILY_UNLIMITED`
+- `WIFI_PROFILE_WEEKLY_5GB`
 
 ## .env.example variables
 
 - `APP_URL`
 - `AUTH_SECRET`
+- `BRAND_NAME`
 - `EXPO_PUBLIC_API_URL`
 - `EXPO_PUBLIC_POSTHOG_KEY`
 - `EXPO_PUBLIC_SENTRY_DSN`
@@ -1360,22 +1457,40 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `OPENROUTER_API_KEY`
+- `PAYSTACK_DISABLED`
+- `PAYSTACK_PUBLIC_KEY`
+- `PAYSTACK_SECRET_KEY`
 - `POSTGRES_URL`
 - `POSTHOG_API_KEY`
+- `PUBLIC_BASE_URL`
 - `RESEND_API_KEY`
+- `ROUTER_API_PASSWORD`
+- `ROUTER_API_USER`
+- `ROUTER_DISABLED`
+- `ROUTER_HOST`
+- `ROUTER_PORT`
 - `SENTRY_DSN`
 - `SERVER_PORT`
 - `SERVER_URL`
 - `SUPABASE_JWT_SECRET`
 - `SUPPORT_INBOX_EMAIL`
+- `SUPPORT_PHONE`
+- `TELEGRAM_ADMIN_IDS`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
 - `TRIGGER_SECRET_KEY`
+- `WG_GATEWAY_HOST`
+- `WIFI_HOTSPOT_SERVER`
+- `WIFI_PROFILE_DAILY_1GB`
+- `WIFI_PROFILE_DAILY_UNLIMITED`
+- `WIFI_PROFILE_WEEKLY_5GB`
 
 ## Env validation modules
 
 | File | Variables |
 | --- | --- |
-| apps/server/src/env.ts | `APP_URL`, `PORT`, `POSTGRES_URL`, `RESEND_API_KEY`, `SERVER_PORT`, `SERVER_URL` |
-| apps/web/src/env.ts | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PORT`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NODE_ENV`, `POSTGRES_URL` |
+| apps/server/src/env.ts | `APP_URL`, `BRAND_NAME`, `PAYSTACK_DISABLED`, `PAYSTACK_PUBLIC_KEY`, `PAYSTACK_SECRET_KEY`, `PORT`, `POSTGRES_URL`, `PUBLIC_BASE_URL`, `RESEND_API_KEY`, `ROUTER_API_PASSWORD`, `ROUTER_API_USER`, `ROUTER_DISABLED`, `ROUTER_HOST`, `ROUTER_PORT`, `SERVER_PORT`, `SERVER_URL`, `SUPPORT_PHONE`, `TELEGRAM_ADMIN_IDS`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `WIFI_HOTSPOT_SERVER`, `WIFI_PROFILE_DAILY_1GB`, `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_WEEKLY_5GB` |
+| apps/web/src/env.ts | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PORT`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NODE_ENV`, `POSTGRES_URL`, `SERVER_URL`, `WIFI_PROFILE_DAILY_1GB`, `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_WEEKLY_5GB` |
 | packages/auth/env.ts | `AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `SUPABASE_JWT_SECRET` |
 | packages/shared/src/env.ts | None |
 
@@ -1414,10 +1529,13 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | `@turbo/db` | `packages/db` | `.`, `./client`, `./schema` |
 | `@turbo/jobs` | `packages/jobs` | `.`, `./tasks/*` |
 | `@turbo/mail` | `packages/mail` | `.`, `./client`, `./templates/*` |
+| `@turbo/paystack` | `packages/paystack` | `.` |
+| `@turbo/routeros` | `packages/routeros` | `.` |
 | `@turbo/shared` | `packages/shared` | `.`, `./constants`, `./env` |
 | `@turbo/supabase` | `packages/supabase` | `.`, `./client` |
 | `@turbo/ui` | `packages/ui` | `./components/*`, `./lib/*`, `./hooks/*` |
 | `@turbo/validators` | `packages/validators` | `.` |
+| `@turbo/wifi` | `packages/wifi` | `.`, `./format` |
 | `@turbo/eslint-config` | `tooling/eslint` | `./base`, `./nextjs`, `./react` |
 | `@turbo/github` | `tooling/github` | None |
 | `@turbo/prettier-config` | `tooling/prettier` | `.` |
@@ -1446,10 +1564,13 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `@turbo/db`
 - `@turbo/jobs`
 - `@turbo/mail`
+- `@turbo/paystack`
+- `@turbo/routeros`
 - `@turbo/shared`
 - `@turbo/supabase`
 - `@turbo/ui`
 - `@turbo/validators`
+- `@turbo/wifi`
 - `@turbo/eslint-config`
 - `@turbo/github`
 - `@turbo/prettier-config`
@@ -1462,19 +1583,22 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | Package | Path | Internal dependencies |
 | --- | --- | --- |
 | `@turbo/mobile` | `apps/mobile` | `@turbo/analytics`, `@turbo/api`, `@turbo/assets`, `@turbo/auth`, `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/supabase`, `@turbo/tailwind-config`, `@turbo/tsconfig`, `@turbo/validators` |
-| `@turbo/web` | `apps/web` | `@turbo/analytics`, `@turbo/api`, `@turbo/auth`, `@turbo/db`, `@turbo/eslint-config`, `@turbo/mail`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tailwind-config`, `@turbo/tsconfig`, `@turbo/ui`, `@turbo/validators` |
+| `@turbo/web` | `apps/web` | `@turbo/analytics`, `@turbo/api`, `@turbo/auth`, `@turbo/db`, `@turbo/eslint-config`, `@turbo/mail`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tailwind-config`, `@turbo/tsconfig`, `@turbo/ui`, `@turbo/validators`, `@turbo/wifi` |
 | `@turbo/ai` | `packages/ai` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/analytics` | `packages/analytics` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tsconfig` |
-| `@turbo/api` | `packages/api` | `@turbo/ai`, `@turbo/analytics`, `@turbo/auth`, `@turbo/db`, `@turbo/eslint-config`, `@turbo/jobs`, `@turbo/mail`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tsconfig`, `@turbo/validators` |
+| `@turbo/api` | `packages/api` | `@turbo/ai`, `@turbo/analytics`, `@turbo/auth`, `@turbo/db`, `@turbo/eslint-config`, `@turbo/jobs`, `@turbo/mail`, `@turbo/prettier-config`, `@turbo/routeros`, `@turbo/shared`, `@turbo/tsconfig`, `@turbo/validators`, `@turbo/wifi` |
 | `@turbo/assets` | `packages/assets` | None |
 | `@turbo/auth` | `packages/auth` | `@turbo/db`, `@turbo/eslint-config`, `@turbo/mail`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tsconfig` |
 | `@turbo/db` | `packages/db` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tsconfig` |
 | `@turbo/jobs` | `packages/jobs` | `@turbo/eslint-config`, `@turbo/mail`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/mail` | `packages/mail` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
+| `@turbo/paystack` | `packages/paystack` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
+| `@turbo/routeros` | `packages/routeros` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/shared` | `packages/shared` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/supabase` | `packages/supabase` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/ui` | `packages/ui` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/validators` | `packages/validators` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
+| `@turbo/wifi` | `packages/wifi` | `@turbo/db`, `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/routeros`, `@turbo/tsconfig` |
 | `@turbo/eslint-config` | `tooling/eslint` | `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/github` | `tooling/github` | None |
 | `@turbo/prettier-config` | `tooling/prettier` | `@turbo/tsconfig` |
