@@ -379,7 +379,7 @@ Routes (all on the server, port 3001):
 | `POST /webhooks/telegram/:secret`    | grammY webhook; 404 unless the secret matches `TELEGRAM_WEBHOOK_SECRET`.                      |
 | `GET /health`                        | Database and router reachability.                                                             |
 
-Plans are a TypeScript array in `apps/server/src/wifi/plans.ts`. Each plan references an existing RouterOS hotspot user profile (created in Mikhmon, which owns expiry). Profile names come from `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB` and `WIFI_PROFILE_WEEKLY_5GB`.
+Plans are a TypeScript array in `packages/wifi/src/plans.ts` (shared by both runtimes as `@turbo/wifi`). Each plan references an existing RouterOS hotspot user profile (created in Mikhmon, which owns expiry). Profile names come from `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB` and `WIFI_PROFILE_WEEKLY_5GB`.
 
 Environment (see `.env.example`):
 

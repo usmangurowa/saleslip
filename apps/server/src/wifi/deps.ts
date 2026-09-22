@@ -1,10 +1,10 @@
 import type { PaystackClient } from "@turbo/paystack";
 import type { HotspotService } from "@turbo/routeros";
+import type { WifiPlan } from "@turbo/wifi";
 
 import type { FulfilmentService } from "./fulfilment";
 import type { Logger } from "./logger";
 import type { OrderRepository } from "./orders";
-import type { WifiPlan } from "./plans";
 
 export interface WifiConfig {
   brandName: string;

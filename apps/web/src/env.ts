@@ -28,6 +28,14 @@ export const env = createEnv({
    */
   server: {
     POSTGRES_URL: z.url(),
+    /**
+     * RouterOS hotspot profiles the admin console mints against. Optional so
+     * the dashboard still builds without the hotspot configured; each falls
+     * back to the profile name Mikhmon creates by default.
+     */
+    WIFI_PROFILE_DAILY_UNLIMITED: optionalStr,
+    WIFI_PROFILE_DAILY_1GB: optionalStr,
+    WIFI_PROFILE_WEEKLY_5GB: optionalStr,
   },
 
   /**

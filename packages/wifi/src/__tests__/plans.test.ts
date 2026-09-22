@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { formatData, formatNaira } from "../format";
 import {
   buildPlans,
   findPlan,
-  formatData,
-  formatNaira,
   toHotspotUserInput,
   VOUCHER_COMMENT_PREFIX,
 } from "../plans";

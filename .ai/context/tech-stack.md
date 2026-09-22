@@ -31,6 +31,7 @@ packages/
   supabase/     → Supabase client setup
   ui/           → shadcn/ui component library (50+ components)
   validators/   → Zod validation schemas
+  wifi/         → WiFi domain logic (voucher codes, order state, plans, batches)
 tooling/
   eslint/       → Shared ESLint configs (@turbo/eslint-config)
   github/       → GitHub Actions setup composite action
@@ -90,6 +91,7 @@ tooling/
 | Email           | Resend                                                                                                                                         |
 | Payments        | Paystack via `@turbo/paystack` (initialize/verify, HMAC-SHA512 webhook check)                                                                  |
 | Hotspot router  | MikroTik RouterOS API via `@turbo/routeros` (`node-routeros` ^1.6.9), reached over WireGuard from the server container                         |
+| WiFi domain     | `@turbo/wifi` — voucher codes, order state machine, plans, naira/data formatting, batch minting; shared by `apps/server` and `packages/api`      |
 | Telegram        | grammY ^1.46 in webhook mode (`apps/server/src/wifi/telegram`)                                                                                 |
 | Background jobs | Trigger.dev                                                                                                                                    |
 | Analytics       | PostHog                                                                                                                                        |

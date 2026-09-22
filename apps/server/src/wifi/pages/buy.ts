@@ -1,7 +1,8 @@
 import { html } from "hono/html";
 
-import type { WifiPlan } from "../plans";
-import { formatData, formatNaira } from "../plans";
+import type { WifiPlan } from "@turbo/wifi";
+import { formatData, formatNaira } from "@turbo/wifi";
+
 import { layout } from "./layout";
 
 export interface PortalParams {

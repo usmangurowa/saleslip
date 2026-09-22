@@ -6,12 +6,14 @@ import {
   analyticsNav,
   platformNav,
   settingsNavItem,
+  wifiNav,
 } from "@/components/dashboard/nav-config";
 
 import { Icon } from "@turbo/ui/components/icon";
 
 const allNavItems = [
   ...platformNav,
+  ...wifiNav,
   ...aiNav,
   ...analyticsNav,
   settingsNavItem,

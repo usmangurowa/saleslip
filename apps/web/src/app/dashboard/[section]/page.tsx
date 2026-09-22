@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { sectionNavItems } from "@/components/dashboard/nav-config";
+import {
+  CUSTOM_ROUTE_SLUGS,
+  sectionNavItems,
+} from "@/components/dashboard/nav-config";
 
 import { Button } from "@turbo/ui/components/button";
 import {
@@ -21,11 +24,11 @@ const getSection = (slug: string) =>
   sectionNavItems.find((item) => item.slug === slug);
 
 export function generateStaticParams() {
-  // `settings` and `assistant` have real static routes at /dashboard/settings
-  // and /dashboard/assistant; keeping them here would make Next build
-  // colliding placeholder pages.
+  // `settings`, `assistant`, and `wifi` have real static routes under
+  // /dashboard/{settings,assistant,wifi}; keeping them here would make Next
+  // build colliding placeholder pages.
   return sectionNavItems
-    .filter((item) => item.slug !== "settings" && item.slug !== "assistant")
+    .filter((item) => !CUSTOM_ROUTE_SLUGS.includes(item.slug ?? ""))
     .map((item) => ({ section: item.slug }));
 }
 

@@ -3,6 +3,7 @@ import type {
   HotspotUser,
   SystemResource,
 } from "@turbo/routeros";
+import { assertTransition, buildPlans } from "@turbo/wifi";
 
 import type { WifiDeps } from "../deps";
 import type {
@@ -14,9 +15,7 @@ import type {
 } from "../orders";
 import { createFulfilmentService } from "../fulfilment";
 import { noopLogger } from "../logger";
-import { assertTransition } from "../order-state";
 import { OrderNotFoundError } from "../orders";
-import { buildPlans } from "../plans";
 
 /** In-memory `OrderRepository` mirroring the Drizzle implementation's rules. */
 export const createMemoryRepo = (now: () => Date = () => new Date()) => {
@@ -87,8 +86,10 @@ export const createMemoryRepo = (now: () => Date = () => new Date()) => {
       const voucher: WifiVoucherRecord = {
         id: `voucher-${++seq}`,
         orderId: input.orderId,
+        batchId: null,
         code: input.code,
         profile: input.profile,
+        channel: input.channel,
         rosId: null,
         limitBytesTotal: input.limitBytesTotal ?? null,
         status: "active",

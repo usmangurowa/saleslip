@@ -31,6 +31,7 @@
     "@turbo/shared": "workspace:*",
     "@turbo/ui": "workspace:*",
     "@turbo/validators": "workspace:*",
+    "@turbo/wifi": "workspace:*",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "better-auth": "catalog:",

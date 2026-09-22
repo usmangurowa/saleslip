@@ -2,13 +2,13 @@ import type { Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import { Bot, InlineKeyboard, Keyboard } from "grammy";
 
+import type { WifiPlan } from "@turbo/wifi";
 import { isRouterOsUnavailable } from "@turbo/routeros";
+import { findPlan, formatData, formatNaira } from "@turbo/wifi";
 
 import type { TelegramNotifier, WifiDeps } from "../deps";
 import type { WifiOrderRecord } from "../orders";
-import type { WifiPlan } from "../plans";
 import { startCheckout } from "../checkout";
-import { findPlan, formatData, formatNaira } from "../plans";
 import { phoneSchema } from "../routes/shop";
 
 export interface TelegramBotOptions {

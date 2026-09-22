@@ -20,6 +20,12 @@ lives in `tooling/`.
 - `packages/jobs` owns Trigger.dev background tasks.
 - `packages/routeros` owns the typed MikroTik RouterOS API wrapper (hotspot
   users, active sessions, kick, system resource).
+- `packages/wifi` owns WiFi domain logic shared by `apps/server` and
+  `packages/api`: voucher codes, order state machine, plan catalogue, naira and
+  data formatting, and counter batch minting. It is runtime-agnostic; nothing in
+  it may import Next.js, React, or `node-routeros` at module scope except
+  `plans.ts`, which is why `apps/web` client code imports the `@turbo/wifi/format`
+  subpath instead of the barrel.
 - `packages/paystack` owns the Paystack client (initialize/verify) and webhook
   signature verification.
 - `tooling/*` owns reusable ESLint, Prettier, TypeScript, Tailwind, and Vitest

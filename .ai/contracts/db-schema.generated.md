@@ -21,6 +21,7 @@
 | `verification` | `verification` | `packages/db/src/auth-schema.ts` |
 | `apikey` | `apikey` | `packages/db/src/auth-schema.ts` |
 | `wifiOrder` | `wifi_order` | `packages/db/src/wifi-schema.ts` |
+| `wifiVoucherBatch` | `wifi_voucher_batch` | `packages/db/src/wifi-schema.ts` |
 | `wifiVoucher` | `wifi_voucher` | `packages/db/src/wifi-schema.ts` |
 
 ## Relations

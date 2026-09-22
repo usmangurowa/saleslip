@@ -7,6 +7,7 @@ import {
   analyticsNav,
   platformNav,
   settingsNavItem,
+  wifiNav,
 } from "@/components/dashboard/nav-config";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 
@@ -30,6 +31,7 @@ interface SearchCommandProps {
 
 const groups = [
   { heading: "Navigation", items: platformNav },
+  { heading: "WiFi", items: wifiNav },
   { heading: "AI", items: aiNav },
   { heading: "Analytics", items: analyticsNav },
 ];

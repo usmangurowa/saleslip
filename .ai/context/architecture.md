@@ -19,6 +19,7 @@ summary.
 | Database   | `packages/db`         | Drizzle/Postgres schema and client       |
 | UI         | `packages/ui`         | Shared web components                    |
 | Validators | `packages/validators` | Shared Zod schemas and inferred types    |
+| WiFi       | `packages/wifi`       | WiFi domain logic (codes, orders, plans) |
 | Jobs       | `packages/jobs`       | Trigger.dev tasks                        |
 
 ## Dependency Direction

@@ -2,12 +2,13 @@ import { Hono } from "hono";
 import QRCode from "qrcode";
 import { z } from "zod";
 
+import { findPlan } from "@turbo/wifi";
+
 import type { WifiDeps } from "../deps";
 import type { PortalParams } from "../pages/buy";
 import { startCheckout } from "../checkout";
 import { buyPage, unavailablePage } from "../pages/buy";
 import { receiptPage } from "../pages/receipt";
-import { findPlan } from "../plans";
 
 /** Nigerian mobile numbers: 0XXXXXXXXXX or +234XXXXXXXXXX. */
 export const phoneSchema = z

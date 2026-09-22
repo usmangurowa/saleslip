@@ -4,13 +4,13 @@ import { webhookCallback } from "grammy";
 import { db } from "@turbo/db/client";
 import { createPaystackClient } from "@turbo/paystack";
 import { createHotspotService, createRouterOsClient } from "@turbo/routeros";
+import { buildPlans } from "@turbo/wifi";
 
 import type { env as ServerEnv } from "../env";
 import type { WifiDeps } from "./deps";
 import { createFulfilmentService } from "./fulfilment";
 import { createLogger } from "./logger";
 import { createOrderRepository } from "./orders";
-import { buildPlans } from "./plans";
 import { createRouterWatchdog } from "./router-watchdog";
 import {
   createTelegramBot,

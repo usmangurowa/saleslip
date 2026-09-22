@@ -29,6 +29,13 @@
       "when": 1790034356259,
       "tag": "0003_add-wifi-orders-vouchers",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790091031788,
+      "tag": "0004_wifi_voucher_batches",
+      "breakpoints": true
     }
   ]
 }

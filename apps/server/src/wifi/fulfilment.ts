@@ -1,5 +1,11 @@
 import type { HotspotService } from "@turbo/routeros";
+import type { WifiPlan } from "@turbo/wifi";
 import { isRouterOsUnavailable, RouterOsCommandError } from "@turbo/routeros";
+import {
+  findPlan,
+  generateUniqueVoucherCode,
+  toHotspotUserInput,
+} from "@turbo/wifi";
 
 import type { Logger } from "./logger";
 import type {
@@ -7,9 +13,6 @@ import type {
   WifiOrderRecord,
   WifiVoucherRecord,
 } from "./orders";
-import type { WifiPlan } from "./plans";
-import { findPlan, toHotspotUserInput } from "./plans";
-import { generateUniqueVoucherCode } from "./voucher-code";
 
 /** Backoff between router attempts, indexed by attempts already made. */
 export const RETRY_DELAYS_MS: readonly number[] = [
@@ -97,6 +100,7 @@ export const createFulfilmentService = (
       orderId: order.id,
       code,
       profile: plan.rosProfile,
+      channel: order.channel,
       limitBytesTotal: plan.dataLimitBytes,
     });
   };

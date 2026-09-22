@@ -167,6 +167,7 @@ Example: `packages/api/src/router/api-key.ts`
 - Column naming: `snake_case` in DB, `camelCase` in TypeScript
 - All tables include `createdAt` and `updatedAt` timestamps
 - Foreign keys with `onDelete: "cascade"` for user-owned data
+- Exclusive-ownership columns use a table-level CHECK instead of two nullable FKs. `wifi_voucher` is the precedent: `num_nonnulls(order_id, batch_id) = 1`, so a voucher belongs to either a paid order or a counter batch, never both and never neither. Drizzle declares it in the table callback with `check("name", sql\`...\`)`.
 - Raw SQL reads bypass Drizzle's UTC decoder for `timestamp without time zone`. When reading those stored UTC instants through `db.execute`, select `column AT TIME ZONE 'UTC'` before parsing them as JavaScript dates.
 - Schema changes: `pnpm db:generate` then `pnpm db:migrate` — never edit applied migrations, never `db:push` against durable databases. `packages/db/src/__tests__/migrations.test.ts` locks the chain's ability to bootstrap an empty database.
 

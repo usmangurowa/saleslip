@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
+  check,
   index,
   integer,
   pgTable,
@@ -21,6 +23,13 @@ export type WifiOrderStatus = (typeof WIFI_ORDER_STATUSES)[number];
 
 export const WIFI_VOUCHER_STATUSES = ["active", "revoked"] as const;
 export type WifiVoucherStatus = (typeof WIFI_VOUCHER_STATUSES)[number];
+
+/**
+ * How a voucher came to exist. `manual` marks counter sales minted from the
+ * admin console, which have no order and therefore no Paystack revenue.
+ */
+export const WIFI_VOUCHER_CHANNELS = ["web", "telegram", "manual"] as const;
+export type WifiVoucherChannel = (typeof WIFI_VOUCHER_CHANNELS)[number];
 
 export const wifiOrder = pgTable(
   "wifi_order",
@@ -58,15 +67,39 @@ export const wifiOrder = pgTable(
   ],
 );
 
+/** One console minting action, so a printed sheet stays traceable. */
+export const wifiVoucherBatch = pgTable(
+  "wifi_voucher_batch",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    label: text("label").notNull(),
+    planId: text("plan_id").notNull(),
+    profile: text("profile").notNull(),
+    quantity: integer("quantity").notNull(),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("wifi_voucher_batch_createdAt_idx").on(table.createdAt)],
+);
+
 export const wifiVoucher = pgTable(
   "wifi_voucher",
   {
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    orderId: text("order_id")
-      .notNull()
-      .references(() => wifiOrder.id, { onDelete: "cascade" }),
+    /**
+     * Null for counter sales. A voucher belongs to either an order or a batch,
+     * never both — enforced by `wifi_voucher_owner_check`.
+     */
+    orderId: text("order_id").references(() => wifiOrder.id, {
+      onDelete: "cascade",
+    }),
+    batchId: text("batch_id").references(() => wifiVoucherBatch.id, {
+      onDelete: "cascade",
+    }),
     code: text("code").notNull().unique(),
     profile: text("profile").notNull(),
     rosId: text("ros_id"),
@@ -74,7 +107,17 @@ export const wifiVoucher = pgTable(
     status: text("status", { enum: WIFI_VOUCHER_STATUSES })
       .default("active")
       .notNull(),
+    channel: text("channel", { enum: WIFI_VOUCHER_CHANNELS })
+      .default("web")
+      .notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("wifi_voucher_orderId_idx").on(table.orderId)],
+  (table) => [
+    index("wifi_voucher_orderId_idx").on(table.orderId),
+    index("wifi_voucher_batchId_idx").on(table.batchId),
+    check(
+      "wifi_voucher_owner_check",
+      sql`num_nonnulls(${table.orderId}, ${table.batchId}) = 1`,
+    ),
+  ],
 );

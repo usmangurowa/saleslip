@@ -158,6 +158,7 @@ describe("fulfilment", () => {
       orderId: order.id,
       code: "GWABCDE",
       profile: "Daily-1GB",
+      channel: "web",
     });
     await fake.hotspot.createHotspotUser({
       name: voucher.code,

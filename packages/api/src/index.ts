@@ -15,6 +15,7 @@ import apiKeyRouter from "./router/api-key";
 import authRouter from "./router/auth";
 import supportRouter from "./router/support";
 import taskRouter from "./router/task";
+import wifiRouter from "./router/wifi";
 
 /**
  * Options for creating the API app
@@ -50,6 +51,7 @@ export const createApp = (
     .route("/apikeys", apiKeyRouter)
     .route("/support", supportRouter)
     .route("/tasks", taskRouter)
+    .route("/wifi", wifiRouter)
     .route("/ai", aiRouter)
     // Health check (not rate limited in security config)
     .get("/health", (c) => c.text("OK"));

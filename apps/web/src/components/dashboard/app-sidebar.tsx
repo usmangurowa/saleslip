@@ -9,6 +9,7 @@ import {
   analyticsNav,
   platformNav,
   settingsNavItem,
+  wifiNav,
 } from "@/components/dashboard/nav-config";
 import { TurboLogo } from "@/components/turbo-logo";
 import { Search01Icon } from "@hugeicons/core-free-icons";
@@ -101,6 +102,7 @@ export const AppSidebar = (props: React.ComponentProps<typeof Sidebar>) => {
       </SidebarHeader>
       <SidebarContent>
         <NavGroup label="Platform" items={platformNav} pathname={pathname} />
+        <NavGroup label="WiFi" items={wifiNav} pathname={pathname} />
         <NavGroup label="AI" items={aiNav} pathname={pathname} />
         <NavGroup label="Analytics" items={analyticsNav} pathname={pathname} />
       </SidebarContent>

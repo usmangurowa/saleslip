@@ -1,7 +1,8 @@
+import type { WifiPlan } from "@turbo/wifi";
+import { findPlan } from "@turbo/wifi";
+
 import type { WifiDeps } from "./deps";
 import type { CreateOrderInput, WifiOrderRecord } from "./orders";
-import type { WifiPlan } from "./plans";
-import { findPlan } from "./plans";
 
 export const PAYSTACK_CHANNELS = ["bank_transfer", "ussd", "card"] as const;
 

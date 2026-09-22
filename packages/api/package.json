@@ -31,6 +31,7 @@
     "@turbo/mail": "workspace:^",
     "@turbo/shared": "workspace:*",
     "@turbo/validators": "workspace:*",
+    "@turbo/wifi": "workspace:*",
     "ai": "^7.0.34",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",

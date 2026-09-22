@@ -4,11 +4,11 @@ import type { db as Database } from "@turbo/db/client";
 import type {
   WifiOrderChannel,
   WifiOrderStatus,
+  WifiVoucherChannel,
   WifiVoucherStatus,
 } from "@turbo/db/schema";
 import { wifiOrder, wifiVoucher } from "@turbo/db/schema";
-
-import { assertTransition } from "./order-state";
+import { assertTransition } from "@turbo/wifi";
 
 export type Db = typeof Database;
 
@@ -35,9 +35,11 @@ export interface WifiOrderRecord {
 
 export interface WifiVoucherRecord {
   id: string;
-  orderId: string;
+  orderId: string | null;
+  batchId: string | null;
   code: string;
   profile: string;
+  channel: WifiVoucherChannel;
   rosId: string | null;
   limitBytesTotal: number | null;
   status: WifiVoucherStatus;
@@ -60,6 +62,7 @@ export interface CreateVoucherInput {
   orderId: string;
   code: string;
   profile: string;
+  channel: WifiVoucherChannel;
   limitBytesTotal?: number;
 }
 
@@ -211,6 +214,7 @@ export const createOrderRepository = (db: Db): OrderRepository => {
           orderId: input.orderId,
           code: input.code,
           profile: input.profile,
+          channel: input.channel,
           limitBytesTotal: input.limitBytesTotal,
         })
         .returning();

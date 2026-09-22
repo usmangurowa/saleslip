@@ -57,12 +57,6 @@ export const findPlan = (
   id: string,
 ): WifiPlan | undefined => plans.find((plan) => plan.id === id);
 
-export const formatNaira = (kobo: number): string =>
-  `₦${(kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
-
-export const formatData = (bytes: number | undefined): string =>
-  bytes === undefined ? "Unlimited" : `${Math.round(bytes / GB)}GB`;
-
 export const VOUCHER_COMMENT_PREFIX = "saleslip";
 
 /**

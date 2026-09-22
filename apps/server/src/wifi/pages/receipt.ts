@@ -1,8 +1,9 @@
 import { html, raw } from "hono/html";
 
+import type { WifiPlan } from "@turbo/wifi";
+import { formatData, formatNaira } from "@turbo/wifi";
+
 import type { WifiOrderRecord, WifiVoucherRecord } from "../orders";
-import type { WifiPlan } from "../plans";
-import { formatData, formatNaira } from "../plans";
 import { layout } from "./layout";
 
 export interface ReceiptPageProps {
