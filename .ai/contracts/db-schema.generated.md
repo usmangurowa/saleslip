@@ -8,6 +8,7 @@
 - `packages/db/src/app-schema.ts`
 - `packages/db/src/auth-schema.ts`
 - `packages/db/src/schema.ts`
+- `packages/db/src/wifi-schema.ts`
 
 ## Tables
 
@@ -19,6 +20,8 @@
 | `account` | `account` | `packages/db/src/auth-schema.ts` |
 | `verification` | `verification` | `packages/db/src/auth-schema.ts` |
 | `apikey` | `apikey` | `packages/db/src/auth-schema.ts` |
+| `wifiOrder` | `wifi_order` | `packages/db/src/wifi-schema.ts` |
+| `wifiVoucher` | `wifi_voucher` | `packages/db/src/wifi-schema.ts` |
 
 ## Relations
 

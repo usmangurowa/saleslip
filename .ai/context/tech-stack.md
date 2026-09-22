@@ -88,6 +88,9 @@ tooling/
 | API runtime     | Standalone Node/Hono app (`apps/server`)                                                                                                       |
 | Database        | Supabase (Postgres)                                                                                                                            |
 | Email           | Resend                                                                                                                                         |
+| Payments        | Paystack via `@turbo/paystack` (initialize/verify, HMAC-SHA512 webhook check)                                                                  |
+| Hotspot router  | MikroTik RouterOS API via `@turbo/routeros` (`node-routeros` ^1.6.9), reached over WireGuard from the server container                         |
+| Telegram        | grammY ^1.46 in webhook mode (`apps/server/src/wifi/telegram`)                                                                                 |
 | Background jobs | Trigger.dev                                                                                                                                    |
 | Analytics       | PostHog                                                                                                                                        |
 | Error tracking  | Sentry (@sentry/nextjs, @sentry/react-native)                                                                                                  |

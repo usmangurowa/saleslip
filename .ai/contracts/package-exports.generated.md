@@ -15,6 +15,8 @@
 | `@turbo/db` | `packages/db` | `.`, `./client`, `./schema` |
 | `@turbo/jobs` | `packages/jobs` | `.`, `./tasks/*` |
 | `@turbo/mail` | `packages/mail` | `.`, `./client`, `./templates/*` |
+| `@turbo/paystack` | `packages/paystack` | `.` |
+| `@turbo/routeros` | `packages/routeros` | `.` |
 | `@turbo/shared` | `packages/shared` | `.`, `./constants`, `./env` |
 | `@turbo/supabase` | `packages/supabase` | `.`, `./client` |
 | `@turbo/ui` | `packages/ui` | `./components/*`, `./lib/*`, `./hooks/*` |

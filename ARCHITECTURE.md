@@ -7,7 +7,10 @@ lives in `tooling/`.
 ## Mental Model
 
 - `apps/web` is the Next.js App Router application and public web runtime.
-- `apps/server` is the standalone Node/Hono runtime for the shared API app.
+- `apps/server` is the standalone Node/Hono runtime for the shared API app. It
+  also hosts the single-tenant WiFi voucher shop (`apps/server/src/wifi`):
+  server-rendered buy/receipt pages, the Paystack webhook, fulfilment against
+  the router, and the Telegram bot.
 - `apps/mobile` is the Expo Router mobile application.
 - `packages/api` owns business API routes through Hono routers.
 - `packages/auth` owns Better Auth runtime configuration and auth generation.
@@ -15,6 +18,10 @@ lives in `tooling/`.
 - `packages/ui` owns shared web UI components following shadcn/ui patterns.
 - `packages/validators` owns shared Zod contracts.
 - `packages/jobs` owns Trigger.dev background tasks.
+- `packages/routeros` owns the typed MikroTik RouterOS API wrapper (hotspot
+  users, active sessions, kick, system resource).
+- `packages/paystack` owns the Paystack client (initialize/verify) and webhook
+  signature verification.
 - `tooling/*` owns reusable ESLint, Prettier, TypeScript, Tailwind, and Vitest
   configuration.
 
@@ -52,7 +59,10 @@ created in `packages/api/src/index.ts` and exports `AppType` for typed clients.
 
 - Hono routers live in `packages/api/src/router/` and use `Hono<AppContext>`.
 - Runtime entrypoints such as `apps/web` and `apps/server` may host the shared
-  API app, but must not own business API logic.
+  API app, but must not own business API logic. The WiFi voucher shop is the
+  documented exception: it is a server-rendered product surface for one runtime
+  (`.ai/specs/active/wifi-voucher-mvp.spec.md`), and its reusable logic lives in
+  `packages/routeros` and `packages/paystack`.
 - Protected routes apply `authMiddleware` or another explicit auth guard.
 - Shared request/response validation lives in `packages/validators` when reused
   across packages or apps.
