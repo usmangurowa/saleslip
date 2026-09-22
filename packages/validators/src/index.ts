@@ -38,6 +38,22 @@ export const usernameSchema = z
 // ============================================================================
 
 /**
+ * Hotspot voucher code — doubles as both username and password on the
+ * MikroTik captive portal.
+ */
+export const voucherSchema = z
+  .string()
+  .trim()
+  .min(1, "Voucher code is required")
+  .max(64, "Voucher code must be at most 64 characters");
+
+export const voucherFormSchema = z.object({
+  voucher: voucherSchema,
+});
+
+export type VoucherFormData = z.infer<typeof voucherFormSchema>;
+
+/**
  * Login form validation schema
  */
 export const loginSchema = z.object({

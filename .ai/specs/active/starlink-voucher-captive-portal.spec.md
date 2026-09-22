@@ -2,7 +2,7 @@
 
 ## Status
 
-- State: draft
+- State: implemented
 - Owner: AI agent
 - Created: 2026-09-22
 - Updated: 2026-09-22
@@ -21,26 +21,26 @@ router. The web app additionally hosts a React design-reference page at
 
 ## Acceptance Criteria
 
-- [ ] `/portal` route in `apps/web` renders the voucher page using existing
+- [x] `/portal` route in `apps/web` renders the voucher page using existing
       shadcn house components, matching the `(auth)` visual precedent
       (centered `max-w-sm`, blurred corner accents, Saleslip logo header).
-- [ ] The form shows exactly one input (voucher code) and one submit button;
+- [x] The form shows exactly one input (voucher code) and one submit button;
       empty or whitespace-only input shows an inline `FieldError`.
-- [ ] `apps/web/public/mikrotik/login.html` is fully self-contained: inline
+- [x] `apps/web/public/mikrotik/login.html` is fully self-contained: inline
       CSS, inline SVG logo, system font stack, **no external requests** (no
       web fonts, no CDNs).
-- [ ] `login.html` keeps MikroTik stock hotspot mechanics: `sendin` form
+- [x] `login.html` keeps MikroTik stock hotspot mechanics: `sendin` form
       posting to `$(link-login-only)`, hidden `dst` (`$(link-orig)`) and
       `popup` fields, `doLogin()` CHAP handling with `/md5.js`, plain PAP
       fallback.
-- [ ] On submit, the voucher value is submitted as both `username` and
+- [x] On submit, the voucher value is submitted as both `username` and
       `password` (MD5-hashed for CHAP).
-- [ ] `$(error)` renders as destructive error text under the input and the
+- [x] `$(error)` renders as destructive error text under the input and the
       input re-focuses after a failed attempt.
-- [ ] The voucher input auto-focuses on page load in both artifacts.
-- [ ] A vitest smoke test asserts the required MikroTik placeholders exist in
+- [x] The voucher input auto-focuses on page load in both artifacts.
+- [x] A vitest smoke test asserts the required MikroTik placeholders exist in
       `login.html`.
-- [ ] Previewable at `apps/web` origin under `/mikrotik/login.html` (served
+- [x] Previewable at `apps/web` origin under `/mikrotik/login.html` (served
       verbatim from `public/`).
 
 ## Expected Files
@@ -80,13 +80,13 @@ router. The web app additionally hosts a React design-reference page at
 
 ## Validation Plan
 
-- [ ] `pnpm design:lint`
-- [ ] `pnpm design:tokens`
-- [ ] `pnpm ui:composition`
-- [ ] `cd apps/web && pnpm typecheck && pnpm lint && pnpm test`
-- [ ] `pnpm turbo run typecheck lint test --filter=@turbo/validators`
-- [ ] `pnpm ai:contracts` (package export change)
-- [ ] Manual: open `/mikrotik/login.html` and `/portal` in a browser
+- [x] `pnpm design:lint`
+- [x] `pnpm design:tokens`
+- [x] `pnpm ui:composition`
+- [x] `cd apps/web && pnpm typecheck && pnpm lint && pnpm test`
+- [x] `pnpm turbo run typecheck lint test --filter=@turbo/validators`
+- [x] `pnpm ai:contracts` (package export change)
+- [x] Manual: open `/mikrotik/login.html` and `/portal` in a browser
 
 ## Rollback Plan
 

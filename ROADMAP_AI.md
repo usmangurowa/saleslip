@@ -8,7 +8,7 @@ architecture, contracts, or conventions.
 
 - Phase: Phase 1 - Template Hardening
 - Active initiative: Inherit silo's design language and AI rules
-- Last updated: 2026-09-11
+- Last updated: 2026-09-22
 
 ## Active Sprint
 
@@ -59,6 +59,7 @@ architecture, contracts, or conventions.
 | 2026-09-05 | Docker is an additional deploy path, never a replacement    | `apps/web/Dockerfile`, `apps/server/Dockerfile`, `.ai/patterns/docker-images.md`          | Standalone output stays behind `DOCKER_BUILD=1`; server runtime deps (`tsx`, `drizzle-kit`) stay in `dependencies`; images never carry Infisical, `.env`, or `apps/mobile`. |
 | 2026-09-11 | CI is one job mirrored by a root `pnpm run ci` script       | `.ai/decisions/ADR-0003-single-job-ci.md`, `.github/workflows/ci.yml`, `package.json`     | Any step added to or removed from the workflow is mirrored in the `ci` script, and vice versa; the Docker matrix stays a separate job.                                      |
 | 2026-09-11 | Dashed frames and house primitives are the dashboard recipe | `packages/ui/src/components/card.tsx`, `apps/web/src/components/dashboard/*`, `DESIGN.md` | `pnpm ui:composition` enforces Card anatomy; `registry-patches.test.ts` guards the `dashed`, `success`/`warning`, and `ThemeToggle` patches after any `pnpm ui-add`.        |
+| 2026-09-22 | MikroTik voucher captive portal                             | `apps/web/src/app/(portal)/*`, `apps/web/src/components/portal/voucher-form.tsx`, `apps/web/public/mikrotik/login.html`, `apps/web/src/__tests__/mikrotik-login.test.ts`, `packages/validators/src/index.ts` | `/portal` is the in-app design reference; the self-contained `public/mikrotik/login.html` (MikroTik stock CHAP/PAP mechanics, voucher doubles as username and password) is the deployable artifact uploaded to the router's `hotspot` directory. Placeholder smoke test guards the router templating. Spec: `.ai/specs/active/starlink-voucher-captive-portal.spec.md`. |
 
 ## Known TODOs
 
