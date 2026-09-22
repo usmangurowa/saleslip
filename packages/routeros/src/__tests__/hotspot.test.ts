@@ -133,4 +133,23 @@ describe("createHotspotService", () => {
       ["=.id=*7"],
     );
   });
+
+  it("finds a user by exact name and returns undefined when absent", async () => {
+    const transport = makeTransport({
+      "/ip/hotspot/user/print": [
+        { ".id": "*9", name: "GW12345", profile: "Daily-1GB" },
+      ],
+    });
+    const service = createHotspotService(transport);
+    await expect(service.findUser("GW12345")).resolves.toMatchObject({
+      id: "*9",
+      name: "GW12345",
+    });
+    expect(transport.write).toHaveBeenCalledWith("/ip/hotspot/user/print", [
+      "?name=GW12345",
+    ]);
+    await expect(
+      createHotspotService(makeTransport({})).findUser("nope"),
+    ).resolves.toBeUndefined();
+  });
 });

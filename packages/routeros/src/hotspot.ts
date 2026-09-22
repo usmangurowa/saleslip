@@ -70,6 +70,8 @@ export interface HotspotService {
   /** Adds the user and returns its RouterOS `.id`. */
   createHotspotUser: (input: HotspotUserInput) => Promise<{ id: string }>;
   listUsers: () => Promise<HotspotUser[]>;
+  /** Looks a hotspot user up by exact name. */
+  findUser: (name: string) => Promise<HotspotUser | undefined>;
   listActive: () => Promise<HotspotActiveSession[]>;
   /** Removes a hotspot user by RouterOS `.id` or by name. */
   removeUser: (idOrName: string) => Promise<void>;
@@ -94,6 +96,14 @@ export const createHotspotService = (
   async listUsers() {
     const rows = await transport.write("/ip/hotspot/user/print");
     return rows.map(parseHotspotUser);
+  },
+
+  async findUser(name) {
+    const rows = await transport.write("/ip/hotspot/user/print", [
+      `?name=${name}`,
+    ]);
+    const row = rows[0];
+    return row ? parseHotspotUser(row) : undefined;
   },
 
   async listActive() {
