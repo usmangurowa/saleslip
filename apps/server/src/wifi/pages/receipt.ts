@@ -105,10 +105,10 @@ export const receiptPage = (props: ReceiptPageProps) => {
               : html`
                   <h1 style="margin-top:12px">
                     ${
-                    order.status === "pending"
-                      ? "Waiting for your payment"
-                      : "Payment received — preparing your code"
-                  }
+                      order.status === "pending"
+                        ? "Waiting for your payment"
+                        : "Payment received — preparing your code"
+                    }
                   </h1>
                   <p class="muted">
                     This page refreshes automatically. It usually takes under a

@@ -6,17 +6,18 @@ import { createServerApp } from "./app.js";
 import { auth } from "./auth.js";
 import { env } from "./env.js";
 import { createWifiApp } from "./wifi/app.js";
-import { createWifiDeps } from "./wifi/bootstrap.js";
+import { createWifiRuntime } from "./wifi/bootstrap.js";
 
-const wifiDeps = createWifiDeps(env);
+const wifi = createWifiRuntime(env);
 
 const app = createServerApp(auth, {
   allowedOrigins: resolveTrustedOrigins(env.SERVER_URL, env.APP_URL, "expo://"),
-  wifi: createWifiApp(wifiDeps),
+  wifi: createWifiApp(wifi.deps),
 });
 
 serve({ fetch: app.fetch, port: env.SERVER_PORT }, (info) => {
-  wifiDeps.logger.info("server listening", { port: info.port });
-  // Pick up orders left waiting on the router by a previous process.
-  void wifiDeps.fulfilment.sweep();
+  wifi.deps.logger.info("server listening", { port: info.port });
+  // Registers the Telegram webhook, starts the router watchdog and picks up
+  // orders left waiting on the router by a previous process.
+  void wifi.start();
 });

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { WifiDeps } from "../deps";
 import type { PortalParams } from "../pages/buy";
+import { startCheckout } from "../checkout";
 import { buyPage, unavailablePage } from "../pages/buy";
 import { receiptPage } from "../pages/receipt";
 import { findPlan } from "../plans";
@@ -63,14 +64,11 @@ export const portalParamsSchema = z.object({
   login: loginUrlSchema,
 });
 
-export const fallbackEmail = (phone: string) =>
-  `${phone.replace(/[^0-9]/g, "")}@guilders.wifi`;
-
 const firstIssue = (error: z.ZodError) =>
   error.issues[0]?.message ?? "Please check the form and try again";
 
 export const createShopRoutes = (deps: WifiDeps) => {
-  const { config, plans, repo, logger } = deps;
+  const { config, plans, repo } = deps;
   const page = {
     brandName: config.brandName,
     supportPhone: config.supportPhone,
@@ -112,74 +110,40 @@ export const createShopRoutes = (deps: WifiDeps) => {
         );
       }
 
-      const plan = findPlan(plans, parsed.data.planId);
-      if (!plan) {
-        return c.html(
-          renderBuy(portal, { error: "That plan is no longer available" }),
-          400,
-        );
-      }
-      if (!deps.paystack || !config.publicBaseUrl) {
-        return c.html(
-          unavailablePage(config.brandName, config.supportPhone),
-          503,
-        );
-      }
-
-      const order = await repo.createOrder({
+      const result = await startCheckout(deps, {
         channel: "web",
-        planId: plan.id,
+        planId: parsed.data.planId,
         phone: parsed.data.phone,
         email: parsed.data.email,
         mac: parsed.data.mac,
         ip: parsed.data.ip,
         loginUrl: parsed.data.login,
-        amountKobo: plan.priceKobo,
       });
 
-      const init = await deps.paystack.initializeTransaction({
-        amount: order.amountKobo,
-        email: order.email ?? fallbackEmail(order.phone),
-        reference: order.paystackReference,
-        callbackUrl: `${config.publicBaseUrl}/orders/${order.id}`,
-        channels: ["bank_transfer", "ussd", "card"],
-        metadata: {
-          orderId: order.id,
-          planId: plan.id,
-          phone: order.phone,
-          mac: order.mac,
-          ip: order.ip,
-        },
-      });
-
-      if (init.status !== "ok") {
-        logger.error("paystack initialize failed", {
-          orderId: order.id,
-          status: init.status,
-          message: init.message,
-        });
-        await repo.transition(order.id, "failed", {
-          lastError: `paystack initialize: ${init.message}`,
-        });
+      if (result.ok) return c.redirect(result.authorizationUrl, 303);
+      if (result.reason === "unknown_plan") {
         return c.html(
-          renderBuy(portal, {
-            error: "We could not start the payment. Please try again.",
-            values: {
-              planId: plan.id,
-              phone: parsed.data.phone,
-              email: parsed.data.email,
-            },
-          }),
-          502,
+          renderBuy(portal, { error: "That plan is no longer available" }),
+          400,
         );
       }
-
-      logger.info("order created", {
-        orderId: order.id,
-        planId: plan.id,
-        channel: "web",
-      });
-      return c.redirect(init.data.authorizationUrl, 303);
+      if (result.reason === "payments_unavailable") {
+        return c.html(
+          unavailablePage(config.brandName, config.supportPhone),
+          503,
+        );
+      }
+      return c.html(
+        renderBuy(portal, {
+          error: "We could not start the payment. Please try again.",
+          values: {
+            planId: parsed.data.planId,
+            phone: parsed.data.phone,
+            email: parsed.data.email,
+          },
+        }),
+        502,
+      );
     })
 
     .get("/orders/:id", async (c) => {

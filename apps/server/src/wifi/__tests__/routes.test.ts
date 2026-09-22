@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import type { PaystackClient } from "@turbo/paystack";
 
 import { createWifiApp } from "../app";
-import { fallbackEmail, phoneSchema } from "../routes/shop";
+import { fallbackEmail } from "../checkout";
+import { phoneSchema } from "../routes/shop";
 import { createFakeHotspot, createTestDeps } from "./helpers";
 
 const SECRET = "sk_test_secret";

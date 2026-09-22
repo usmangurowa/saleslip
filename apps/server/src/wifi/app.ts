@@ -4,6 +4,7 @@ import type { WifiDeps } from "./deps";
 import { createHealthRoutes } from "./routes/health";
 import { createPaystackRoutes } from "./routes/paystack";
 import { createShopRoutes } from "./routes/shop";
+import { createTelegramRoutes } from "./routes/telegram";
 
 /**
  * Mounts every WiFi-shop route at the root of the given deps. Pure over its
@@ -13,6 +14,7 @@ export const createWifiApp = (deps: WifiDeps) =>
   new Hono()
     .route("/", createHealthRoutes(deps))
     .route("/", createPaystackRoutes(deps))
+    .route("/", createTelegramRoutes(deps))
     .route("/", createShopRoutes(deps));
 
 export type WifiApp = ReturnType<typeof createWifiApp>;

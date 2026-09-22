@@ -92,8 +92,8 @@ export const layout = (
       </head>
       <body
         ${Object.entries(options.bodyData ?? {}).map(
-        ([key, value]) => html`data-${key}="${value}" `,
-      )}
+          ([key, value]) => html`data-${key}="${value}" `,
+        )}
       >
         <header><div class="brand">${options.brandName}</div></header>
         <main>${body}</main>

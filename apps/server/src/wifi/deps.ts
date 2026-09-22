@@ -34,6 +34,8 @@ export interface WifiDeps {
   fulfilment: FulfilmentService;
   logger: Logger;
   telegram?: TelegramNotifier;
+  /** Handles a raw Telegram update request; set when the bot is configured. */
+  telegramWebhook?: (request: Request) => Promise<Response>;
   /** DB liveness probe for `/health`. */
   pingDb: () => Promise<void>;
   now?: () => Date;

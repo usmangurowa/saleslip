@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { webhookCallback } from "grammy";
 
 import { db } from "@turbo/db/client";
 import { createPaystackClient } from "@turbo/paystack";
@@ -10,6 +11,12 @@ import { createFulfilmentService } from "./fulfilment";
 import { createLogger } from "./logger";
 import { createOrderRepository } from "./orders";
 import { buildPlans } from "./plans";
+import { createRouterWatchdog } from "./router-watchdog";
+import {
+  createTelegramBot,
+  createTelegramNotifier,
+  telegramWebhookPath,
+} from "./telegram/bot";
 
 type WifiEnv = typeof ServerEnv;
 
@@ -23,6 +30,13 @@ export const parseAdminIds = (raw: string | undefined): string[] =>
  * Builds the production dependency graph from validated env. Anything not
  * configured is left `undefined` and the routes degrade gracefully.
  */
+export interface WifiRuntime {
+  deps: WifiDeps;
+  /** Best-effort boot tasks: webhook registration, watchdog, retry sweep. */
+  start: () => Promise<void>;
+  stop: () => void;
+}
+
 export const createWifiDeps = (env: WifiEnv): WifiDeps => {
   const logger = createLogger({ service: "wifi" });
 
@@ -98,4 +112,72 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
   };
 
   return deps;
+};
+
+/**
+ * Wires the optional Telegram bot and router watchdog onto the deps and
+ * returns the boot hooks `index.ts` runs once the HTTP server is listening.
+ */
+export const createWifiRuntime = (env: WifiEnv): WifiRuntime => {
+  const deps = createWifiDeps(env);
+  const { logger, config } = deps;
+  const stops: (() => void)[] = [() => deps.fulfilment.stop()];
+  const boot: (() => Promise<unknown>)[] = [() => deps.fulfilment.sweep()];
+
+  if (env.TELEGRAM_BOT_TOKEN && config.telegramWebhookSecret) {
+    const bot = createTelegramBot({ token: env.TELEGRAM_BOT_TOKEN, deps });
+    deps.telegram = createTelegramNotifier(
+      bot,
+      logger.child({ component: "telegram" }),
+    );
+    deps.telegramWebhook = webhookCallback(bot, "std/http");
+
+    if (config.publicBaseUrl) {
+      const url = `${config.publicBaseUrl}${telegramWebhookPath(config.telegramWebhookSecret)}`;
+      boot.push(async () => {
+        try {
+          await bot.api.setWebhook(url, { drop_pending_updates: false });
+          logger.info("telegram webhook registered");
+        } catch (error) {
+          logger.error("telegram setWebhook failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
+    } else {
+      logger.warn("telegram webhook not registered", {
+        reason: "PUBLIC_BASE_URL unset",
+      });
+    }
+
+    if (deps.hotspot && config.telegramAdminIds.length > 0) {
+      const notifier = deps.telegram;
+      const watchdog = createRouterWatchdog({
+        hotspot: deps.hotspot,
+        logger: logger.child({ component: "watchdog" }),
+        notify: async (text) => {
+          await Promise.all(
+            config.telegramAdminIds.map((id) => notifier.sendMessage(id, text)),
+          );
+        },
+      });
+      boot.push(() => {
+        watchdog.start();
+        return Promise.resolve();
+      });
+      stops.push(() => watchdog.stop());
+    }
+  } else {
+    logger.warn("telegram bot disabled", { reason: "not configured" });
+  }
+
+  return {
+    deps,
+    start: async () => {
+      for (const task of boot) await task();
+    },
+    stop: () => {
+      for (const stop of stops) stop();
+    },
+  };
 };
