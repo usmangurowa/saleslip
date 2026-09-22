@@ -21,7 +21,7 @@ WG_GATEWAY_HOST="${WG_GATEWAY_HOST:-}"
 WG_ROUTE_CIDR="${WG_ROUTE_CIDR:-10.8.0.0/24}"
 
 if [ -n "$WG_GATEWAY_HOST" ]; then
-  gateway="$(getent hosts "$WG_GATEWAY_HOST" 2>/dev/null | awk '{ print $1; exit }' || true)"
+  gateway="$(getent ahostsv4 "$WG_GATEWAY_HOST" 2>/dev/null | awk '{ print $1; exit }' || true)"
   if [ -z "$gateway" ]; then
     echo "entrypoint: cannot resolve WG_GATEWAY_HOST=$WG_GATEWAY_HOST; skipping route" >&2
   elif ip route replace "$WG_ROUTE_CIDR" via "$gateway" 2>/dev/null; then
