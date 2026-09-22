@@ -5,7 +5,7 @@
 - State: implemented
 - Owner: AI agent
 - Created: 2026-09-12
-- Updated: 2026-09-12
+- Updated: 2026-09-22
 
 ## Problem
 
@@ -34,6 +34,9 @@ slice that ships first.
 - [x] `GET /health` reports database and router reachability.
 - [x] Dockerfile adds the WireGuard route as root and drops to `node`; a Coolify
       compose snippet and README section document deployment.
+- [x] Router-only API exports use dedicated server and browser-client subpaths,
+      so the Next.js production bundle never pulls in `node-routeros`.
+- [x] The same-origin WiFi proxy is compatible with Next.js Cache Components.
 - [x] Vitest covers code generation, signature verification, order state, plan
       mapping, fulfilment, routes, Telegram and the watchdog.
 
@@ -48,6 +51,8 @@ slice that ships first.
 | `apps/server/src/wifi/**`                        | Shop, webhook, fulfilment, receipt, Telegram bot, watchdog, health      |
 | `apps/server/src/env.ts`                         | Router, Paystack, Telegram, branding variables                          |
 | `apps/server/Dockerfile`, `docker-entrypoint.sh` | iproute2 + su-exec, WireGuard route on boot                             |
+| `packages/api/package.json`                      | Browser-safe and server-only WiFi router subpath exports                |
+| `apps/web/src/app/api/wifi-router/**`            | Same-origin RouterOS proxy compatible with Cache Components             |
 | `deploy/coolify-compose.snippet.yaml`            | Service block for the `saleslip-wifi` stack                             |
 | `README.md`, `.env.example`, `turbo.json`        | Docs and env contract                                                   |
 
@@ -58,7 +63,7 @@ slice that ships first.
 | API routes      | yes     | Server-hosted shop routes (not `packages/api`; see Notes)                 |
 | DB schema       | yes     | `wifi_order`, `wifi_voucher`                                              |
 | Env vars        | yes     | `ROUTER_*`, `PAYSTACK_*`, `TELEGRAM_*`, `WIFI_PROFILE_*`, branding        |
-| Package exports | yes     | `@turbo/routeros`, `@turbo/paystack`                                      |
+| Package exports | yes     | `@turbo/routeros`, `@turbo/paystack`, `@turbo/api/wifi-router*`           |
 | UI tokens       | no      | Server-rendered HTML with Tailwind CDN; not part of the web design system |
 | Agent memory    | yes     | `ARCHITECTURE.md`, `ROADMAP_AI.md`, `.ai/context/tech-stack.md`           |
 

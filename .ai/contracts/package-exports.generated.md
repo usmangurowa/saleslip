@@ -9,7 +9,7 @@
 | `@turbo/web` | `apps/web` | None |
 | `@turbo/ai` | `packages/ai` | `.`, `./client` |
 | `@turbo/analytics` | `packages/analytics` | `.`, `./server`, `./events` |
-| `@turbo/api` | `packages/api` | `.` |
+| `@turbo/api` | `packages/api` | `.`, `./wifi-router`, `./wifi-router-client` |
 | `@turbo/assets` | `packages/assets` | `./fonts/*` |
 | `@turbo/auth` | `packages/auth` | `.`, `./middleware`, `./client`, `./env`, `./trusted-origins` |
 | `@turbo/db` | `packages/db` | `.`, `./client`, `./schema` |

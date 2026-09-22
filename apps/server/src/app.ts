@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 
-import type { WifiRouterAppOptions } from "@turbo/api";
+import type { WifiRouterAppOptions } from "@turbo/api/wifi-router";
 import type { Auth } from "@turbo/auth";
-import { createApp, createWifiRouterApp } from "@turbo/api";
+import { createApp } from "@turbo/api";
+import { createWifiRouterApp } from "@turbo/api/wifi-router";
 import { db } from "@turbo/db/client";
 
 import type { WifiApp } from "./wifi/app";
