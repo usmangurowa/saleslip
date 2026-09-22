@@ -32,7 +32,7 @@ describe("createPaystackClient", () => {
     const client = createPaystackClient({ secretKey: "sk_test_x" });
     const result = await client.initializeTransaction({
       amount: 50000,
-      email: "08012345678@guilders.wifi",
+      email: "08012345678@saleslip.wifi",
       reference: "order-1",
       callbackUrl: "https://buy.example/orders/order-1",
       channels: ["bank_transfer", "ussd", "card"],

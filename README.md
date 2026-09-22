@@ -363,9 +363,9 @@ Auto-deploy needs a webhook. Coolify rebuilds on push only when GitHub tells it 
 
 With Infisical, the only runtime variables Coolify needs are the four `INFISICAL_*` credentials above (plus anything you deliberately keep out of Infisical). Without it, `POSTGRES_URL`, `AUTH_SECRET`, `RESEND_API_KEY`, … are normal Coolify environment variables. Layout and invariants: `.ai/patterns/docker-images.md`.
 
-### WiFi voucher shop (Guilders)
+### WiFi voucher shop (Saleslip)
 
-`apps/server` also hosts a single-tenant WiFi voucher shop for the Guilders Starlink hotspot: a mobile-first buy page, Paystack checkout, a Telegram bot, and fulfilment that creates hotspot users on a MikroTik router over WireGuard. The long-term plan is in [`docs/wifi-platform-plan.md`](docs/wifi-platform-plan.md).
+`apps/server` also hosts a single-tenant WiFi voucher shop for the Saleslip Starlink hotspot: a mobile-first buy page, Paystack checkout, a Telegram bot, and fulfilment that creates hotspot users on a MikroTik router over WireGuard. The long-term plan is in [`docs/wifi-platform-plan.md`](docs/wifi-platform-plan.md).
 
 Routes (all on the server, port 3001):
 
@@ -395,11 +395,11 @@ Fulfilment: `charge.success` (signature-checked, idempotent by reference) marks 
 
 Setup checklist:
 
-1. **Paystack** — in the dashboard set the webhook URL to `${PUBLIC_BASE_URL}/webhooks/paystack` (for example `https://buy.saleslip.app/webhooks/paystack`) and copy the secret key into `PAYSTACK_SECRET_KEY`. The redirect back to `/orders/:id` never fulfils; only the webhook does.
+1. **Paystack** — in the dashboard set the webhook URL to `${PUBLIC_BASE_URL}/webhooks/paystack` (for example `https://wifi.saleslip.app/webhooks/paystack`) and copy the secret key into `PAYSTACK_SECRET_KEY`. The redirect back to `/orders/:id` never fulfils; only the webhook does.
 2. **Telegram** — create the bot with [@BotFather](https://t.me/BotFather) (`/newbot`), put the token in `TELEGRAM_BOT_TOKEN`, generate a random `TELEGRAM_WEBHOOK_SECRET` (`openssl rand -hex 24`), and put the owners' numeric user IDs in `TELEGRAM_ADMIN_IDS`. The server calls `setWebhook` to `${PUBLIC_BASE_URL}/webhooks/telegram/<secret>` on boot.
 3. **MikroTik** — the API user needs `api` + `write` policy on the hotspot. Add walled-garden entries so unpaid clients can reach the shop, Paystack and Telegram: `*.saleslip.app`, `*.paystack.co`, `*.paystack.com`, `*.telegram.org`, `t.me`, and the VPS IP `195.179.227.24`. Point the login page's buy link at `${PUBLIC_BASE_URL}/?mac=$(mac)&ip=$(ip)&login=$(link-login-only)`.
 4. **Database** — the app reads `POSTGRES_URL`; migrations run on boot. In production point it at the shared Coolify Postgres with a dedicated `saleslip` role and database.
-5. **Deploy** — add the block in [`deploy/coolify-compose.snippet.yaml`](deploy/coolify-compose.snippet.yaml) to the `guilders-wifi` stack. It needs `cap_add: NET_ADMIN` and `WG_GATEWAY_HOST=wg-easy`; `apps/server/docker-entrypoint.sh` adds `ip route replace 10.8.0.0/24 via <wg-easy>` before dropping to the `node` user.
+5. **Deploy** — add the block in [`deploy/coolify-compose.snippet.yaml`](deploy/coolify-compose.snippet.yaml) to the `saleslip-wifi` stack. It needs `cap_add: NET_ADMIN` and `WG_GATEWAY_HOST=wg-easy`; `apps/server/docker-entrypoint.sh` adds `ip route replace 10.8.0.0/24 via <wg-easy>` before dropping to the `node` user.
 6. **Router check** — the tunnel is only reachable from the VPS, so verify from the deployed container: `pnpm --filter @turbo/server routeros:check` prints `/system/resource`.
 
 ### Auth Proxy

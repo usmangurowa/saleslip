@@ -27,7 +27,7 @@ export const env = createEnv({
     // template still boots without a router or Paystack account; the shop
     // degrades to "not configured" responses instead.
     PUBLIC_BASE_URL: z.url().optional(),
-    BRAND_NAME: z.string().min(1).default("Guilders Starlink"),
+    BRAND_NAME: z.string().min(1).default("Saleslip Starlink"),
     SUPPORT_PHONE: optionalString,
     ROUTER_HOST: optionalString,
     ROUTER_PORT: z.coerce.number().int().min(1).max(65535).default(8728),

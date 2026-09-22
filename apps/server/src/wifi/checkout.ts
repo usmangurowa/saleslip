@@ -7,7 +7,7 @@ export const PAYSTACK_CHANNELS = ["bank_transfer", "ussd", "card"] as const;
 
 /** Paystack requires an email; hotspot buyers usually only have a phone. */
 export const fallbackEmail = (phone: string) =>
-  `${phone.replace(/\D/g, "")}@guilders.wifi`;
+  `${phone.replace(/\D/g, "")}@saleslip.wifi`;
 
 export type CheckoutResult =
   | {

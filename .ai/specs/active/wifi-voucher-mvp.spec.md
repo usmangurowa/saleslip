@@ -1,4 +1,4 @@
-# Feature Spec: WiFi voucher sales MVP (Guilders)
+# Feature Spec: WiFi voucher sales MVP (Saleslip)
 
 ## Status
 
@@ -9,7 +9,7 @@
 
 ## Problem
 
-Guilders runs a Starlink hotspot on a MikroTik hEX (RouterOS 7.19.6) and sells
+Saleslip runs a Starlink hotspot on a MikroTik hEX (RouterOS 7.19.6) and sells
 WiFi access by hand through Mikhmon. Customers need a way to pick a plan, pay
 with Paystack (bank transfer, USSD, card) and get a working hotspot code
 without an operator, from the captive portal or from Telegram. The long-term
@@ -48,7 +48,7 @@ slice that ships first.
 | `apps/server/src/wifi/**`                        | Shop, webhook, fulfilment, receipt, Telegram bot, watchdog, health      |
 | `apps/server/src/env.ts`                         | Router, Paystack, Telegram, branding variables                          |
 | `apps/server/Dockerfile`, `docker-entrypoint.sh` | iproute2 + su-exec, WireGuard route on boot                             |
-| `deploy/coolify-compose.snippet.yaml`            | Service block for the `guilders-wifi` stack                             |
+| `deploy/coolify-compose.snippet.yaml`            | Service block for the `saleslip-wifi` stack                             |
 | `README.md`, `.env.example`, `turbo.json`        | Docs and env contract                                                   |
 
 ## Contracts

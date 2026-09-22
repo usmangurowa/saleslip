@@ -10,7 +10,7 @@ import {
 } from "../plans";
 
 describe("buildPlans", () => {
-  it("seeds the three Guilders plans with default profiles", () => {
+  it("seeds the three Saleslip plans with default profiles", () => {
     const plans = buildPlans({});
     expect(plans.map((p) => [p.id, p.priceKobo, p.rosProfile])).toEqual([
       ["daily-unlimited", 50_000, "Daily-Unlimited"],

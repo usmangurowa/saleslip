@@ -1,8 +1,8 @@
-# Service block to add to the existing Coolify compose for `guilders-wifi`
+# Service block to add to the existing Coolify compose for `saleslip-wifi`
 # (the stack that already runs `wg-easy` and `mikhmon`).
 #
 # - Build pack: dockerfile, base directory `/`, dockerfile `/apps/server/Dockerfile`.
-# - Domain: https://buy.saleslip.app → port 3001 (Coolify's Traefik terminates TLS).
+# - Domain: https://wifi.saleslip.app → port 3001 (Coolify's Traefik terminates TLS).
 # - `POSTGRES_URL` points at the shared `infra-postgres` service over the
 #   `coolify` network; create the `saleslip` role and database there first.
 # - `cap_add: NET_ADMIN` lets the entrypoint add the WireGuard route the same
@@ -41,10 +41,10 @@ services:
     environment:
       NODE_ENV: production
       SERVER_PORT: "3001"
-      SERVER_URL: https://buy.saleslip.app
-      APP_URL: https://buy.saleslip.app
-      PUBLIC_BASE_URL: https://buy.saleslip.app
-      BRAND_NAME: Guilders Starlink
+      SERVER_URL: https://wifi.saleslip.app
+      APP_URL: https://wifi.saleslip.app
+      PUBLIC_BASE_URL: https://wifi.saleslip.app
+      BRAND_NAME: Saleslip Starlink
       SUPPORT_PHONE: ${SUPPORT_PHONE}
 
       # Shared Coolify Postgres (infra-postgres, pg16) over the coolify network.
@@ -69,7 +69,7 @@ services:
       TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.saleslip-server.rule=Host(`buy.saleslip.app`)
+      - traefik.http.routers.saleslip-server.rule=Host(`wifi.saleslip.app`)
       - traefik.http.routers.saleslip-server.entryPoints=https
       - traefik.http.routers.saleslip-server.tls=true
       - traefik.http.routers.saleslip-server.tls.certresolver=letsencrypt

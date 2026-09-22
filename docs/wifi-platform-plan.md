@@ -1,7 +1,7 @@
 # Saleslip WiFi — Implementation Plan
 
 Multi-tenant hotspot-monetisation platform for Starlink/MikroTik owners.
-Domain: `saleslip.app`. First tenant: Guilders (already wired via WireGuard).
+Domain: `saleslip.app`. First tenant: Saleslip (already wired via WireGuard).
 
 > Living document. The single-tenant MVP that starts this plan is tracked in
 > `.ai/specs/active/wifi-voucher-mvp.spec.md`; the repo README documents its
@@ -11,7 +11,7 @@ Domain: `saleslip.app`. First tenant: Guilders (already wired via WireGuard).
 
 ## 0. Is a SaaS feasible? — Yes. Here's the shape of it.
 
-The only hard problem in a hotspot SaaS is **reaching routers that sit behind CGNAT** — and it is already solved for one router (Guilders). The SaaS is that same pattern, automated per tenant.
+The only hard problem in a hotspot SaaS is **reaching routers that sit behind CGNAT** — and it is already solved for one router (Saleslip). The SaaS is that same pattern, automated per tenant.
 
 ### What makes it work
 
@@ -43,11 +43,11 @@ Every Starlink kit sold in Nigeria to a shop, hostel, estate, event centre, or v
 
 ---
 
-## 1. Phase 0 — Fix the physical network (Guilders, this week)
+## 1. Phase 0 — Fix the physical network (Saleslip, this week)
 
 ### 1.1 The catch: the AP is on the wrong side
 
-The Guilders hEX (RB750Gr3) has **no WiFi**. The WiFi customers see today is the **Starlink router's** — and that sits _upstream_ of the MikroTik, so anyone joining it gets internet **without ever touching the captive portal**. Only wired clients (like the owner's laptop) are being captured.
+The Saleslip hEX (RB750Gr3) has **no WiFi**. The WiFi customers see today is the **Starlink router's** — and that sits _upstream_ of the MikroTik, so anyone joining it gets internet **without ever touching the captive portal**. Only wired clients (like the owner's laptop) are being captured.
 
 ### 1.2 Fix
 
@@ -65,8 +65,8 @@ Starlink dish ──► Starlink router (BYPASS MODE, WiFi off)
    - TP-Link **EAP225/EAP610** — cheap, Omada app, good range.
    - Ubiquiti **U6 Lite** — best roaming if you'll have several.
      For a shop/hall under 50 users one AP is fine; large compounds want 2–3 wired back to the hEX.
-3. **AP config** (any brand): mode = _Access Point / bridge_ (not router — no NAT, no DHCP), SSID `Guilders Starlink`, **security = Open (none)**, enable _client isolation_, disable AP's own DHCP. The MikroTik hands out IPs and the portal does the auth.
-   - MikroTik cAP example: `/interface/wifi set [find] configuration.ssid="Guilders Starlink" configuration.mode=ap security.authentication-types="" disabled=no` and add the wifi interface to a bridge whose ether port uplinks to the hEX.
+3. **AP config** (any brand): mode = _Access Point / bridge_ (not router — no NAT, no DHCP), SSID `Saleslip Starlink`, **security = Open (none)**, enable _client isolation_, disable AP's own DHCP. The MikroTik hands out IPs and the portal does the auth.
+   - MikroTik cAP example: `/interface/wifi set [find] configuration.ssid="Saleslip Starlink" configuration.mode=ap security.authentication-types="" disabled=no` and add the wifi interface to a bridge whose ether port uplinks to the hEX.
 4. Rename/open-network answer: **yes, remove the WiFi password** — the voucher _is_ the password. An open SSID is standard for captive portals (hotels, airports). The MikroTik `hotspot1` with `addresses-per-mac=2` and per-voucher `shared-users` is what stops freeloading.
 
 ### 1.3 MikroTik hardening (before shipping the box)
@@ -78,8 +78,9 @@ Starlink dish ──► Starlink router (BYPASS MODE, WiFi off)
 /ip/firewall/filter add chain=input in-interface=ether1 action=drop comment="drop WAN input" place-before=[find comment~"VPS mgmt"]
 /system/ntp/client set enabled=yes servers=time.cloudflare.com
 /system/clock set time-zone-name=Africa/Lagos
+# wg-easy stays on usmangurowa.dev for now — keep this endpoint until it moves to vpn.saleslip.app
 /interface/wireguard/peers set 0 endpoint-address=vpn.usmangurowa.dev
-/export file=guilders-wifi-$(date)        # download via Files, keep off-site
+/export file=saleslip-wifi-$(date)        # download via Files, keep off-site
 ```
 
 (Check firewall order after `place-before` — the WireGuard accept rule must stay above the WAN drop.) Test: unplug power, wait for boot, confirm `last-handshake` returns without touching anything.
@@ -87,7 +88,7 @@ Starlink dish ──► Starlink router (BYPASS MODE, WiFi off)
 ### 1.4 Hotspot tweaks worth doing now
 
 ```
-/ip/hotspot/profile set hsprof3 login-by=http-chap,cookie,mac-cookie http-cookie-lifetime=1d dns-name=wifi.guilders.ltd
+/ip/hotspot/profile set hsprof3 login-by=http-chap,cookie,mac-cookie http-cookie-lifetime=1d dns-name=wifi.saleslip.app
 /ip/hotspot set hotspot1 idle-timeout=10m
 /ip/hotspot/walled-garden add dst-host=saleslip.app
 /ip/hotspot/walled-garden add dst-host=*.saleslip.app
@@ -117,7 +118,7 @@ Starlink dish ──► Starlink router (BYPASS MODE, WiFi off)
  └───────────────────────────────────────────────────────────────┘
           ▲ WireGuard tunnels, one per router (10.20.0.0/16)
    ┌──────┴──────┐     ┌─────────────┐     ┌─────────────┐
-   │ Guilders    │     │ Tenant B    │     │ Tenant C    │
+   │ Saleslip    │     │ Tenant B    │     │ Tenant C    │
    │ hEX 10.20.0.2│    │ hAP 10.20.0.3│    │ ...         │
    └─────────────┘     └─────────────┘     └─────────────┘
 ```
@@ -281,7 +282,7 @@ Today's revenue, vouchers sold (by channel), active users, router health, Starli
 
 ### 5.6 Deliverable
 
-Guilders fully managed from `saleslip.app/app`; Mikhmon container retired.
+Saleslip fully managed from `saleslip.app/app`; Mikhmon container retired.
 
 ---
 
@@ -308,7 +309,7 @@ Reached from the captive portal's **Buy** button with `?mac=…&ip=…&router=�
 - Tenant logo, name, address, plan, validity, price, code, QR (encodes the auto-login URL), "how to connect" steps, support phone, footer text.
 - Formats: web page, **58mm thermal** print CSS, PNG (satori/`@vercel/og`) for WhatsApp/Telegram, PDF download.
 - **Receipt template editor** in Settings: logo, colours, footer, show/hide fields. Live preview.
-- SMS delivery via **Termii** (cheap, Nigerian): "Your Guilders Starlink code: GW48213. Valid 24h. Receipt: saleslip.app/r/…". Optional per tenant (they pay per SMS or you bundle).
+- SMS delivery via **Termii** (cheap, Nigerian): "Your Saleslip Starlink code: GW48213. Valid 24h. Receipt: saleslip.app/r/…". Optional per tenant (they pay per SMS or you bundle).
 
 ### 6.4 3DS reality
 
@@ -382,7 +383,7 @@ WhatsApp Cloud API (Meta) — same state machine, different transport. Bigger re
 - **Analytics**: revenue by day/plan/channel, peak hours, repeat customers (by MAC/phone), data consumption vs Starlink plan cap (warn at 80% of their Starlink priority data).
 - **Notifications**: router offline (Telegram/SMS/email), low pool, failed webhook, new sale.
 - **Tenant offboarding**: revoke WG peer, delete API user (script), export data CSV.
-- **Docs site** `/docs`: supported topology, Starlink bypass, AP setup per brand, troubleshooting (with the exact device-mode power-cycle gotcha hit during the Guilders setup).
+- **Docs site** `/docs`: supported topology, Starlink bypass, AP setup per brand, troubleshooting (with the exact device-mode power-cycle gotcha hit during the Saleslip setup).
 
 ---
 
@@ -398,7 +399,7 @@ WhatsApp Cloud API (Meta) — same state machine, different transport. Bigger re
 | Rate limits   | Buy page + webhook + bot: per-IP/per-MAC limits (Redis).                                                                                                                                                                                                                                                                                 |
 | Idempotency   | Paystack `reference` unique; webhook handler is a no-op on replay; fulfilment in a DB transaction with `SELECT … FOR UPDATE SKIP LOCKED` on pooled vouchers.                                                                                                                                                                             |
 | Tests         | Vitest unit for voucher/pool/plan logic; integration against a **CHR (Cloud Hosted Router)** docker image (`evilfreelancer/docker-routeros`) so the connector is tested against real RouterOS in CI.                                                                                                                                     |
-| Deploy        | Coolify: `apps/web` (Next standalone), `apps/server` (Hono, runs migrations on boot per the repo README), Postgres, Redis, wg-easy. Domains `saleslip.app`, `api.saleslip.app`, `vpn.saleslip.app`. Move Guilders' tunnel off `usmangurowa.dev` by pointing router's `endpoint-address` to `vpn.saleslip.app` (same VPS, zero downtime). |
+| Deploy        | Coolify: `apps/web` (Next standalone), `apps/server` (Hono, runs migrations on boot per the repo README), Postgres, Redis, wg-easy. Domains `saleslip.app`, `wifi.saleslip.app` (shop, and the hotspot `dns-name`), `vpn.saleslip.app`. wg-easy and the Mikhmon container stay on `usmangurowa.dev` until Phase 4; the router keeps `endpoint-address=vpn.usmangurowa.dev` until wg-easy moves to `vpn.saleslip.app` (same VPS, zero downtime). |
 
 ---
 
@@ -406,7 +407,7 @@ WhatsApp Cloud API (Meta) — same state machine, different transport. Bigger re
 
 | Phase | Scope                                                                    | Est.                |
 | ----- | ------------------------------------------------------------------------ | ------------------- |
-| 0     | Starlink bypass + AP + hardening (Guilders)                              | 1–2 days + hardware |
+| 0     | Starlink bypass + AP + hardening (Saleslip)                              | 1–2 days + hardware |
 | 1     | Tenancy, router onboarding, connector, plans, vouchers, print, dashboard | 2 wks               |
 | 2     | Paystack, buy page, receipts, SMS                                        | 1.5 wks             |
 | 3     | Portal builder + push + auto-login                                       | 1 wk                |
@@ -414,7 +415,7 @@ WhatsApp Cloud API (Meta) — same state machine, different transport. Bigger re
 | 5     | Marketing, billing, roles, POS, analytics, docs                          | 2 wks               |
 | 6     | Ops hardening, CI against CHR                                            | ongoing             |
 
-Ship order: **0 → 1 → 2 → 3** gets Guilders earning online in ~5 weeks. **4 → 5** turns it into a product.
+Ship order: **0 → 1 → 2 → 3** gets Saleslip earning online in ~5 weeks. **4 → 5** turns it into a product.
 
 ---
 
@@ -440,7 +441,7 @@ Drop `apps/mobile` for now (or keep for a cashier POS app later — Expo is alre
 ## 13. First 10 concrete tasks
 
 1. Phase 0: Starlink bypass mode + order an AP. Apply hardening + walled garden commands (§1.3, §1.4).
-2. `packages/routeros`: client wrapper + `HotspotService.createUsers/listActive/kick/ensureProfile` — test against the live Guilders hEX over the tunnel from the Coolify network.
+2. `packages/routeros`: client wrapper + `HotspotService.createUsers/listActive/kick/ensureProfile` — test against the live Saleslip hEX over the tunnel from the Coolify network.
 3. `packages/db`: tenants, routers, plans, vouchers, orders schema + migration.
 4. Better Auth org plugin; `/app` shell with tenant switcher.
 5. Router onboarding flow + `/o/<token>.rsc` generator; test by re-onboarding the hEX (idempotent script).
