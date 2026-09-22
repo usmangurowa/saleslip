@@ -6,6 +6,7 @@ import {
   findPlan,
   toHotspotUserInput,
   VOUCHER_COMMENT_PREFIX,
+  voucherComment,
 } from "../plans";
 
 describe("buildPlans", () => {
@@ -35,7 +36,7 @@ describe("toHotspotUserInput", () => {
     if (!plan) throw new Error("missing plan");
     const input = toHotspotUserInput(plan, {
       code: "GWAB2C3",
-      orderId: "order-1",
+      owner: "order-1",
       phone: "+2348012345678",
       server: "hotspot1",
     });
@@ -50,17 +51,36 @@ describe("toHotspotUserInput", () => {
     });
   });
 
-  it("leaves limits off for unlimited plans so the Mikhmon profile governs expiry", () => {
+  it("leaves limits off for unlimited plans so the router profile governs expiry", () => {
     const plan = findPlan(plans, "daily-unlimited");
     if (!plan) throw new Error("missing plan");
     const input = toHotspotUserInput(plan, {
       code: "GWZZZZZ",
-      orderId: "o",
+      owner: "o",
       phone: "p",
     });
     expect(input.limitBytesTotal).toBeUndefined();
     expect(input.limitUptime).toBeUndefined();
     expect(input.server).toBeUndefined();
+  });
+
+  it("tags a counter voucher with its batch when there is no phone", () => {
+    const plan = findPlan(plans, "daily-1gb");
+    if (!plan) throw new Error("missing plan");
+    const input = toHotspotUserInput(plan, {
+      code: "GWQQQQQ",
+      owner: "batch-9",
+    });
+    expect(input.comment).toBe(`${VOUCHER_COMMENT_PREFIX}|batch-9`);
+  });
+});
+
+describe("voucherComment", () => {
+  it("includes the phone only when one is known", () => {
+    expect(voucherComment("order-1", "+2348012345678")).toBe(
+      "saleslip|order-1|+2348012345678",
+    );
+    expect(voucherComment("batch-9")).toBe("saleslip|batch-9");
   });
 });
 

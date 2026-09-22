@@ -79,6 +79,7 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
       paystackPublicKey: env.PAYSTACK_PUBLIC_KEY,
       telegramWebhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
       telegramAdminIds: parseAdminIds(env.TELEGRAM_ADMIN_IDS),
+      hotspotServer: env.WIFI_HOTSPOT_SERVER,
       timeZone: "Africa/Lagos",
     },
     plans,

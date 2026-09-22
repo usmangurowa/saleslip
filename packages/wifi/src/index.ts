@@ -20,8 +20,9 @@ export {
   findPlan,
   toHotspotUserInput,
   VOUCHER_COMMENT_PREFIX,
+  voucherComment,
 } from "./plans";
-export type { PlanProfileOverrides, WifiPlan } from "./plans";
+export type { PlanProfileOverrides, VoucherOwner, WifiPlan } from "./plans";
 export {
   generateUniqueVoucherCode,
   generateVoucherCode,

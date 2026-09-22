@@ -3,7 +3,7 @@ const GB = 1024 ** 3;
 export const formatNaira = (kobo: number): string =>
   `₦${(kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
 
-/** Plan data allowance, where `undefined` means the Mikhmon profile governs. */
+/** Plan data allowance, where `undefined` means the router profile governs. */
 export const formatData = (bytes: number | undefined): string =>
   bytes === undefined ? "Unlimited" : `${Math.round(bytes / GB)}GB`;
 

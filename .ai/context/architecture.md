@@ -22,6 +22,12 @@ summary.
 | WiFi       | `packages/wifi`       | WiFi domain logic (codes, orders, plans) |
 | Jobs       | `packages/jobs`       | Trigger.dev tasks                        |
 
+Router-only routes are the one exception to "one API app": `createWifiRouterApp`
+in `packages/api/src/router/wifi-router.ts` is mounted on `apps/server` alone
+(the only runtime with a WireGuard route to the hotspot) and reached from
+`apps/web` through the `/api/wifi-router` proxy. See "Router-only routes" in
+`ARCHITECTURE.md`.
+
 ## Dependency Direction
 
 - Apps may import packages.

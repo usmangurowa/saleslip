@@ -8,8 +8,8 @@ import { WifiTabs } from "@/components/dashboard/wifi/wifi-tabs";
  * WiFi console — the money view.
  *
  * Revenue and stuck fulfilments first, then the order ledger. Router state
- * (live sessions, usage, kick) is not here: the web runtime has no route to
- * the hotspot, so those live in `apps/server` behind the local network.
+ * (live sessions, usage, kick) sits behind the Live tab, which is served by
+ * `apps/server` — this runtime has no route to the hotspot.
  */
 export default function WifiOrdersPage() {
   return (

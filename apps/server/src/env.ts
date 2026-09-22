@@ -43,6 +43,7 @@ export const env = createEnv({
     WIFI_PROFILE_DAILY_UNLIMITED: optionalString,
     WIFI_PROFILE_DAILY_1GB: optionalString,
     WIFI_PROFILE_WEEKLY_5GB: optionalString,
+    WIFI_HOTSPOT_SERVER: optionalString,
   },
   runtimeEnv: {
     ...process.env,

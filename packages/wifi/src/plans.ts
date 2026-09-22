@@ -5,7 +5,7 @@ export interface WifiPlan {
   name: string;
   description: string;
   priceKobo: number;
-  /** Existing RouterOS hotspot user profile (created in Mikhmon). */
+  /** Existing RouterOS hotspot user profile, as named on the router. */
   rosProfile: string;
   dataLimitBytes?: number;
   /** RouterOS duration, e.g. `1d`, `7d`. */
@@ -60,18 +60,37 @@ export const findPlan = (
 export const VOUCHER_COMMENT_PREFIX = "saleslip";
 
 /**
+ * Short fingerprint of whatever owns the voucher, written to the RouterOS
+ * comment so a hotspot user can be traced back from the router alone.
+ *
+ * Shop vouchers carry the order and phone (support needs the phone); counter
+ * vouchers carry only the batch, because they have neither.
+ */
+export const voucherComment = (owner: string, phone?: string): string =>
+  phone
+    ? [VOUCHER_COMMENT_PREFIX, owner, phone].join("|")
+    : `${VOUCHER_COMMENT_PREFIX}|${owner}`;
+
+export interface VoucherOwner {
+  /** Order id (shop sales) or batch id (counter sales). */
+  owner: string;
+  /** Customer phone; absent for counter sales. */
+  phone?: string;
+}
+
+/**
  * Plan → RouterOS hotspot user. Username and password are both the voucher
- * code; expiry stays in the Mikhmon profile's on-login script, so only the
+ * code; expiry stays in the router profile's on-login script, so only the
  * total byte limit is written here.
  */
 export const toHotspotUserInput = (
   plan: WifiPlan,
-  input: { code: string; orderId: string; phone: string; server?: string },
+  input: VoucherOwner & { code: string; server?: string },
 ): HotspotUserInput => ({
   name: input.code,
   password: input.code,
   profile: plan.rosProfile,
-  comment: [VOUCHER_COMMENT_PREFIX, input.orderId, input.phone].join("|"),
+  comment: voucherComment(input.owner, input.phone),
   limitBytesTotal: plan.dataLimitBytes,
   limitUptime: plan.uptimeLimit,
   server: input.server,

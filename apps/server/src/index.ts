@@ -13,6 +13,10 @@ const wifi = createWifiRuntime(env);
 const app = createServerApp(auth, {
   allowedOrigins: resolveTrustedOrigins(env.SERVER_URL, env.APP_URL, "expo://"),
   wifi: createWifiApp(wifi.deps),
+  wifiRouter: {
+    hotspot: wifi.deps.hotspot,
+    hotspotServer: wifi.deps.config.hotspotServer,
+  },
 });
 
 serve({ fetch: app.fetch, port: env.SERVER_PORT }, (info) => {

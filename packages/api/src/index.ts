@@ -65,6 +65,19 @@ export type AppType = ReturnType<typeof createApp>;
 // Type helper for creating a typed client
 export type Client = ReturnType<typeof hc<AppType>>;
 
+// Router-backed console app. Deliberately *not* part of `createApp`: it needs a
+// WireGuard route to the hotspot, which only `apps/server` has.
+export { createWifiRouterApp } from "./router/wifi-router";
+export type {
+  WifiRouterAppOptions,
+  WifiRouterAppType,
+} from "./router/wifi-router";
+export {
+  createWifiRouterClient,
+  WIFI_ROUTER_BASE_PATH,
+} from "./wifi/router-client";
+export type { WifiRouterClient } from "./wifi/router-client";
+
 /**
  * Create a typed Hono client
  * Usage: const client = hcWithType("http://localhost:3000/api")

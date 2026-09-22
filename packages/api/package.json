@@ -29,6 +29,7 @@
     "@turbo/db": "workspace:*",
     "@turbo/jobs": "workspace:*",
     "@turbo/mail": "workspace:^",
+    "@turbo/routeros": "workspace:*",
     "@turbo/shared": "workspace:*",
     "@turbo/validators": "workspace:*",
     "@turbo/wifi": "workspace:*",

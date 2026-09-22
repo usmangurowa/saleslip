@@ -9,12 +9,13 @@ import { cn } from "@turbo/ui/lib/utils";
 const tabs = [
   { label: "Orders", href: "/dashboard/wifi" },
   { label: "Vouchers", href: "/dashboard/wifi/vouchers" },
+  { label: "Live", href: "/dashboard/wifi/live" },
 ] as const;
 
 /**
- * The console's two views. Orders is the money view, vouchers is the code
- * view, and both read the same tables — so they sit side by side rather than
- * nested.
+ * The console's three views. Orders is the money view, vouchers is the code
+ * view, and live is the router itself — who is connected and whether it is
+ * answering at all.
  */
 export const WifiTabs = () => {
   const pathname = usePathname();

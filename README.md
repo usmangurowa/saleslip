@@ -379,7 +379,7 @@ Routes (all on the server, port 3001):
 | `POST /webhooks/telegram/:secret`    | grammY webhook; 404 unless the secret matches `TELEGRAM_WEBHOOK_SECRET`.                      |
 | `GET /health`                        | Database and router reachability.                                                             |
 
-Plans are a TypeScript array in `packages/wifi/src/plans.ts` (shared by both runtimes as `@turbo/wifi`). Each plan references an existing RouterOS hotspot user profile (created in Mikhmon, which owns expiry). Profile names come from `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB` and `WIFI_PROFILE_WEEKLY_5GB`.
+Plans are a TypeScript array in `packages/wifi/src/plans.ts` (shared by both runtimes as `@turbo/wifi`). Each plan references an existing RouterOS hotspot user profile, and the profile's on-login script owns expiry. Profile names come from `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB` and `WIFI_PROFILE_WEEKLY_5GB`.
 
 Environment (see `.env.example`):
 
@@ -390,8 +390,31 @@ Environment (see `.env.example`):
 | `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`                           | Paystack keys. `PAYSTACK_DISABLED=1` disables checkout.                                                                                 |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_ADMIN_IDS`  | Bot token, a random path secret, comma-separated owner user IDs (`/status`, outage alerts).                                             |
 | `WG_GATEWAY_HOST`                                                      | Container only: the wg-easy container the entrypoint routes `10.8.0.0/24` through.                                                      |
+| `WIFI_HOTSPOT_SERVER`                                                  | Optional: the RouterOS hotspot server name when the router runs more than one (`server=` on created users). Unset means all servers.   |
+| `SERVER_URL`                                                           | Web only: where the console proxy forwards `/api/wifi-router/*` (for example `http://server:3001`).                                     |
+| `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB`, `WIFI_PROFILE_WEEKLY_5GB` | RouterOS hotspot user profile names per plan; both runtimes must resolve the same values.                                  |
 
 Fulfilment: `charge.success` (signature-checked, idempotent by reference) marks the order paid, generates a `GW#####` code, creates the hotspot user (`username = password = code`, the plan's profile, comment `saleslip|<orderId>|<phone>`, `limit-bytes-total` for data plans), stores the voucher and marks the order fulfilled. Telegram orders get the code by DM. If the router is unreachable the order becomes `pending_router` and an in-process retry with backoff finishes it; the sweep also runs on boot. A watchdog DMs the admins when the router has been down for five minutes and again when it recovers.
+
+### WiFi admin console (Saleslip)
+
+The web dashboard at `/dashboard/wifi` is the operator surface: revenue and order stats, every order, every issued code, counter batches, and a **Live** tab showing who is online. It reads through `/api/wifi/*`.
+
+Minting is the part that has to be right. A counter batch is created and activated in one step: the codes are inserted **and** the corresponding RouterOS hotspot users are created inside a single database transaction, so a batch that cannot be fully activated rolls back and returns an error instead of printing a sheet of codes that do not work. Revoking removes the hotspot user *before* marking the row revoked — if the router is unreachable the voucher stays active and the request 503s, because a "revoked" code that still connects is worse than a failed revoke.
+
+Those routes need a route to the router, which only `apps/server` has. They therefore live in their own Hono app (`createWifiRouterApp` in `packages/api/src/router/wifi-router.ts`), mounted at `/wifi-router` on `apps/server` and never on `apps/web`; the browser reaches them through the same-origin proxy at `/api/wifi-router/*`, which forwards the session cookie to `SERVER_URL`. See "Router-only routes" in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+| Console route (browser-facing)           | Purpose                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------ |
+| `GET /api/wifi-router/health`            | Router reachability plus `/system/resource`. A down router is `reachable: false`, still HTTP 200. |
+| `GET /api/wifi-router/sessions`          | Live hotspot sessions resolved back to their voucher, plan and phone, with today's revenue. |
+| `POST /api/wifi-router/sessions/sync`    | Snapshots `bytes-in + bytes-out` per code onto `wifi_voucher.bytes_used`.       |
+| `POST /api/wifi-router/sessions/:user/kick` | Disconnects a live session.                                                  |
+| `POST /api/wifi-router/vouchers/batch`   | Mints and activates a counter batch.                                            |
+| `POST /api/wifi-router/vouchers/:id/activate` | Activates one voucher; 409 when it already is.                             |
+| `POST /api/wifi-router/vouchers/:id/revoke` | Removes the hotspot user, then marks the voucher revoked.                     |
+
+Usage is a snapshot, not a live meter: there is no `expires_at` column in the database, because expiry lives in the router profile's on-login script and RouterOS does not expose a per-user expiry to read back. Uptime in the Live tab comes from the active session instead.
 
 Setup checklist:
 

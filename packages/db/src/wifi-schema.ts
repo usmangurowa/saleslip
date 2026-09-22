@@ -102,7 +102,20 @@ export const wifiVoucher = pgTable(
     }),
     code: text("code").notNull().unique(),
     profile: text("profile").notNull(),
+    /**
+     * RouterOS hotspot user `.id`. The console revokes by id rather than by
+     * name so a stale code cannot silently resolve to a different user.
+     */
     rosId: text("ros_id"),
+    /** Set when the router accepted the hotspot user. Null means not live. */
+    activatedAt: timestamp("activated_at"),
+    /**
+     * Bytes-in + bytes-out as last read from the router. Snapshotted by
+     * `/sessions/sync`, never streamed.
+     */
+    bytesUsed: bigint("bytes_used", { mode: "number" }).default(0).notNull(),
+    syncedAt: timestamp("synced_at"),
+    lastError: text("last_error"),
     limitBytesTotal: bigint("limit_bytes_total", { mode: "number" }),
     status: text("status", { enum: WIFI_VOUCHER_STATUSES })
       .default("active")

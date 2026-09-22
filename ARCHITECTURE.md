@@ -51,6 +51,23 @@ the routers in `packages/api/src/providers/` and hold no business logic
 (`.ai/patterns/external-provider-boundary.md`; none exist yet). The API app is
 created in `packages/api/src/index.ts` and exports `AppType` for typed clients.
 
+### Router-only routes
+
+Some routes are only servable by one runtime. The WiFi console needs the
+MikroTik router, and only `apps/server` has a WireGuard route to `10.8.0.0/24`,
+so those routes cannot live in `createApp` — both runtimes mount it, and adding
+them there would advertise endpoints one host cannot serve.
+
+They live in `packages/api/src/router/wifi-router.ts`
+(`createWifiRouterApp`, exporting its own `WifiRouterAppType`), which
+`apps/server/src/app.ts` mounts at `/wifi-router` only when a `HotspotService`
+exists. `apps/web` reaches them through the same-origin proxy at
+`apps/web/src/app/api/wifi-router/[...path]/route.ts`, which forwards the
+session cookie to `SERVER_URL`. This is why `AppType` deliberately excludes the
+router app and the web hooks build a client with `createWifiRouterClient`
+instead of the shared `hc<AppType>` client. Follow the same shape for any future
+route that one runtime alone can serve.
+
 ## Frontend Data Flow
 
 - Use server components by default in `apps/web/src/app` when no client

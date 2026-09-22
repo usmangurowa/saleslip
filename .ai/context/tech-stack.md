@@ -92,6 +92,7 @@ tooling/
 | Payments        | Paystack via `@turbo/paystack` (initialize/verify, HMAC-SHA512 webhook check)                                                                  |
 | Hotspot router  | MikroTik RouterOS API via `@turbo/routeros` (`node-routeros` ^1.6.9), reached over WireGuard from the server container                         |
 | WiFi domain     | `@turbo/wifi` — voucher codes, order state machine, plans, naira/data formatting, batch minting; shared by `apps/server` and `packages/api`      |
+| WiFi console    | `/dashboard/wifi` in `apps/web`, reading `/api/wifi/*`; router-backed actions live in `createWifiRouterApp` (`packages/api/src/router/wifi-router.ts`), mounted on `apps/server` only and proxied same-origin at `/api/wifi-router/*` |
 | Telegram        | grammY ^1.46 in webhook mode (`apps/server/src/wifi/telegram`)                                                                                 |
 | Background jobs | Trigger.dev                                                                                                                                    |
 | Analytics       | PostHog                                                                                                                                        |

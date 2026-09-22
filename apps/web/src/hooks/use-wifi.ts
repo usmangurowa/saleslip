@@ -2,7 +2,7 @@
 
 import type { InferResponseType } from "hono/client";
 import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 /** One hotspot order as returned by GET /api/wifi/orders */
 export type WifiOrder = InferResponseType<
@@ -30,12 +30,6 @@ export type WifiPlanOption = InferResponseType<
 
 /** Today's revenue + status breakdown from GET /api/wifi/stats */
 export type WifiStats = InferResponseType<typeof api.wifi.stats.$get, 200>;
-
-/** The minted sheet returned by POST /api/wifi/vouchers/batch */
-export type MintedBatch = InferResponseType<
-  typeof api.wifi.vouchers.batch.$post,
-  201
->;
 
 export interface WifiOrderFilters {
   status?: string[];
@@ -154,53 +148,3 @@ export const useWifiPlans = () =>
     // Profile names only change on deploy; no reason to refetch.
     staleTime: 5 * 60_000,
   });
-
-/**
- * Mint a printable batch of counter vouchers.
- *
- * The whole batch is written in one transaction, so a failure means no codes
- * were issued and it is safe to retry. Codes are recorded here but are **not**
- * pushed to RouterOS — the web runtime has no route to the hotspot, so the
- * sheet still has to be created in Mikhmon.
- */
-export const useMintVoucherBatch = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: {
-      planId: string;
-      quantity: number;
-      label: string;
-    }): Promise<MintedBatch> => {
-      const res = await api.wifi.vouchers.batch.$post({ json: input });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(body?.error ?? "Failed to generate vouchers");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: wifiKeys.all });
-    },
-  });
-};
-
-/** Revoke a voucher. Idempotent server-side, so a retry is harmless. */
-export const useRevokeVoucher = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await api.wifi.vouchers[":id"].revoke.$post({
-        param: { id },
-      });
-      if (!res.ok) throw new Error("Failed to revoke voucher");
-      return res.json();
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: wifiKeys.all });
-    },
-  });
-};

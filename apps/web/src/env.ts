@@ -29,9 +29,14 @@ export const env = createEnv({
   server: {
     POSTGRES_URL: z.url(),
     /**
+     * Origin of `apps/server`, the only runtime with a route to the hotspot.
+     * The console's `/api/wifi-router` proxy forwards here.
+     */
+    SERVER_URL: z.url().default("http://localhost:3001"),
+    /**
      * RouterOS hotspot profiles the admin console mints against. Optional so
      * the dashboard still builds without the hotspot configured; each falls
-     * back to the profile name Mikhmon creates by default.
+     * back to the default profile name on the router.
      */
     WIFI_PROFILE_DAILY_UNLIMITED: optionalStr,
     WIFI_PROFILE_DAILY_1GB: optionalStr,

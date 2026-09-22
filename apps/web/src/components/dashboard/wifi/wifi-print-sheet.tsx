@@ -1,4 +1,4 @@
-import type { MintedBatch } from "@/hooks/use-wifi";
+import type { MintedBatch } from "@/hooks/use-wifi-router";
 
 /**
  * Open the OS print dialog for a freshly minted voucher sheet.

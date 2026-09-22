@@ -22,8 +22,6 @@
 | POST | `/apikeys` | `packages/api/src/router/api-key.ts` | yes |
 | POST | `/support` | `packages/api/src/router/support.ts` | yes |
 | POST | `/tasks` | `packages/api/src/router/task.ts` | yes |
-| POST | `/wifi/vouchers/:id/revoke` | `packages/api/src/router/wifi.ts` | no |
-| POST | `/wifi/vouchers/batch` | `packages/api/src/router/wifi.ts` | no |
 
 ## Typed client source
 

@@ -159,7 +159,7 @@ export const createFulfilmentService = (
             const created = await deps.hotspot.createHotspotUser(
               toHotspotUserInput(plan, {
                 code: voucher.code,
-                orderId: order.id,
+                owner: order.id,
                 phone: order.phone,
                 server: deps.hotspotServer,
               }),

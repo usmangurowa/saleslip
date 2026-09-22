@@ -722,6 +722,9 @@ importers:
       '@turbo/mail':
         specifier: workspace:^
         version: link:../mail
+      '@turbo/routeros':
+        specifier: workspace:*
+        version: link:../routeros
       '@turbo/shared':
         specifier: workspace:*
         version: link:../shared

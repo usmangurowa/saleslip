@@ -173,6 +173,14 @@ Example: `packages/api/src/router/api-key.ts`
 
 Example: `packages/db/src/auth-schema.ts`
 
+## Router-Only Routes
+
+- A route that only one runtime can serve does **not** belong in `createApp`. Both `apps/web` and `apps/server` mount that app, so adding one there advertises an endpoint one host cannot answer.
+- Give it its own Hono app with its own exported type (`createWifiRouterApp` / `WifiRouterAppType` is the precedent), mount it on the capable runtime only, and reach it from the web app through a same-origin Next route handler that forwards the session cookie. That avoids CORS, a `Domain=.saleslip.app` cookie change, and a `SameSite` regression.
+- Use a **static** first path segment (`/api/wifi-router/*`, never `/api/wifi/*`) so the proxy resolves ahead of the optional catch-all at `/api/[[...route]]`.
+- The separate app does not inherit `createApp`'s middleware: re-apply `secureHeadersMiddleware()` and `contextMiddleware(auth, db)` yourself, and omit browser-only middleware (CORS, rate limiting, CSRF, timing).
+- Client code cannot use the shared `hc<AppType>` client for these routes — build one from the app's own type (`createWifiRouterClient`).
+
 ## Commit Messages
 
 - Conventional Commits format: `type(scope): description`

@@ -5,7 +5,8 @@ import * as React from "react";
 import { QueryError } from "@/components/dashboard/query-error";
 import { TableCard } from "@/components/dashboard/table-card";
 import { TablePagination } from "@/components/dashboard/table-pagination";
-import { useRevokeVoucher, useWifiVouchers } from "@/hooks/use-wifi";
+import { useWifiVouchers } from "@/hooks/use-wifi";
+import { useRevokeVoucher } from "@/hooks/use-wifi-router";
 import { Delete02Icon, Ticket01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
@@ -40,6 +41,7 @@ import {
   TableRow,
 } from "@turbo/ui/components/table";
 import { cn } from "@turbo/ui/lib/utils";
+import { formatBytes } from "@turbo/wifi/format";
 
 const PAGE_SIZE = 25;
 
@@ -79,9 +81,9 @@ const RevokeButton = ({ voucher }: { voucher: WifiVoucher }) => {
         <AlertDialogHeader>
           <AlertDialogTitle>Revoke {voucher.code}?</AlertDialogTitle>
           <AlertDialogDescription>
-            The code stops counting as active here. If it was already added to
-            Mikhmon, remove it there too — the dashboard cannot reach the
-            router, so this does not disconnect anyone.
+            {voucher.activatedAt
+              ? "The code is removed from the router, so it stops working and disconnects anyone using it."
+              : "The code is marked revoked. It was never live on the router, so nobody is disconnected."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -90,7 +92,7 @@ const RevokeButton = ({ voucher }: { voucher: WifiVoucher }) => {
             onClick={() =>
               revokeVoucher.mutate(voucher.id, {
                 onSuccess: () => toast.success(`${voucher.code} revoked`),
-                onError: () => toast.error("Could not revoke the voucher"),
+                onError: (error) => toast.error(error.message),
               })
             }
           >
@@ -129,8 +131,6 @@ export const WifiVouchersTable = ({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
-  const revokeVoucher = useRevokeVoucher();
-
   if (isError) {
     return (
       <TableCard title={title} padding="sm">
@@ -189,6 +189,7 @@ export const WifiVouchersTable = ({
             <TableHead>Profile</TableHead>
             <TableHead>Origin</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Usage</TableHead>
             <TableHead>Issued</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
@@ -197,14 +198,14 @@ export const WifiVouchersTable = ({
           {isPending ? (
             Array.from({ length: 5 }, (_, index) => (
               <TableRow key={index} className="hover:bg-transparent">
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <Skeleton className="h-6 w-full" />
                 </TableCell>
               </TableRow>
             ))
           ) : rows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={6} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center">
                 <span className="text-muted-foreground text-sm">
                   No vouchers here yet.
                 </span>
@@ -241,6 +242,19 @@ export const WifiVouchersTable = ({
                     {voucher.status === "active" ? "Active" : "Revoked"}
                   </span>
                 </TableCell>
+                <TableCell>
+                  {voucher.activatedAt ? (
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      {formatBytes(voucher.bytesUsed)}
+                    </span>
+                  ) : voucher.lastError ? (
+                    <Badge variant="destructive" className="font-normal">
+                      Not live
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
                   {formatWhen(voucher.createdAt)}
                 </TableCell>
@@ -248,12 +262,8 @@ export const WifiVouchersTable = ({
                   {voucher.status === "active" ? (
                     <RevokeButton voucher={voucher} />
                   ) : (
-                    <span
-                      className="text-muted-foreground text-xs"
-                      aria-live="polite"
-                    >
-                      {revokeVoucher.isPending ? "Revoking…" : ""}
-                    </span>
+                    // Revoked rows are terminal, so there is nothing to act on.
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
               </TableRow>

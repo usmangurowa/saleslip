@@ -1,9 +1,10 @@
 "use client";
 
-import type { MintedBatch } from "@/hooks/use-wifi";
+import type { MintedBatch } from "@/hooks/use-wifi-router";
 import * as React from "react";
 import { printVoucherSheet } from "@/components/dashboard/wifi/wifi-print-sheet";
-import { useMintVoucherBatch, useWifiPlans } from "@/hooks/use-wifi";
+import { useWifiPlans } from "@/hooks/use-wifi";
+import { useMintVoucherBatch } from "@/hooks/use-wifi-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Copy01Icon,
@@ -70,7 +71,8 @@ const todayLabel = () =>
  *
  * Two states: the form, then the minted sheet. The sheet is held in local state
  * rather than refetched because it is an artifact — once printed and handed
- * over, the codes are in the customer's hands, not ours.
+ * over, the codes are in the customer's hands, not ours. Generating a sheet is
+ * also what activates it: the codes come back already live on the hotspot.
  */
 export const WifiBatchDialog = () => {
   const [open, setOpen] = React.useState(false);
@@ -132,18 +134,18 @@ export const WifiBatchDialog = () => {
           </DialogTitle>
           <DialogDescription>
             {minted
-              ? `${minted.vouchers.length} codes for ${planName(minted.batch.planId)}. Print the sheet, or copy the codes into Mikhmon.`
-              : "Mints counter-sale codes for cash customers. The batch is all-or-nothing, so a failure issues nothing."}
+              ? `${minted.vouchers.length} live codes for ${planName(minted.batch.planId)}. Print the sheet, or copy the codes out.`
+              : "Mints counter-sale codes for cash customers. Each code goes live on the hotspot as it is created, so a failure issues nothing."}
           </DialogDescription>
         </DialogHeader>
 
         {minted ? (
           <div className="flex flex-col gap-4">
             <Alert>
-              <AlertTitle>These codes are not on the hotspot yet</AlertTitle>
+              <AlertTitle>These codes are already live</AlertTitle>
               <AlertDescription>
-                They are recorded here for revenue tracking. Add them to Mikhmon
-                to grant access — the dashboard cannot reach the router.
+                Every one signs a customer in on the hotspot now, and their
+                usage shows up under Live while they are connected.
               </AlertDescription>
             </Alert>
             <div className="max-h-80 overflow-y-auto rounded-lg border border-dashed p-3">
@@ -192,7 +194,8 @@ export const WifiBatchDialog = () => {
                   {...register("quantity")}
                 />
                 <FieldDescription>
-                  One to {MAX_QUANTITY}. Each code is unique and single-use.
+                  One to {MAX_QUANTITY}. Each code is unique, single-use, and
+                  active on the hotspot the moment it is generated.
                 </FieldDescription>
                 <FieldError errors={[errors.quantity]} />
               </Field>
@@ -217,7 +220,7 @@ export const WifiBatchDialog = () => {
               </Button>
               <Button type="submit" size="sm" disabled={mintBatch.isPending}>
                 {mintBatch.isPending ? <Spinner /> : null}
-                {mintBatch.isPending ? "Minting…" : "Generate"}
+                {mintBatch.isPending ? "Minting…" : "Generate & activate"}
               </Button>
             </DialogFooter>
           </form>
