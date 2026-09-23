@@ -1,7 +1,8 @@
 import type { HotspotService } from "@turbo/routeros";
-import type { WifiPlan } from "@turbo/wifi";
+import type { WifiPlan, WifiVoucherKind } from "@turbo/wifi";
 import { isRouterOsUnavailable, RouterOsCommandError } from "@turbo/routeros";
 import {
+  bonusPlan,
   findPlan,
   generateUniqueVoucherCode,
   toHotspotUserInput,
@@ -44,6 +45,12 @@ export type FulfilmentResult =
 export interface FulfilmentDeps {
   repo: OrderRepository;
   plans: readonly WifiPlan[];
+  /**
+   * Non-purchasable plan minted as a bonus voucher with every purchase so
+   * the customer can get back online and repurchase when data runs out.
+   * Overridable for tests; defaults to `bonusPlan`.
+   */
+  bonusPlan?: WifiPlan;
   /** `undefined` when the router is not configured (`ROUTER_DISABLED`). */
   hotspot: HotspotService | undefined;
   hotspotServer?: string;
@@ -73,6 +80,7 @@ export const createFulfilmentService = (
   deps: FulfilmentDeps,
 ): FulfilmentService => {
   const now = deps.now ?? (() => new Date());
+  const bonus = deps.bonusPlan ?? bonusPlan;
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
   const inFlight = new Set<string>();
 
@@ -92,17 +100,52 @@ export const createFulfilmentService = (
   const ensureVoucher = async (
     order: WifiOrderRecord,
     plan: WifiPlan,
+    kind: WifiVoucherKind,
   ): Promise<WifiVoucherRecord> => {
-    const existing = await deps.repo.getVoucherForOrder(order.id);
+    const existing =
+      kind === "bonus"
+        ? await deps.repo.getBonusVoucherForOrder(order.id)
+        : await deps.repo.getVoucherForOrder(order.id);
     if (existing) return existing;
     const code = await generateUniqueVoucherCode(deps.repo.voucherCodeExists);
     return deps.repo.createVoucher({
       orderId: order.id,
       code,
       profile: plan.rosProfile,
+      kind,
       channel: order.channel,
       limitBytesTotal: plan.dataLimitBytes,
     });
+  };
+
+  /**
+   * Idempotently ensure the RouterOS hotspot user exists for a voucher and
+   * record its rosId. A previous attempt may have created the user before
+   * we lost the reply, so look it up before adding.
+   */
+  const ensureHotspotUser = async (
+    hotspot: HotspotService,
+    voucher: WifiVoucherRecord,
+    plan: WifiPlan,
+    order: WifiOrderRecord,
+    owner: string,
+  ): Promise<string | undefined> => {
+    if (voucher.rosId) return voucher.rosId;
+    const existing = await hotspot.findUser(voucher.code);
+    if (existing) {
+      await deps.repo.setVoucherRosId(voucher.id, existing.id);
+      return existing.id;
+    }
+    const created = await hotspot.createHotspotUser(
+      toHotspotUserInput(plan, {
+        code: voucher.code,
+        owner,
+        phone: order.phone,
+        server: deps.hotspotServer,
+      }),
+    );
+    if (created.id) await deps.repo.setVoucherRosId(voucher.id, created.id);
+    return created.id;
   };
 
   const fulfil: FulfilmentService["fulfil"] = async (orderId) => {
@@ -137,7 +180,8 @@ export const createFulfilmentService = (
         return { outcome: "failed", order: failed, reason: "unknown plan" };
       }
 
-      const voucher = await ensureVoucher(order, plan);
+      const voucher = await ensureVoucher(order, plan, "primary");
+      const bonusVoucher = await ensureVoucher(order, bonus, "bonus");
 
       if (!deps.hotspot) {
         const pending = await deps.repo.transition(order.id, "pending_router", {
@@ -148,26 +192,20 @@ export const createFulfilmentService = (
       }
 
       try {
-        let rosId = voucher.rosId;
-        if (!rosId) {
-          // A previous attempt may have created the user before we lost the
-          // reply, so look it up before adding.
-          const existing = await deps.hotspot.findUser(voucher.code);
-          if (existing) {
-            rosId = existing.id;
-          } else {
-            const created = await deps.hotspot.createHotspotUser(
-              toHotspotUserInput(plan, {
-                code: voucher.code,
-                owner: order.id,
-                phone: order.phone,
-                server: deps.hotspotServer,
-              }),
-            );
-            rosId = created.id;
-          }
-          if (rosId) await deps.repo.setVoucherRosId(voucher.id, rosId);
-        }
+        const rosId = await ensureHotspotUser(
+          deps.hotspot,
+          voucher,
+          plan,
+          order,
+          order.id,
+        );
+        await ensureHotspotUser(
+          deps.hotspot,
+          bonusVoucher,
+          bonus,
+          order,
+          `bonus:${order.id}`,
+        );
 
         const fulfilled = await deps.repo.transition(order.id, "fulfilled", {
           fulfilledAt: now(),
@@ -175,7 +213,7 @@ export const createFulfilmentService = (
           incrementAttempts: true,
         });
         log.info("order fulfilled", { code: voucher.code, rosId });
-        const finalVoucher = { ...voucher, rosId };
+        const finalVoucher = { ...voucher, rosId: rosId ?? null };
         try {
           await deps.onFulfilled?.(fulfilled, finalVoucher);
         } catch (error) {

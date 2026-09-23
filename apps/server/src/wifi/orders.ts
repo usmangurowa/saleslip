@@ -5,6 +5,7 @@ import type {
   WifiOrderChannel,
   WifiOrderStatus,
   WifiVoucherChannel,
+  WifiVoucherKind,
   WifiVoucherStatus,
 } from "@turbo/db/schema";
 import { wifiOrder, wifiVoucher } from "@turbo/db/schema";
@@ -39,6 +40,7 @@ export interface WifiVoucherRecord {
   batchId: string | null;
   code: string;
   profile: string;
+  kind: WifiVoucherKind;
   channel: WifiVoucherChannel;
   rosId: string | null;
   limitBytesTotal: number | null;
@@ -62,6 +64,7 @@ export interface CreateVoucherInput {
   orderId: string;
   code: string;
   profile: string;
+  kind?: WifiVoucherKind;
   channel: WifiVoucherChannel;
   limitBytesTotal?: number;
 }
@@ -95,7 +98,12 @@ export interface OrderRepository {
     limit?: number,
   ) => Promise<WifiOrderRecord[]>;
   createVoucher: (input: CreateVoucherInput) => Promise<WifiVoucherRecord>;
+  /** The paid plan voucher for an order (kind = `primary`). */
   getVoucherForOrder: (
+    orderId: string,
+  ) => Promise<WifiVoucherRecord | undefined>;
+  /** The repurchase bonus voucher for an order (kind = `bonus`). */
+  getBonusVoucherForOrder: (
     orderId: string,
   ) => Promise<WifiVoucherRecord | undefined>;
   setVoucherRosId: (id: string, rosId: string) => Promise<void>;
@@ -214,6 +222,7 @@ export const createOrderRepository = (db: Db): OrderRepository => {
           orderId: input.orderId,
           code: input.code,
           profile: input.profile,
+          kind: input.kind ?? "primary",
           channel: input.channel,
           limitBytesTotal: input.limitBytesTotal,
         })
@@ -226,7 +235,23 @@ export const createOrderRepository = (db: Db): OrderRepository => {
       const [row] = await db
         .select()
         .from(wifiVoucher)
-        .where(eq(wifiVoucher.orderId, orderId))
+        .where(
+          and(
+            eq(wifiVoucher.orderId, orderId),
+            eq(wifiVoucher.kind, "primary"),
+          ),
+        )
+        .limit(1);
+      return row;
+    },
+
+    getBonusVoucherForOrder: async (orderId) => {
+      const [row] = await db
+        .select()
+        .from(wifiVoucher)
+        .where(
+          and(eq(wifiVoucher.orderId, orderId), eq(wifiVoucher.kind, "bonus")),
+        )
         .limit(1);
       return row;
     },

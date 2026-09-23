@@ -54,7 +54,9 @@ describe("phone normalisation", () => {
   });
 
   it("derives a stable fallback email", () => {
-    expect(fallbackEmail("+2348012345678")).toBe("2348012345678@buyers.saleslip.app");
+    expect(fallbackEmail("+2348012345678")).toBe(
+      "2348012345678@buyers.saleslip.app",
+    );
   });
 });
 
@@ -255,6 +257,43 @@ describe("shop routes", () => {
     });
     expect(body.qrSvg).toContain("<svg");
   });
+
+  it("includes the bonus code in JSON and the receipt HTML once fulfilled", async () => {
+    const fake = createFakeHotspot();
+    const t = createTestDeps({
+      hotspot: fake.hotspot,
+      paystack: fakePaystack(),
+    });
+    const app = createWifiApp(t.deps);
+    const order = await t.repo.createOrder({
+      channel: "web",
+      planId: "day-1",
+      phone: "+2348012345678",
+      amountKobo: 100_000,
+    });
+
+    const pending = await app.request(`/orders/${order.id}`, {
+      headers: { accept: "application/json" },
+    });
+    expect(await pending.json()).toMatchObject({ bonusVoucherCode: null });
+
+    await t.fulfilment.handlePayment(order.id, "success");
+    const bonus = await t.repo.getBonusVoucherForOrder(order.id);
+    if (!bonus) throw new Error("bonus voucher missing");
+
+    const done = await app.request(`/orders/${order.id}`, {
+      headers: { accept: "application/json" },
+    });
+    expect(await done.json()).toMatchObject({
+      bonusVoucherCode: bonus.code,
+    });
+
+    const html = await (await app.request(`/orders/${order.id}`)).text();
+    expect(html).toContain("Bonus code");
+    expect(html).toContain(bonus.code);
+    expect(html).toContain("data-copy");
+    expect(html).toContain("5 free minutes");
+  });
 });
 
 describe("paystack webhook", () => {
@@ -311,7 +350,8 @@ describe("paystack webhook", () => {
 
     const second = await app.request(post(body, sign(body)));
     expect(await second.text()).toBe("already_fulfilled");
-    expect(fake.users.size).toBe(1);
+    // Primary + bonus hotspot users, one pair per order.
+    expect(fake.users.size).toBe(2);
   });
 
   it("acknowledges other events and unknown references with 200", async () => {

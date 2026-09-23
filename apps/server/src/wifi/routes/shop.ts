@@ -179,6 +179,10 @@ export const createShopRoutes = (deps: WifiDeps) => {
         order.status === "fulfilled"
           ? await repo.getVoucherForOrder(order.id)
           : undefined;
+      const bonusVoucher =
+        order.status === "fulfilled"
+          ? await repo.getBonusVoucherForOrder(order.id)
+          : undefined;
       const qrSvg = voucher
         ? await QRCode.toString(voucher.code, {
             type: "svg",
@@ -209,6 +213,7 @@ export const createShopRoutes = (deps: WifiDeps) => {
             : null,
           amountKobo: order.amountKobo,
           voucherCode: voucher?.code ?? null,
+          bonusVoucherCode: bonusVoucher?.code ?? null,
           qrSvg: qrSvg ?? null,
           loginUrl: order.loginUrl,
           supportPhone: config.supportPhone ?? null,
@@ -222,6 +227,7 @@ export const createShopRoutes = (deps: WifiDeps) => {
           order,
           plan: findPlan(plans, order.planId),
           voucher,
+          bonusVoucher,
           qrSvg,
           timeZone: config.timeZone,
         }),

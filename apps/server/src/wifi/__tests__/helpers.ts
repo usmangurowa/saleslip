@@ -90,6 +90,7 @@ export const createMemoryRepo = (now: () => Date = () => new Date()) => {
         code: input.code,
         profile: input.profile,
         channel: input.channel,
+        kind: input.kind ?? "primary",
         rosId: null,
         limitBytesTotal: input.limitBytesTotal ?? null,
         status: "active",
@@ -100,7 +101,15 @@ export const createMemoryRepo = (now: () => Date = () => new Date()) => {
     },
     getVoucherForOrder: (orderId) =>
       Promise.resolve(
-        [...vouchers.values()].find((v) => v.orderId === orderId),
+        [...vouchers.values()].find(
+          (v) => v.orderId === orderId && v.kind === "primary",
+        ),
+      ),
+    getBonusVoucherForOrder: (orderId) =>
+      Promise.resolve(
+        [...vouchers.values()].find(
+          (v) => v.orderId === orderId && v.kind === "bonus",
+        ),
       ),
     setVoucherRosId: (id, rosId) => {
       const v = vouchers.get(id);

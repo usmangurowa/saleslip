@@ -43,6 +43,13 @@
       "when": 1790094700203,
       "tag": "0005_wifi_voucher_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790180928632,
+      "tag": "0006_wifi_voucher_kind",
+      "breakpoints": true
     }
   ]
 }

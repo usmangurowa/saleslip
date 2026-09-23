@@ -31,6 +31,14 @@ export type WifiVoucherStatus = (typeof WIFI_VOUCHER_STATUSES)[number];
 export const WIFI_VOUCHER_CHANNELS = ["web", "telegram", "manual"] as const;
 export type WifiVoucherChannel = (typeof WIFI_VOUCHER_CHANNELS)[number];
 
+/**
+ * Whether a voucher is the paid plan the customer bought (`primary`) or the
+ * single-use ~5-minute bonus (`bonus`) minted alongside it so they can get
+ * back online and repurchase when their data runs out.
+ */
+export const WIFI_VOUCHER_KINDS = ["primary", "bonus"] as const;
+export type WifiVoucherKind = (typeof WIFI_VOUCHER_KINDS)[number];
+
 export const wifiOrder = pgTable(
   "wifi_order",
   {
@@ -102,6 +110,10 @@ export const wifiVoucher = pgTable(
     }),
     code: text("code").notNull().unique(),
     profile: text("profile").notNull(),
+    /** Paid plan voucher vs the repurchase bonus — see `WIFI_VOUCHER_KINDS`. */
+    kind: text("kind", { enum: WIFI_VOUCHER_KINDS })
+      .default("primary")
+      .notNull(),
     /**
      * RouterOS hotspot user `.id`. The console revokes by id rather than by
      * name so a stale code cannot silently resolve to a different user.
