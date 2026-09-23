@@ -30,7 +30,7 @@ export const createMemoryRepo = (now: () => Date = () => new Date()) => {
         id,
         channel: input.channel,
         planId: input.planId,
-        phone: input.phone,
+        phone: input.phone ?? null,
         email: input.email ?? null,
         telegramId: input.telegramId ?? null,
         mac: input.mac ?? null,

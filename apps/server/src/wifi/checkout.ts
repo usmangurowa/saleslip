@@ -6,9 +6,16 @@ import type { CreateOrderInput, WifiOrderRecord } from "./orders";
 
 export const PAYSTACK_CHANNELS = ["bank_transfer", "ussd", "card"] as const;
 
-/** Paystack requires an email; hotspot buyers usually only have a phone. */
-export const fallbackEmail = (phone: string) =>
-  `${phone.replace(/\D/g, "")}@buyers.saleslip.app`;
+/** Paystack requires an email; hotspot buyers often leave both fields empty. */
+export const fallbackEmail = (identifier: string) =>
+  `${identifier.replace(/\D/g, "") || identifier}@buyers.saleslip.app`;
+
+/** Paystack email chain: buyer email → phone-derived → order id. */
+export const paystackEmail = (order: WifiOrderRecord) =>
+  order.email ??
+  (order.phone
+    ? fallbackEmail(order.phone)
+    : `${order.id}@buyers.saleslip.app`);
 
 export type CheckoutResult =
   | {
@@ -49,7 +56,7 @@ export const startCheckout = async (
 
   const init = await deps.paystack.initializeTransaction({
     amount: order.amountKobo,
-    email: order.email ?? fallbackEmail(order.phone),
+    email: paystackEmail(order),
     reference: order.paystackReference,
     callbackUrl: `${config.publicBaseUrl}/orders/${order.id}`,
     channels: [...PAYSTACK_CHANNELS],

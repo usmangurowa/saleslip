@@ -17,9 +17,10 @@ export const instant = false;
 export default async function BuyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string }>;
+  searchParams: Promise<{ plan?: string; planId?: string }>;
 }) {
-  const { plan: planId } = await searchParams;
+  const params = await searchParams;
+  const planId = params.planId ?? params.plan;
   const plan = planId ? findPlan(buildPlans(), planId) : undefined;
 
   return (

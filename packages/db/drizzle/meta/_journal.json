@@ -50,6 +50,13 @@
       "when": 1790180928632,
       "tag": "0006_wifi_voucher_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790183833147,
+      "tag": "0007_wifi_order_phone_optional",
+      "breakpoints": true
     }
   ]
 }

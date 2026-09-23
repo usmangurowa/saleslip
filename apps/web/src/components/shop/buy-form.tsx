@@ -93,24 +93,6 @@ export const BuyForm = ({ plan }: BuyFormProps) => {
             <FieldGroup>
               <input type="hidden" {...register("planId")} />
 
-              <Field data-invalid={!!errors.phone}>
-                <FieldLabel htmlFor="phone">Phone number</FieldLabel>
-                <Input
-                  id="phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel-national"
-                  placeholder="0803 123 4567"
-                  className="h-11"
-                  aria-invalid={!!errors.phone}
-                  {...register("phone")}
-                />
-                <FieldDescription>
-                  We'll send your voucher here as a backup.
-                </FieldDescription>
-                <FieldError>{errors.phone?.message}</FieldError>
-              </Field>
-
               <Field data-invalid={!!errors.email}>
                 <FieldLabel htmlFor="email">
                   Email{" "}
@@ -123,12 +105,35 @@ export const BuyForm = ({ plan }: BuyFormProps) => {
                   type="email"
                   inputMode="email"
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder="you@example.com — we'll send your voucher code here"
                   className="h-11"
                   aria-invalid={!!errors.email}
                   {...register("email")}
                 />
+                <FieldDescription>
+                  We'll send your voucher code here.
+                </FieldDescription>
                 <FieldError>{errors.email?.message}</FieldError>
+              </Field>
+
+              <Field data-invalid={!!errors.phone}>
+                <FieldLabel htmlFor="phone">
+                  Phone number{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  placeholder="0803 123 4567"
+                  className="h-11"
+                  aria-invalid={!!errors.phone}
+                  {...register("phone")}
+                />
+                <FieldError>{errors.phone?.message}</FieldError>
               </Field>
 
               <Field>

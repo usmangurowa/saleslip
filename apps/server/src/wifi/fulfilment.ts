@@ -140,7 +140,7 @@ export const createFulfilmentService = (
       toHotspotUserInput(plan, {
         code: voucher.code,
         owner,
-        phone: order.phone,
+        phone: order.phone ?? undefined,
         server: deps.hotspotServer,
       }),
     );

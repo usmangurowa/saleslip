@@ -6,6 +6,8 @@ import { formatData, formatNaira } from "@turbo/wifi";
 import { layout } from "./layout";
 
 export interface PortalParams {
+  /** Router-supplied plan to preselect (e.g. `?planId=day-1`). */
+  planId?: string;
   mac?: string;
   ip?: string;
   login?: string;
@@ -24,8 +26,17 @@ export interface BuyPageProps {
 const hidden = (name: string, value: string | undefined) =>
   value ? html`<input type="hidden" name="${name}" value="${value}" />` : "";
 
-export const buyPage = (props: BuyPageProps) =>
-  layout(
+/** Preselect priority: re-filled form value → portal `?planId=` → first plan. */
+const selectedPlanId = (props: BuyPageProps) => {
+  const fromPortal = props.plans.some((plan) => plan.id === props.portal.planId)
+    ? props.portal.planId
+    : undefined;
+  return props.values?.planId ?? fromPortal ?? props.plans[0]?.id;
+};
+
+export const buyPage = (props: BuyPageProps) => {
+  const selected = selectedPlanId(props);
+  return layout(
     { title: "Buy WiFi", brandName: props.brandName },
     html`
       <h1>Buy a WiFi voucher</h1>
@@ -39,7 +50,7 @@ export const buyPage = (props: BuyPageProps) =>
         ${hidden("login", props.portal.login)}
         <h2>1. Choose a plan</h2>
         ${props.plans.map(
-          (plan, index) => html`
+          (plan) => html`
             <label class="plan" style="margin:8px 0;font-weight:400">
               <span style="display:flex;gap:10px;align-items:flex-start">
                 <input
@@ -47,12 +58,7 @@ export const buyPage = (props: BuyPageProps) =>
                   name="planId"
                   value="${plan.id}"
                   required
-                  ${
-                    (props.values?.planId ?? props.plans[0]?.id) === plan.id ||
-                    (!props.values?.planId && index === 0)
-                      ? "checked"
-                      : ""
-                  }
+                  ${selected === plan.id ? "checked" : ""}
                   style="margin-top:5px"
                 />
                 <span>
@@ -68,7 +74,16 @@ export const buyPage = (props: BuyPageProps) =>
           `,
         )}
         <h2 style="margin-top:16px">2. Your details</h2>
-        <label for="phone">Phone number</label>
+        <label for="email">Email <span class="muted">(optional)</span></label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@example.com — we'll send your voucher code here"
+          value="${props.values?.email ?? ""}"
+        />
+        <label for="phone">Phone <span class="muted">(optional)</span></label>
         <input
           id="phone"
           name="phone"
@@ -76,19 +91,7 @@ export const buyPage = (props: BuyPageProps) =>
           inputmode="tel"
           autocomplete="tel"
           placeholder="0801 234 5678"
-          required
           value="${props.values?.phone ?? ""}"
-        />
-        <label for="email"
-          >Email <span class="muted">(optional, for receipt)</span></label
-        >
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autocomplete="email"
-          placeholder="you@example.com"
-          value="${props.values?.email ?? ""}"
         />
         <div style="height:16px"></div>
         <button class="btn" type="submit">Continue to payment</button>
@@ -103,6 +106,7 @@ export const buyPage = (props: BuyPageProps) =>
       }
     `,
   );
+};
 
 export const unavailablePage = (brandName: string, supportPhone?: string) =>
   layout(

@@ -49,7 +49,7 @@ export const wifiOrder = pgTable(
       .default("web")
       .notNull(),
     planId: text("plan_id").notNull(),
-    phone: text("phone").notNull(),
+    phone: text("phone"),
     email: text("email"),
     telegramId: text("telegram_id"),
     mac: text("mac"),

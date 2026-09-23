@@ -17,6 +17,7 @@ import {
   createTelegramNotifier,
   telegramWebhookPath,
 } from "./telegram/bot";
+import { sendVoucherEmail } from "./voucher-email";
 
 type WifiEnv = typeof ServerEnv;
 
@@ -99,26 +100,67 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
       hotspot,
       logger: logger.child({ component: "fulfilment" }),
       onFulfilled: async (order, voucher) => {
+        const bonus = await repo
+          .getBonusVoucherForOrder(order.id)
+          .catch(() => null);
+
+        // Each delivery channel gets its own try/catch so a failure in one
+        // never skips the other.
         if (order.channel === "telegram" && order.telegramId && deps.telegram) {
-          const bonus = await repo.getBonusVoucherForOrder(order.id);
-          await deps.telegram.sendMessage(
-            order.telegramId,
-            [
-              `✅ Payment received. Your WiFi code:`,
-              ``,
-              voucher.code,
-              ``,
-              `Join the ${env.BRAND_NAME} WiFi, open the login page and enter the code as both username and password.`,
-              ...(bonus
-                ? [
-                    ``,
-                    `Bonus code for 5 free minutes when your data finishes:`,
-                    ``,
-                    bonus.code,
-                  ]
-                : []),
-            ].join("\n"),
-          );
+          try {
+            await deps.telegram.sendMessage(
+              order.telegramId,
+              [
+                `✅ Payment received. Your WiFi code:`,
+                ``,
+                voucher.code,
+                ``,
+                `Join the ${env.BRAND_NAME} WiFi, open the login page and enter the code as both username and password.`,
+                ...(bonus
+                  ? [
+                      ``,
+                      `Bonus code for 5 free minutes when your data finishes:`,
+                      ``,
+                      bonus.code,
+                    ]
+                  : []),
+              ].join("\n"),
+            );
+          } catch (error) {
+            logger.error("telegram voucher delivery failed", {
+              orderId: order.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        if (order.email) {
+          try {
+            const result = await sendVoucherEmail({
+              to: order.email,
+              order,
+              voucher,
+              bonusVoucher: bonus,
+              plans,
+              supportPhone: env.SUPPORT_PHONE,
+            });
+            if (result.success) {
+              logger.info("voucher email sent", {
+                orderId: order.id,
+                emailId: result.id,
+              });
+            } else {
+              logger.error("voucher email failed", {
+                orderId: order.id,
+                error: result.error?.message,
+              });
+            }
+          } catch (error) {
+            logger.error("voucher email delivery failed", {
+              orderId: order.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
         }
       },
     }),
