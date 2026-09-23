@@ -81,8 +81,8 @@ export const VoucherForm = ({
               Connect
             </Button>
             <FieldDescription className="text-center">
-              One voucher per device. Ask reception if you don&rsquo;t have a
-              code.
+              Ask reception if you don&rsquo;t have a code. Duo vouchers work
+              on two devices.
             </FieldDescription>
           </Field>
         </FieldGroup>
