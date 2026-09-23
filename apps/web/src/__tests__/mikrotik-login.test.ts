@@ -73,5 +73,23 @@ describe("mikrotik login.html", () => {
     expect(inline).not.toContain("=>");
     expect(inline).not.toContain("const ");
     expect(inline).not.toContain("let ");
+    // textContent is missing in IE8 — use innerHTML for the static
+    // client-side error message instead.
+    expect(inline).not.toContain(".textContent");
+  });
+
+  it("has no trailing commas — they are ES2017 syntax and break pre-2017 parsers", () => {
+    // A trailing comma in a FUNCTION CALL (f(a, b,)) makes IE8-era
+    // browsers throw a SyntaxError at parse time: doLogin never gets
+    // defined, the form submits natively with an empty password, and
+    // every login fails with "invalid username or password". Prettier
+    // adds these when it wraps a call across lines — this guard keeps
+    // them out of the deployable artifact.
+    const scriptBlocks = html.match(/<script>[\s\S]*?<\/script>/g) ?? [];
+    for (const block of scriptBlocks) {
+      expect(block).not.toMatch(/,\s*\)/);
+      expect(block).not.toMatch(/,\s*\]/);
+      expect(block).not.toMatch(/,\s*\}/);
+    }
   });
 });

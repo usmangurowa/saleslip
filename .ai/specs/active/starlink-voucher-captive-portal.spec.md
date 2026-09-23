@@ -50,10 +50,20 @@ router. The web app additionally hosts a React design-reference page at
       `http-pap` accepts the JS-less native fallback POST.
 - [x] ES3-safe script (2025): no ES5+ syntax — no `.trim()` (regex replace
       instead), no `hidden` attribute/property (`style="display: none"` +
-      `err.style.display` instead), no arrow functions, `const`, or `let`.
-      Old Windows captive-portal browsers (IE8-era) can run `doLogin()`
+      `err.style.display` instead), no arrow functions, `const`, or `let`,
+      no `.textContent` (innerHTML for the static error string). Old
+      Windows captive-portal browsers (IE8-era) can run `doLogin()`
       fully. Pinned by the "is ES3-safe for old captive-portal browsers"
       test.
+- [x] No trailing commas anywhere in the inline scripts (2026-09-23
+      incident): a trailing comma in a FUNCTION CALL is ES2017 syntax —
+      Prettier introduced one when it wrapped `replace()` across lines,
+      which made IE8-era browsers throw a SyntaxError at PARSE time.
+      `doLogin` never got defined, the form submitted natively with an
+      empty password, and every login failed with "invalid username or
+      password" while modern browsers kept working. Pinned by the
+      "has no trailing commas" test. Never let formatters reflow this
+      file's inline script into multi-line calls.
 - [x] `$(error)` renders as destructive error text under the input and the
       input re-focuses after a failed attempt.
 - [x] The voucher input auto-focuses on page load in both artifacts.

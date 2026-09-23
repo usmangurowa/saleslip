@@ -258,13 +258,14 @@
       function doLogin() {
         // ES3-safe: old captive-portal browsers (IE8-era) lack trim() and
         // the hidden property — regex and style.display work everywhere.
-        var voucher = document.login.username.value.replace(
-          /^\s+|\s+$/g,
-          "",
-        );
+        // No trailing commas in function calls either: those are ES2017
+        // syntax and make pre-2017 browsers fail to PARSE this script,
+        // which silently falls back to an empty-password native submit.
+        var voucher = document.login.username.value.replace(/^\s+|\s+$/g, "");
         if (!voucher) {
           var err = document.getElementById("client-error");
-          err.textContent = "Voucher code is required";
+          // innerHTML (not textContent) — IE8 has no textContent.
+          err.innerHTML = "Voucher code is required";
           err.style.display = "block";
           document.login.username.focus();
           return false;
