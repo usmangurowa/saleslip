@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { TurboLogo } from "@/components/turbo-logo";
+import { SaleslipLogo } from "@/components/saleslip-logo";
 import { useSession } from "@/hooks/use-session";
 
 import { Button } from "@turbo/ui/components/button";
@@ -14,8 +14,8 @@ export const LandingNav = () => {
     <header className="bg-background/80 sticky top-0 z-50 border-b backdrop-blur-sm">
       <div className="container flex h-14 items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <TurboLogo size="sm" className="text-primary" />
-          <span className="text-sm font-semibold">Turbo</span>
+          <SaleslipLogo size="sm" className="text-primary" />
+          <span className="text-sm font-semibold">Saleslip</span>
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -26,10 +26,10 @@ export const LandingNav = () => {
           ) : (
             <>
               <Button size="sm" variant="ghost" asChild>
-                <Link href="/login">Sign in</Link>
+                <Link href="/login">Admin login</Link>
               </Button>
               <Button size="sm" asChild>
-                <Link href="/create-account">Get started</Link>
+                <Link href="/#plans">Get online</Link>
               </Button>
             </>
           )}

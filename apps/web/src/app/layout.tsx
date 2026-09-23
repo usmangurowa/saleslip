@@ -39,21 +39,22 @@ const interDisplay = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://turbo.app"),
-  title: "Turbo - The AI-Native Codebase for Coding Agents",
+  metadataBase: new URL("https://saleslip.app"),
+  title: "Saleslip — Buy WiFi, go online in seconds",
   description:
-    "A full-stack TypeScript monorepo with versioned agent memory, task skills, and generated contracts. Next.js, Expo, Hono, Better Auth, and Drizzle - wired for humans and their coding agents.",
+    "Choose a plan, pay with your card, and get a voucher code that connects you to the internet instantly. No account needed.",
   openGraph: {
-    title: "Turbo - The AI-Native Codebase for Coding Agents",
+    title: "Saleslip — Buy WiFi, go online in seconds",
     description:
-      "A full-stack TypeScript monorepo with versioned agent memory, task skills, and generated contracts. Next.js, Expo, Hono, Better Auth, and Drizzle - wired for humans and their coding agents.",
-    url: "https://turbo.app",
-    siteName: "Turbo",
+      "Choose a plan, pay with your card, and get a voucher code that connects you to the internet instantly. No account needed.",
+    url: "https://saleslip.app",
+    siteName: "Saleslip",
   },
   twitter: {
     card: "summary_large_image",
-    site: "@turbo",
-    creator: "@turbo",
+    title: "Saleslip — Buy WiFi, go online in seconds",
+    description:
+      "Choose a plan, pay with your card, and get a voucher code that connects you to the internet instantly. No account needed.",
   },
 };
 
