@@ -27,7 +27,7 @@ const fakePaystack = (calls: unknown[] = []): PaystackClient => ({
   verifyTransaction: (reference) =>
     Promise.resolve({
       status: "ok",
-      data: { reference, status: "success", amount: 30_000 },
+      data: { reference, status: "success", amount: 100_000 },
     }),
 });
 
@@ -36,6 +36,13 @@ const form = (fields: Record<string, string>) =>
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(fields).toString(),
+  });
+
+const jsonBody = (fields: Record<string, unknown>) =>
+  new Request("http://localhost/orders", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(fields),
   });
 
 describe("phone normalisation", () => {
@@ -60,7 +67,7 @@ describe("shop routes", () => {
     );
     expect(res.status).toBe(200);
     const body = await res.text();
-    expect(body).toContain("Daily Unlimited");
+    expect(body).toContain("1 Day · 1 Device");
     expect(body).toContain('name="mac" value="AA:BB"');
     expect(body).toContain('name="login" value="http://10.5.50.1/login"');
   });
@@ -83,7 +90,7 @@ describe("shop routes", () => {
 
     const res = await app.request(
       form({
-        planId: "daily-1gb",
+        planId: "day-1",
         phone: "08012345678",
         mac: "AA:BB",
         login: "http://r/login",
@@ -101,15 +108,15 @@ describe("shop routes", () => {
     expect(calls[0]).toMatchObject({
       reference: order.id,
       email: "2348012345678@saleslip.wifi",
-      amount: 30_000,
-      metadata: { orderId: order.id, planId: "daily-1gb", mac: "AA:BB" },
+      amount: 100_000,
+      metadata: { orderId: order.id, planId: "day-1", mac: "AA:BB" },
     });
   });
 
   it("re-renders the form with an error for a bad phone", async () => {
     const t = createTestDeps({ paystack: fakePaystack() });
     const res = await createWifiApp(t.deps).request(
-      form({ planId: "daily-1gb", phone: "123" }),
+      form({ planId: "day-1", phone: "123" }),
     );
     expect(res.status).toBe(400);
     expect(await res.text()).toContain("valid Nigerian phone");
@@ -125,9 +132,9 @@ describe("shop routes", () => {
     const app = createWifiApp(t.deps);
     const order = await t.repo.createOrder({
       channel: "web",
-      planId: "daily-1gb",
+      planId: "day-1",
       phone: "+2348012345678",
-      amountKobo: 30_000,
+      amountKobo: 100_000,
       loginUrl: "http://10.5.50.1/login",
     });
 
@@ -165,6 +172,89 @@ describe("shop routes", () => {
       (await createWifiApp(t.deps).request("/orders/nope/status")).status,
     ).toBe(404);
   });
+
+  it("creates an order over JSON for the web storefront", async () => {
+    const t = createTestDeps({ paystack: fakePaystack() });
+    const app = createWifiApp(t.deps);
+
+    const res = await app.request(
+      jsonBody({ planId: "day-1", phone: "08012345678" }),
+    );
+    expect(res.status).toBe(200);
+    const order = [...t.orders.values()][0];
+    if (!order) throw new Error("order not created");
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      orderId: order.id,
+      authorizationUrl: `https://checkout.paystack.test/${order.id}`,
+    });
+    expect(order.status).toBe("pending");
+    expect(order.phone).toBe("+2348012345678");
+  });
+
+  it("returns a JSON validation error for a bad phone", async () => {
+    const t = createTestDeps({ paystack: fakePaystack() });
+    const res = await createWifiApp(t.deps).request(
+      jsonBody({ planId: "day-1", phone: "123" }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      ok: false,
+      reason: "validation",
+      message: "Enter a valid Nigerian phone number",
+    });
+    expect(t.orders.size).toBe(0);
+  });
+
+  it("returns JSON order detail including the voucher code and QR", async () => {
+    const fake = createFakeHotspot();
+    const t = createTestDeps({
+      hotspot: fake.hotspot,
+      paystack: fakePaystack(),
+    });
+    const app = createWifiApp(t.deps);
+    const order = await t.repo.createOrder({
+      channel: "web",
+      planId: "day-1",
+      phone: "+2348012345678",
+      amountKobo: 100_000,
+      loginUrl: "http://10.5.50.1/login",
+    });
+
+    const pending = await app.request(`/orders/${order.id}`, {
+      headers: { accept: "application/json" },
+    });
+    expect(pending.status).toBe(200);
+    expect(await pending.json()).toMatchObject({
+      id: order.id,
+      status: "pending",
+      plan: { id: "day-1", name: "1 Day · 1 Device" },
+      amountKobo: 100_000,
+      voucherCode: null,
+      qrSvg: null,
+      loginUrl: "http://10.5.50.1/login",
+      supportPhone: "+2348000000000",
+    });
+
+    await t.fulfilment.handlePayment(order.id, "success");
+    const voucher = await t.repo.getVoucherForOrder(order.id);
+    if (!voucher) throw new Error("voucher missing");
+    const done = await app.request(`/orders/${order.id}`, {
+      headers: { accept: "application/json" },
+    });
+    const body = (await done.json()) as {
+      id: string;
+      status: string;
+      voucherCode: string | null;
+      qrSvg: string | null;
+    };
+    expect(body).toMatchObject({
+      id: order.id,
+      status: "fulfilled",
+      voucherCode: voucher.code,
+    });
+    expect(body.qrSvg).toContain("<svg");
+  });
 });
 
 describe("paystack webhook", () => {
@@ -184,9 +274,9 @@ describe("paystack webhook", () => {
     const app = createWifiApp(t.deps);
     const order = await t.repo.createOrder({
       channel: "web",
-      planId: "daily-1gb",
+      planId: "day-1",
       phone: "+2348012345678",
-      amountKobo: 30_000,
+      amountKobo: 100_000,
     });
     const body = JSON.stringify({
       event: "charge.success",
@@ -205,13 +295,13 @@ describe("paystack webhook", () => {
     const app = createWifiApp(t.deps);
     const order = await t.repo.createOrder({
       channel: "web",
-      planId: "daily-1gb",
+      planId: "day-1",
       phone: "+2348012345678",
-      amountKobo: 30_000,
+      amountKobo: 100_000,
     });
     const body = JSON.stringify({
       event: "charge.success",
-      data: { reference: order.id, status: "success", amount: 30_000 },
+      data: { reference: order.id, status: "success", amount: 100_000 },
     });
 
     const first = await app.request(post(body, sign(body)));
@@ -252,9 +342,9 @@ describe("paystack webhook", () => {
     const app = createWifiApp(t.deps);
     const order = await t.repo.createOrder({
       channel: "web",
-      planId: "daily-1gb",
+      planId: "day-1",
       phone: "+2348012345678",
-      amountKobo: 30_000,
+      amountKobo: 100_000,
     });
     const res = await app.request(`/webhooks/paystack/verify/${order.id}`);
     expect(res.status).toBe(200);

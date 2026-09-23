@@ -14,41 +14,64 @@ export interface WifiPlan {
 }
 
 export interface PlanProfileOverrides {
-  dailyUnlimited?: string;
-  daily1gb?: string;
-  weekly5gb?: string;
+  day1?: string;
+  day2?: string;
+  week1?: string;
+  week2?: string;
+  month1?: string;
+  month2?: string;
 }
-
-const GB = 1024 ** 3;
 
 export const buildPlans = (
   overrides: PlanProfileOverrides = {},
 ): readonly WifiPlan[] => [
   {
-    id: "daily-unlimited",
-    name: "Daily Unlimited",
+    id: "day-1",
+    name: "1 Day · 1 Device",
     description: "Unlimited data for 24 hours on one device.",
-    priceKobo: 50_000,
-    rosProfile: overrides.dailyUnlimited ?? "Daily-Unlimited",
+    priceKobo: 100_000,
+    rosProfile: overrides.day1 ?? "Saleslip-1d-1",
     validityLabel: "24 hours",
   },
   {
-    id: "daily-1gb",
-    name: "Daily 1GB",
-    description: "1GB of data, valid for 24 hours.",
-    priceKobo: 30_000,
-    rosProfile: overrides.daily1gb ?? "Daily-1GB",
-    dataLimitBytes: 1 * GB,
-    validityLabel: "24 hours",
-  },
-  {
-    id: "weekly-5gb",
-    name: "Weekly 5GB",
-    description: "5GB of data, valid for 7 days.",
+    id: "day-2",
+    name: "1 Day · 2 Devices",
+    description: "Unlimited data for 24 hours on up to two devices.",
     priceKobo: 150_000,
-    rosProfile: overrides.weekly5gb ?? "Weekly-5GB",
-    dataLimitBytes: 5 * GB,
+    rosProfile: overrides.day2 ?? "Saleslip-1d-2",
+    validityLabel: "24 hours",
+  },
+  {
+    id: "week-1",
+    name: "1 Week · 1 Device",
+    description: "Unlimited data for 7 days on one device.",
+    priceKobo: 300_000,
+    rosProfile: overrides.week1 ?? "Saleslip-7d-1",
     validityLabel: "7 days",
+  },
+  {
+    id: "week-2",
+    name: "1 Week · 2 Devices",
+    description: "Unlimited data for 7 days on up to two devices.",
+    priceKobo: 400_000,
+    rosProfile: overrides.week2 ?? "Saleslip-7d-2",
+    validityLabel: "7 days",
+  },
+  {
+    id: "month-1",
+    name: "1 Month · 1 Device",
+    description: "Unlimited data for 30 days on one device.",
+    priceKobo: 600_000,
+    rosProfile: overrides.month1 ?? "Saleslip-30d-1",
+    validityLabel: "30 days",
+  },
+  {
+    id: "month-2",
+    name: "1 Month · 2 Devices",
+    description: "Unlimited data for 30 days on up to two devices.",
+    priceKobo: 800_000,
+    rosProfile: overrides.month2 ?? "Saleslip-30d-2",
+    validityLabel: "30 days",
   },
 ];
 

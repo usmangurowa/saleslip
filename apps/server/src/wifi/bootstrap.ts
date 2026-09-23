@@ -64,9 +64,12 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
   if (!paystack) logger.warn("paystack disabled", { reason: "not configured" });
 
   const plans = buildPlans({
-    dailyUnlimited: env.WIFI_PROFILE_DAILY_UNLIMITED,
-    daily1gb: env.WIFI_PROFILE_DAILY_1GB,
-    weekly5gb: env.WIFI_PROFILE_WEEKLY_5GB,
+    day1: env.WIFI_PROFILE_DAY_1,
+    day2: env.WIFI_PROFILE_DAY_2,
+    week1: env.WIFI_PROFILE_WEEK_1,
+    week2: env.WIFI_PROFILE_WEEK_2,
+    month1: env.WIFI_PROFILE_MONTH_1,
+    month2: env.WIFI_PROFILE_MONTH_2,
   });
 
   const repo = createOrderRepository(db);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TurboLogo } from "@/components/turbo-logo";
+import { SaleslipLogo } from "@/components/saleslip-logo";
 
 import { cn } from "@turbo/ui/lib/utils";
 
@@ -17,8 +17,8 @@ export const AuthHeader = ({ title, children, className }: AuthHeaderProps) => (
       href="/"
       className="bg-card mb-3 flex size-12 items-center justify-center rounded-2xl border shadow-xs"
     >
-      <TurboLogo size="sm" className="text-primary" />
-      <span className="sr-only">Turbo</span>
+      <SaleslipLogo size="sm" className="text-primary" />
+      <span className="sr-only">Saleslip</span>
     </Link>
     <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
     {children ? (

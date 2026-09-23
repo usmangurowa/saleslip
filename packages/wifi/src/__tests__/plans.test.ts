@@ -10,29 +10,38 @@ import {
 } from "../plans";
 
 describe("buildPlans", () => {
-  it("seeds the three Saleslip plans with default profiles", () => {
+  it("seeds the six Saleslip plans with default profiles", () => {
     const plans = buildPlans({});
     expect(plans.map((p) => [p.id, p.priceKobo, p.rosProfile])).toEqual([
-      ["daily-unlimited", 50_000, "Daily-Unlimited"],
-      ["daily-1gb", 30_000, "Daily-1GB"],
-      ["weekly-5gb", 150_000, "Weekly-5GB"],
+      ["day-1", 100_000, "Saleslip-1d-1"],
+      ["day-2", 150_000, "Saleslip-1d-2"],
+      ["week-1", 300_000, "Saleslip-7d-1"],
+      ["week-2", 400_000, "Saleslip-7d-2"],
+      ["month-1", 600_000, "Saleslip-30d-1"],
+      ["month-2", 800_000, "Saleslip-30d-2"],
     ]);
   });
 
   it("lets env override the RouterOS profile names", () => {
-    const plans = buildPlans({ daily1gb: "mikhmon-1g" });
-    expect(findPlan(plans, "daily-1gb")?.rosProfile).toBe("mikhmon-1g");
-    expect(findPlan(plans, "daily-unlimited")?.rosProfile).toBe(
-      "Daily-Unlimited",
-    );
+    const plans = buildPlans({ day1: "mikhmon-1d" });
+    expect(findPlan(plans, "day-1")?.rosProfile).toBe("mikhmon-1d");
+    expect(findPlan(plans, "day-2")?.rosProfile).toBe("Saleslip-1d-2");
+  });
+
+  it("leaves every plan unlimited so the router profile governs limits", () => {
+    const plans = buildPlans({});
+    for (const plan of plans) {
+      expect(plan.dataLimitBytes).toBeUndefined();
+      expect(plan.uptimeLimit).toBeUndefined();
+    }
   });
 });
 
 describe("toHotspotUserInput", () => {
   const plans = buildPlans({});
 
-  it("maps a data plan to username=password=code with a byte limit", () => {
-    const plan = findPlan(plans, "weekly-5gb");
+  it("maps a plan to username=password=code with its profile and no byte cap", () => {
+    const plan = findPlan(plans, "week-1");
     if (!plan) throw new Error("missing plan");
     const code = "GWAB2C3";
     const input = toHotspotUserInput(plan, {
@@ -44,16 +53,16 @@ describe("toHotspotUserInput", () => {
     expect(input).toEqual({
       name: code,
       password: code,
-      profile: "Weekly-5GB",
+      profile: "Saleslip-7d-1",
       comment: `${VOUCHER_COMMENT_PREFIX}|order-1|+2348012345678`,
-      limitBytesTotal: 5 * 1024 ** 3,
+      limitBytesTotal: undefined,
       limitUptime: undefined,
       server: "hotspot1",
     });
   });
 
-  it("leaves limits off for unlimited plans so the router profile governs expiry", () => {
-    const plan = findPlan(plans, "daily-unlimited");
+  it("leaves limits off so the router profile governs expiry", () => {
+    const plan = findPlan(plans, "day-1");
     if (!plan) throw new Error("missing plan");
     const input = toHotspotUserInput(plan, {
       code: "GWZZZZZ",
@@ -66,7 +75,7 @@ describe("toHotspotUserInput", () => {
   });
 
   it("tags a counter voucher with its batch when there is no phone", () => {
-    const plan = findPlan(plans, "daily-1gb");
+    const plan = findPlan(plans, "day-1");
     if (!plan) throw new Error("missing plan");
     const input = toHotspotUserInput(plan, {
       code: "GWQQQQQ",
@@ -87,7 +96,7 @@ describe("voucherComment", () => {
 
 describe("formatters", () => {
   it("formats kobo as naira", () => {
-    expect(formatNaira(50_000)).toBe("₦500");
+    expect(formatNaira(100_000)).toBe("₦1,000");
     expect(formatNaira(150_000)).toBe("₦1,500");
   });
 

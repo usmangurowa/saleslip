@@ -13,7 +13,7 @@ import {
 } from "@turbo/wifi";
 
 import type { AppContext, AuthWithApi, Db } from "../context";
-import { authMiddleware } from "../middleware/auth";
+import { adminMiddleware } from "../middleware/auth";
 import { contextMiddleware } from "../middleware/context";
 import { secureHeadersMiddleware } from "../middleware/security";
 import {
@@ -113,7 +113,7 @@ export const createWifiRouterApp = ({
       .use("*", secureHeadersMiddleware())
       .use("*", contextMiddleware(auth, db))
       // Every route below exposes phone numbers, revenue, or router access.
-      .use("*", authMiddleware)
+      .use("*", adminMiddleware)
       .get(
         "/health",
         withRouter(async (service, c) => {

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import QRCode from "qrcode";
 import { z } from "zod";
 
+import { nigerianPhoneSchema, optionalEmailSchema } from "@turbo/validators";
 import { findPlan } from "@turbo/wifi";
 
 import type { WifiDeps } from "../deps";
@@ -10,26 +11,12 @@ import { startCheckout } from "../checkout";
 import { buyPage, unavailablePage } from "../pages/buy";
 import { receiptPage } from "../pages/receipt";
 
-/** Nigerian mobile numbers: 0XXXXXXXXXX or +234XXXXXXXXXX. */
-export const phoneSchema = z
-  .string()
-  .trim()
-  .transform((value) => value.replace(/[\s()-]/g, ""))
-  .pipe(
-    z
-      .string()
-      .regex(
-        /^(?:\+?234|0)[789][01]\d{8}$/,
-        "Enter a valid Nigerian phone number",
-      ),
-  )
-  .transform((value) =>
-    value.startsWith("0")
-      ? `+234${value.slice(1)}`
-      : value.startsWith("+")
-        ? value
-        : `+${value}`,
-  );
+/**
+ * Nigerian mobile numbers, normalized to E.164. Defined in `@turbo/validators`
+ * so the server shop and the web `/buy` form accept the same numbers; re-exported
+ * here for existing consumers and tests.
+ */
+export const phoneSchema = nigerianPhoneSchema;
 
 const optionalText = (max: number) =>
   z
@@ -48,12 +35,7 @@ const loginUrlSchema = optionalText(2048).refine(
 export const orderFormSchema = z.object({
   planId: z.string().trim().min(1, "Choose a plan"),
   phone: phoneSchema,
-  email: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => (value === "" ? undefined : value))
-    .pipe(z.email("Enter a valid email").optional()),
+  email: optionalEmailSchema,
   mac: optionalText(64),
   ip: optionalText(64),
   login: loginUrlSchema,
@@ -94,21 +76,25 @@ export const createShopRoutes = (deps: WifiDeps) => {
     })
 
     .post("/orders", async (c) => {
-      const body = await c.req.parseBody();
+      const contentType = (c.req.header("content-type") ?? "").toLowerCase();
+      const wantsJson = contentType.includes("application/json");
+
+      const body = wantsJson ? await c.req.json() : await c.req.parseBody();
       const parsed = orderFormSchema.safeParse(body);
       const rawPortal = portalParamsSchema.safeParse(body);
       const portal: PortalParams = rawPortal.success ? rawPortal.data : {};
 
       if (!parsed.success) {
+        const message = firstIssue(parsed.error);
+        if (wantsJson) {
+          return c.json({ ok: false, reason: "validation", message }, 400);
+        }
         const values = {
           planId: typeof body.planId === "string" ? body.planId : undefined,
           phone: typeof body.phone === "string" ? body.phone : undefined,
           email: typeof body.email === "string" ? body.email : undefined,
         };
-        return c.html(
-          renderBuy(portal, { error: firstIssue(parsed.error), values }),
-          400,
-        );
+        return c.html(renderBuy(portal, { error: message, values }), 400);
       }
 
       const result = await startCheckout(deps, {
@@ -121,17 +107,56 @@ export const createShopRoutes = (deps: WifiDeps) => {
         loginUrl: parsed.data.login,
       });
 
-      if (result.ok) return c.redirect(result.authorizationUrl, 303);
+      if (result.ok) {
+        if (wantsJson) {
+          return c.json({
+            ok: true,
+            orderId: result.order.id,
+            authorizationUrl: result.authorizationUrl,
+          });
+        }
+        return c.redirect(result.authorizationUrl, 303);
+      }
       if (result.reason === "unknown_plan") {
+        if (wantsJson) {
+          return c.json(
+            {
+              ok: false,
+              reason: "unknown_plan",
+              message: "That plan is no longer available",
+            },
+            400,
+          );
+        }
         return c.html(
           renderBuy(portal, { error: "That plan is no longer available" }),
           400,
         );
       }
       if (result.reason === "payments_unavailable") {
+        if (wantsJson) {
+          return c.json(
+            {
+              ok: false,
+              reason: "payments_unavailable",
+              message: "Payments are temporarily unavailable",
+            },
+            503,
+          );
+        }
         return c.html(
           unavailablePage(config.brandName, config.supportPhone),
           503,
+        );
+      }
+      if (wantsJson) {
+        return c.json(
+          {
+            ok: false,
+            reason: "paystack_failed",
+            message: "We could not start the payment. Please try again.",
+          },
+          502,
         );
       }
       return c.html(
@@ -162,6 +187,35 @@ export const createShopRoutes = (deps: WifiDeps) => {
           })
         : undefined;
       c.header("Cache-Control", "no-store");
+
+      // The web app's `/receipt/[orderId]` polls this endpoint; it wants the
+      // machine-readable order (including the voucher code + QR) rather than the
+      // server-rendered HTML receipt used by the captive-portal flow.
+      const wantsJson = (c.req.header("accept") ?? "")
+        .toLowerCase()
+        .includes("application/json");
+      if (wantsJson) {
+        const plan = findPlan(plans, order.planId);
+        return c.json({
+          id: order.id,
+          status: order.status,
+          plan: plan
+            ? {
+                id: plan.id,
+                name: plan.name,
+                validityLabel: plan.validityLabel,
+                dataLimitBytes: plan.dataLimitBytes ?? null,
+              }
+            : null,
+          amountKobo: order.amountKobo,
+          voucherCode: voucher?.code ?? null,
+          qrSvg: qrSvg ?? null,
+          loginUrl: order.loginUrl,
+          supportPhone: config.supportPhone ?? null,
+          createdAt: order.createdAt.toISOString(),
+        });
+      }
+
       return c.html(
         receiptPage({
           ...page,

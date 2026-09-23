@@ -11,7 +11,7 @@ import {
   settingsNavItem,
   wifiNav,
 } from "@/components/dashboard/nav-config";
-import { TurboLogo } from "@/components/turbo-logo";
+import { SaleslipLogo } from "@/components/saleslip-logo";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 
 import { Icon } from "@turbo/ui/components/icon";
@@ -77,10 +77,10 @@ export const AppSidebar = (props: React.ComponentProps<typeof Sidebar>) => {
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
                 <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <TurboLogo size="sm" />
+                  <SaleslipLogo size="sm" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Turbo</span>
+                  <span className="truncate font-semibold">Saleslip</span>
                   <span className="text-muted-foreground truncate text-xs">
                     Workspace
                   </span>

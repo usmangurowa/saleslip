@@ -18,6 +18,7 @@ export function authEnv() {
       SUPABASE_JWT_SECRET: optionalString,
       GITHUB_CLIENT_ID: z.string().optional(),
       GITHUB_CLIENT_SECRET: z.string().optional(),
+      ADMIN_EMAILS: optionalString,
       NODE_ENV: z.enum(["development", "production", "test"]).optional(),
     },
     runtimeEnv: process.env,

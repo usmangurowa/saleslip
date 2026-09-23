@@ -5,7 +5,7 @@ import { z } from "zod";
 import { WIFI_ORDER_STATUSES, WIFI_VOUCHER_STATUSES } from "@turbo/db/schema";
 
 import type { AppContext } from "../context";
-import { authMiddleware } from "../middleware/auth";
+import { adminMiddleware } from "../middleware/auth";
 import { resolvePlans } from "../wifi/plans";
 import { createWifiConsoleRepository } from "../wifi/repository";
 
@@ -44,7 +44,7 @@ const listVouchersSchema = paginationSchema.extend({
  */
 const app = new Hono<AppContext>()
   // Every WiFi route exposes customer phone numbers and revenue figures.
-  .use("*", authMiddleware)
+  .use("*", adminMiddleware)
   .get("/plans", (c) => {
     const plans = resolvePlans();
     return c.json({

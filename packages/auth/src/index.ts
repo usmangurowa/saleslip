@@ -8,8 +8,10 @@ import { oAuthProxy } from "better-auth/plugins/oauth-proxy";
 
 import { db } from "@turbo/db/client";
 import { sendOTPEmail } from "@turbo/mail/client";
+import { resolveAllowlist } from "@turbo/shared";
 
 import { authEnv } from "../env";
+import { shouldAllowUserCreate } from "./allowlist";
 import { BASE_TRUSTED_ORIGINS, resolveTrustedOrigins } from "./trusted-origins";
 
 interface SocialProviderConfig {
@@ -44,6 +46,12 @@ interface InitAuthOptions<TExtraPlugins extends BetterAuthPlugin[] = []> {
    * Callback to send OTP emails for verification, password reset, etc.
    */
   sendOTPEmail?: (params: SendOTPEmailParams) => Promise<void>;
+  /**
+   * Optional admin email allowlist. When provided, only these emails may
+   * create an account; an empty array admits no one. Omit to leave
+   * registration open (used by the auth CLI and tests).
+   */
+  adminEmails?: readonly string[];
   extraPlugins?: TExtraPlugins;
 }
 
@@ -94,6 +102,18 @@ export const initAuth = <TExtraPlugins extends BetterAuthPlugin[] = []>(
     database: drizzleAdapter(db, {
       provider: "pg",
     }),
+    databaseHooks: {
+      user: {
+        create: {
+          // Authoritative signup gate: when an allowlist is configured, only
+          // those emails may create an account. Omitted allowlist = open.
+          before: (user) =>
+            shouldAllowUserCreate(user.email, options.adminEmails)
+              ? Promise.resolve()
+              : Promise.resolve(false),
+        },
+      },
+    },
     baseURL: options.baseUrl,
     secret: options.secret,
     session: {
@@ -185,6 +205,10 @@ export const createAppAuth = <TExtraPlugins extends BetterAuthPlugin[] = []>(
     secret: env.AUTH_SECRET ?? "development-secret-change-in-production",
     supabaseJwtSecret:
       env.SUPABASE_JWT_SECRET ?? "development-secret-change-in-production",
+    // The allowlist is authoritative for app instances: an unset ADMIN_EMAILS
+    // yields an empty list, which closes registration rather than leaving it
+    // open. initAuth (CLI/tests) omits this and stays open.
+    adminEmails: resolveAllowlist(env.ADMIN_EMAILS),
     socialProviders: {
       github:
         env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
