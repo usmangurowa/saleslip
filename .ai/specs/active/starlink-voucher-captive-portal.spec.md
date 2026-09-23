@@ -35,6 +35,19 @@ router. The web app additionally hosts a React design-reference page at
       fallback.
 - [x] On submit, the voucher value is submitted as both `username` and
       `password` (MD5-hashed for CHAP).
+- [x] Hardened form (2025): the visible voucher input **is** the form's
+      `name="username"` field (hidden `password` is filled by JS). If the
+      inline script never runs (cache/parse/timing), a native submit still
+      sends `username=<voucher>` — a visible, logged auth failure, never a
+      silent empty-credential POST.
+- [x] Substitution safety: `$(...)` placeholders appear only in HTML
+      attributes; the inline `<script>` contains none. CHAP material is
+      read from hidden inputs `#chap-id` / `#chap-challenge` in the
+      `sendin` form; `$(error)` renders only via the `$(if error)` HTML
+      block. Pinned by the "keeps substitutions out of fragile JS logic"
+      test.
+- [x] Hotspot profile `hsprof4` login-by is `cookie,http-chap,http-pap` —
+      `http-pap` accepts the JS-less native fallback POST.
 - [x] `$(error)` renders as destructive error text under the input and the
       input re-focuses after a failed attempt.
 - [x] The voucher input auto-focuses on page load in both artifacts.
@@ -127,7 +140,8 @@ portal.
   `$(link-orig)`, `$(error)`, `$(chap-id)`, and `$(chap-challenge)` must remain
   literal in the source file.
 - RouterOS `http-chap` hashes `MD5(chap-id + password + chap-challenge)` as one
-  concatenated string — `hexMD5("$(chap-id)" + voucher + "$(chap-challenge)")`.
+  concatenated string — `hexMD5(chapId + voucher + challenge)` where `chapId`
+  and `challenge` come from the hidden `#chap-id` / `#chap-challenge` inputs.
   `hexMD5` takes a single argument; passing the voucher as a second argument is
   silently ignored and produces a valid-looking but wrong hash (every login
   rejected as invalid).

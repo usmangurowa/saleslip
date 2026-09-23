@@ -184,6 +184,10 @@
       <input type="hidden" name="password" />
       <input type="hidden" name="dst" value="$(link-orig)" />
       <input type="hidden" name="popup" value="true" />
+      <!-- CHAP material lives in the DOM, not in JS string literals, so a
+           raw substituted byte can never break the inline script's parse. -->
+      <input type="hidden" id="chap-id" value="$(chap-id)" />
+      <input type="hidden" id="chap-challenge" value="$(chap-challenge)" />
     </form>
 
     <main class="panel">
@@ -223,25 +227,22 @@
       >
         <input type="hidden" name="dst" value="$(link-orig)" />
         <input type="hidden" name="popup" value="true" />
-        <input type="hidden" name="username" />
         <input type="hidden" name="password" />
 
         <label for="voucher">Voucher code</label>
         <input
           id="voucher"
           type="text"
-          name="voucher"
+          name="username"
           autocomplete="off"
           autocapitalize="none"
           spellcheck="false"
           placeholder="e.g. 8f3k2m"
         />
 
-        <div id="router-error">
-          $(if error)
-          <p class="error" role="alert">$(error)</p>
-          $(endif)
-        </div>
+        $(if error)
+        <p class="error" role="alert">$(error)</p>
+        $(endif)
 
         <p class="error" id="client-error" role="alert" hidden></p>
 
@@ -255,36 +256,34 @@
     <script src="/md5.js"></script>
     <script>
       function doLogin() {
-        var voucher = document.login.voucher.value.trim();
+        var voucher = document.login.username.value.trim();
         if (!voucher) {
           var err = document.getElementById("client-error");
           err.textContent = "Voucher code is required";
           err.hidden = false;
-          document.login.voucher.focus();
+          document.login.username.focus();
           return false;
         }
 
-        // The voucher doubles as both username and password.
-        document.login.username.value = voucher;
+        // The voucher doubles as both username and password. The visible
+        // input is already the form's username field, so even if this
+        // script never runs the router still receives the voucher as the
+        // username and logs a normal auth failure instead of a silent
+        // empty-credential POST.
         document.login.password.value = voucher;
 
-        if ("$(chap-challenge)" == "") {
+        var chapId = document.getElementById("chap-id").value;
+        var challenge = document.getElementById("chap-challenge").value;
+        if (challenge == "") {
           return true;
         }
 
         document.sendin.username.value = voucher;
         // RouterOS http-chap expects MD5(chap-id + password + chap-challenge)
         // as a single concatenated string — hexMD5 takes one argument.
-        document.sendin.password.value = hexMD5(
-          "$(chap-id)" + voucher + "$(chap-challenge)",
-        );
+        document.sendin.password.value = hexMD5(chapId + voucher + challenge);
         document.sendin.submit();
         return false;
-      }
-
-      var routerError = document.getElementById("router-error");
-      if (routerError && routerError.textContent.indexOf("$(error)") !== -1) {
-        routerError.remove();
       }
 
       document.getElementById("voucher").focus();
