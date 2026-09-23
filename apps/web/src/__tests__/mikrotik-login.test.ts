@@ -67,13 +67,17 @@ describe("mikrotik login.html", () => {
     }
   });
 
-  it("is self-contained — the only external link is the walled-garden storefront", () => {
-    // External URLs are banned except the buy button: its host must be
-    // allowed in the hotspot walled garden or the link dead-ends pre-auth.
+  it("is self-contained — every external link is the walled-garden storefront", () => {
+    // External URLs are banned except the storefront: the buy button and
+    // the six price rows (with a plan preselected). Its host must be
+    // allowed in the hotspot walled garden or the links dead-end pre-auth.
     const external = html.match(/(?:src|href)="https?:\/\/[^"]*"/g) ?? [];
-    expect(external).toEqual([
-      'href="https://api.saleslip.app/?login=$(link-login-only)&amp;mac=$(mac)&amp;ip=$(ip)"',
-    ]);
+    expect(external).toHaveLength(7);
+    for (const href of external) {
+      expect(href.startsWith('href="https://api.saleslip.app/?login=')).toBe(
+        true,
+      );
+    }
     expect(html).not.toMatch(/@import|url\(/);
     expect(html).not.toMatch(/fonts\.googleapis|cdn\./);
   });
@@ -86,21 +90,46 @@ describe("mikrotik login.html", () => {
     );
   });
 
+  it("links each price row to the storefront with that plan preselected", () => {
+    // One row per plan; the planId query param preselects the plan radio
+    // on the buy page (unknown ids fall back to the first plan there).
+    const planIds = ["day-1", "week-1", "month-1", "day-2", "week-2", "month-2"];
+    for (const planId of planIds) {
+      expect(html).toContain(
+        `href="https://api.saleslip.app/?login=$(link-login-only)&amp;mac=$(mac)&amp;ip=$(ip)&amp;planId=${planId}"`,
+      );
+    }
+  });
+
   it("offers the once-per-device trial session when the router allows it", () => {
-    // The walled garden is closed pre-login, so the buy link only works
+    // The walled garden is closed pre-login, so the buy links only work
     // once online: the 5-minute trial is the guest's path to the store.
     // RouterOS hides the block via $(if trial == 'yes') once the device
     // has spent its trial. T-$(mac-esc) is the vendor's per-MAC trial
-    // pseudo-username — no password — and dst must be the escaped
-    // original URL so the trial lands where the guest was heading.
+    // pseudo-username — no password — and dst is the storefront URL
+    // percent-encoded as a nested query value, so a successful trial
+    // login lands the guest on the buy page with their portal context
+    // (login/mac/ip) for post-payment auto-connect.
     expect(html).toContain("$(if trial == 'yes')");
     expect(html).toContain(
-      'href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)"',
+      'href="$(link-login-only)?dst=https%3A%2F%2Fapi.saleslip.app%2F%3Flogin%3D$(link-login-only-esc)%26mac%3D$(mac-esc)%26ip%3D$(ip-esc)&amp;username=T-$(mac-esc)"',
     );
   });
 
   it("auto-focuses the voucher input", () => {
     expect(html).toContain('getElementById("voucher").focus()');
+  });
+
+  it("uses the wifi brand mark and lean voucher-field copy", () => {
+    // The logo is the Saleslip wifi symbol (same paths as the web app
+    // icon at apps/web/src/app/icon.svg), and the voucher field copy
+    // stays lean: a code-shaped placeholder mirroring the platform's
+    // 4-letters-then-4-digits generator, with no "e.g." prefix and no
+    // pointer to reception.
+    expect(html).toContain('d="M2.5 9.5a13.5 13.5 0 0 1 19 0"');
+    expect(html).toContain('placeholder="abcd1234"');
+    expect(html).not.toContain('placeholder="e.g.');
+    expect(html).not.toContain("Ask reception");
   });
 
   it("is ES3-safe for old captive-portal browsers", () => {

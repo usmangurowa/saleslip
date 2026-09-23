@@ -234,3 +234,31 @@ internet — the store resolves without any whitelist.
   worktree `apps/server/src/wifi/`) — after every order, mint a 5-minute
   single-use voucher shown on the receipt page so buyers can re-purchase
   when their data finishes. Needs user go-ahead before editing that tree.
+
+## Portal Layout Rework (2026-09-24, deployed md5 60800730a8e78b21faaad9624f5472d2)
+
+- **Section order**: brand → login form → "Get 5 free minutes" (immediately
+  after Connect, no divider) → divider → Prices → "Buy a voucher online" →
+  How it works (last). Tightened `.panel` gap 1.5rem→1rem, `.logo`
+  margin-bottom 0.75rem→0.5rem, `button` margin-top 1rem→0.75rem so pricing
+  is visible without scrolling.
+- **Trial redirect**: trial href dst changed from `$(link-orig-esc)` to the
+  storefront URL percent-encoded as a nested query value —
+  `dst=https%3A%2F%2Fapi.saleslip.app%2F%3Flogin%3D$(link-login-only-esc)%26mac%3D$(mac-esc)%26ip%3D$(ip-esc)`.
+  After a successful trial auth RouterOS redirects to the buy page, which
+  then has portal context for post-payment auto-connect. Top-level params
+  join with `&amp;`; inner URL percent-encodes `? = & : /`.
+- **Plan links**: the six price rows are now `<a class="price-row">` links
+  to `https://api.saleslip.app/?login=…&mac=…&ip=…&planId=<id>` (day-1,
+  week-1, month-1, day-2, week-2, month-2) — tapping a row opens the store
+  with that plan preselected. The generic buy button is kept below pricing
+  for the no-plan path. **Server dependency**: `GET /` in
+  `apps/server/src/wifi/routes/shop.ts` (sibling worktree) currently
+  ignores `planId`; sibling session asked to parse it (validated against
+  the plan list, ignore unknown ids) and pass `values: { planId }` to
+  `renderBuy`. Until it lands, plan links still work — buy page opens with
+  the first plan selected (forward-compatible).
+- **Tests**: `mikrotik-login.test.ts` now 13 tests — external-href test
+  allows exactly 7 storefront hrefs (6 plan rows + buy button, all
+  `https://api.saleslip.app/?login=` prefix), new planId link test, trial
+  href assertion updated to the store-redirect dst.
