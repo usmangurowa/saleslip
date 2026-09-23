@@ -412,6 +412,9 @@ importers:
       '@turbo/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@turbo/validators':
+        specifier: workspace:*
+        version: link:../../packages/validators
       '@turbo/wifi':
         specifier: workspace:*
         version: link:../../packages/wifi

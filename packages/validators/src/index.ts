@@ -157,3 +157,53 @@ export const updateSettingsSchema = z.object({
 });
 
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
+
+// ============================================================================
+// WiFi Shop Schemas
+// ============================================================================
+
+/**
+ * Nigerian mobile numbers: `0801 234 5678` or `+234 801 234 5678`, normalized
+ * to E.164 (`+234...`). Shared by the server shop and the web `/buy` form so
+ * both accept exactly the same numbers.
+ */
+export const nigerianPhoneSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/[\s()-]/g, ""))
+  .pipe(
+    z
+      .string()
+      .regex(
+        /^(?:\+?234|0)[789][01]\d{8}$/,
+        "Enter a valid Nigerian phone number",
+      ),
+  )
+  .transform((value) =>
+    value.startsWith("0")
+      ? `+234${value.slice(1)}`
+      : value.startsWith("+")
+        ? value
+        : `+${value}`,
+  );
+
+/**
+ * Optional receipt email: empty strings are treated as absent.
+ */
+export const optionalEmailSchema = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value === "" ? undefined : value))
+  .pipe(z.string().email("Enter a valid email").optional());
+
+/**
+ * Public `/buy` form: a plan plus a Nigerian phone, with an optional email.
+ */
+export const buyOrderSchema = z.object({
+  planId: z.string().trim().min(1, "Choose a plan"),
+  phone: nigerianPhoneSchema,
+  email: optionalEmailSchema,
+});
+
+export type BuyOrderFormData = z.infer<typeof buyOrderSchema>;

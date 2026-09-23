@@ -21,6 +21,12 @@ export const metadata: Metadata = {
   description: "Your workspace overview",
 };
 
+// The dashboard is auth-gated: `getSession()` reads cookies on every request,
+// so no route under it can be prerendered. Opt the whole subtree out of Next
+// 16's instant-prerender experiment, which would otherwise try to prerender a
+// blocking shell around the runtime cookie access.
+export const instant = false;
+
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
