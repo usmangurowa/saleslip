@@ -176,3 +176,28 @@ portal.
 - Default hotspot setup (local users, PAP + CHAP both supported) is the
   assumed auth backend; mechanics are identical if User Manager is adopted
   later.
+
+## Buy Flow (2026-09-23)
+
+The portal now links to the Saleslip storefront so guests can self-serve:
+
+- **Buy button** links to
+  `https://api.saleslip.app/?login=$(link-login-only)&mac=$(mac)&ip=$(ip)`.
+  The storefront (sibling `usmangurowa-wifi-voucher-mvp`, deployed via Coolify
+  as `saleslip-server`) accepts those params, carries them through the
+  Paystack order, and its receipt page POSTs the generated voucher straight
+  back to the router login link — one-click connect after payment.
+- **Walled garden** (required for the link to resolve pre-auth): allow entries
+  for `api.saleslip.app`, `checkout.paystack.com`, `paystack.com` on
+  `/ip hotspot walled-garden`. Added via REST — note `POST` to
+  `/rest/ip/hotspot/walled-garden/add` works; `PUT` returns 500
+  ("not allowed by device-mode").
+- **Price list + how-it-works** render on the portal (Personal 1 device:
+  ₦1,000/1-day, ₦3,000/1-week, ₦6,000/1-month; Duo 2 devices: ₦1,500,
+  ₦4,000, ₦8,000).
+- The self-contained test bans external URLs except this one storefront link.
+- `login.html` is in `.prettierignore`: Prettier reflows the CHAP `hexMD5`
+  call with a trailing comma + double quotes, which pre-2017 browsers cannot
+  parse (root cause #2, commit d069ae0).
+- Pending: support/Telegram contact line — waiting on the Telegram bot
+  username from the user.

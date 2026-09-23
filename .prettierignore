@@ -1,2 +1,7 @@
 # Preserve vendored external reference formatting.
 .ai/references/pols-anti-slop-design-law.md
+
+# Deployable router artifact: Prettier reflows the http-chap hexMD5 call
+# onto multiple lines with a trailing comma and double quotes, which
+# pre-2017 captive-portal browsers fail to parse (see commit d069ae0).
+apps/web/public/mikrotik/login.html

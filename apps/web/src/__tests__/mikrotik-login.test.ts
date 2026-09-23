@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-
 import { describe, expect, it } from "vitest";
 
 /**
@@ -68,10 +67,23 @@ describe("mikrotik login.html", () => {
     }
   });
 
-  it("is fully self-contained — no external requests", () => {
-    expect(html).not.toMatch(/(?:src|href)="https?:\/\//);
+  it("is self-contained — the only external link is the walled-garden storefront", () => {
+    // External URLs are banned except the buy button: its host must be
+    // allowed in the hotspot walled garden or the link dead-ends pre-auth.
+    const external = html.match(/(?:src|href)="https?:\/\/[^"]*"/g) ?? [];
+    expect(external).toEqual([
+      'href="https://api.saleslip.app/?login=$(link-login-only)&amp;mac=$(mac)&amp;ip=$(ip)"',
+    ]);
     expect(html).not.toMatch(/@import|url\(/);
     expect(html).not.toMatch(/fonts\.googleapis|cdn\./);
+  });
+
+  it("hands the portal context to the storefront for post-payment auto-connect", () => {
+    // The receipt page POSTs the generated voucher straight back to the
+    // router login link — it needs login/mac/ip to reproduce this session.
+    expect(html).toContain(
+      "https://api.saleslip.app/?login=$(link-login-only)&amp;mac=$(mac)&amp;ip=$(ip)",
+    );
   });
 
   it("auto-focuses the voucher input", () => {
