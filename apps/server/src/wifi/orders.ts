@@ -17,7 +17,7 @@ export interface WifiOrderRecord {
   id: string;
   channel: WifiOrderChannel;
   planId: string;
-  phone: string;
+  phone: string | null;
   email: string | null;
   telegramId: string | null;
   mac: string | null;
@@ -51,7 +51,7 @@ export interface WifiVoucherRecord {
 export interface CreateOrderInput {
   channel: WifiOrderChannel;
   planId: string;
-  phone: string;
+  phone?: string;
   email?: string;
   telegramId?: string;
   mac?: string;

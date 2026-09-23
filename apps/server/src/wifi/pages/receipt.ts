@@ -227,8 +227,12 @@ export const receiptPage = (props: ReceiptPageProps) => {
           <dd>${plan?.validityLabel ?? "—"}</dd>
           <dt>Amount</dt>
           <dd>${formatNaira(order.amountKobo)}</dd>
-          <dt>Phone</dt>
-          <dd>${order.phone}</dd>
+          ${
+            order.phone
+              ? html`<dt>Phone</dt>
+                  <dd>${order.phone}</dd>`
+              : ""
+          }
           <dt>Time</dt>
           <dd>
             ${formatTime(order.paidAt ?? order.createdAt, props.timeZone)}

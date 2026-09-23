@@ -115,6 +115,54 @@ describe("shop routes", () => {
     });
   });
 
+  it("preselects the plan from ?planId", async () => {
+    const t = createTestDeps({ paystack: fakePaystack() });
+    const res = await createWifiApp(t.deps).request("/?planId=week-1");
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toMatch(/value="week-1"[\s\S]{0,120}checked/);
+    expect(body).not.toMatch(/value="day-1"[\s\S]{0,120}checked/);
+  });
+
+  it("falls back to the first plan for an unknown ?planId", async () => {
+    const t = createTestDeps({ paystack: fakePaystack() });
+    const res = await createWifiApp(t.deps).request("/?planId=nope");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toMatch(/value="day-1"[\s\S]{0,120}checked/);
+  });
+
+  it("uses the buyer email for Paystack when no phone is given", async () => {
+    const calls: { email: string }[] = [];
+    const t = createTestDeps({ paystack: fakePaystack(calls) });
+    const app = createWifiApp(t.deps);
+
+    const res = await app.request(
+      form({ planId: "day-1", email: "buyer@example.com" }),
+    );
+    expect(res.status).toBe(303);
+    const order = [...t.orders.values()][0];
+    if (!order) throw new Error("order not created");
+    expect(order.email).toBe("buyer@example.com");
+    expect(order.phone).toBeNull();
+    expect(calls[0]).toMatchObject({ email: "buyer@example.com" });
+  });
+
+  it("derives a stable fallback email when no contact is given", async () => {
+    const calls: { email: string }[] = [];
+    const t = createTestDeps({ paystack: fakePaystack(calls) });
+    const app = createWifiApp(t.deps);
+
+    const res = await app.request(form({ planId: "day-1" }));
+    expect(res.status).toBe(303);
+    const order = [...t.orders.values()][0];
+    if (!order) throw new Error("order not created");
+    expect(order.email).toBeNull();
+    expect(order.phone).toBeNull();
+    expect(calls[0]).toMatchObject({
+      email: `${order.id}@buyers.saleslip.app`,
+    });
+  });
+
   it("re-renders the form with an error for a bad phone", async () => {
     const t = createTestDeps({ paystack: fakePaystack() });
     const res = await createWifiApp(t.deps).request(

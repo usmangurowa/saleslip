@@ -198,12 +198,25 @@ export const optionalEmailSchema = z
   .pipe(z.string().email("Enter a valid email").optional());
 
 /**
- * Public `/buy` form: a plan plus a Nigerian phone, with an optional email.
+ * Optional contact phone: empty/absent passes, but a value must be a valid
+ * Nigerian number (normalized to E.164) — shared by the buy forms.
+ */
+export const optionalNigerianPhoneSchema = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value === "" ? undefined : value))
+  .pipe(nigerianPhoneSchema.optional());
+
+/**
+ * Public `/buy` form: a plan, an optional email (voucher delivery), and an
+ * optional Nigerian phone. At least one contact field is encouraged but not
+ * enforced — buyers without both still get their code on the receipt page.
  */
 export const buyOrderSchema = z.object({
   planId: z.string().trim().min(1, "Choose a plan"),
-  phone: nigerianPhoneSchema,
   email: optionalEmailSchema,
+  phone: optionalNigerianPhoneSchema,
 });
 
 export type BuyOrderFormData = z.infer<typeof buyOrderSchema>;
