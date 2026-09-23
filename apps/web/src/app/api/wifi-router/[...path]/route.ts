@@ -1,9 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth/server";
 import { env } from "@/env";
-
-import { resolveAllowlist } from "@turbo/shared";
 
 /**
  * Same-origin proxy to the router-backed console on `apps/server`.
@@ -14,8 +11,9 @@ import { resolveAllowlist } from "@turbo/shared";
  * server-to-server. Because the browser only ever talks to its own origin,
  * there is no CORS to configure and no third copy of the session cookie.
  *
- * The `cookie` header is forwarded verbatim — `apps/server` resolves the
- * Better Auth session from it exactly as this app does.
+ * Authentication stays authoritative in `apps/server`; this proxy forwards
+ * the browser's cookie or bearer credentials verbatim so that runtime resolves
+ * the Better Auth session from the same credentials as the web app.
  */
 const proxy = async (
   request: NextRequest,
@@ -23,25 +21,12 @@ const proxy = async (
 ) => {
   const { path } = await params;
 
-  // Defense-in-depth admin gate: the standalone server also enforces this via
-  // adminMiddleware, but refusing here avoids forwarding anonymous traffic.
-  const session = await auth.api.getSession({ headers: request.headers });
-  const email = session?.user.email.toLowerCase();
-  const isAdmin = !!email && resolveAllowlist(env.ADMIN_EMAILS).includes(email);
-
-  if (!isAdmin) {
-    return NextResponse.json(
-      { error: session ? "Forbidden" : "Unauthorized" },
-      { status: session ? 403 : 401 },
-    );
-  }
-
   const serverUrl = env.SERVER_URL.replace(/\/+$/, "");
   const target = new URL(`${serverUrl}/wifi-router/${path.join("/")}`);
   target.search = request.nextUrl.search;
 
   const headers = new Headers();
-  for (const name of ["cookie", "content-type"]) {
+  for (const name of ["authorization", "cookie", "content-type", "accept"]) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
