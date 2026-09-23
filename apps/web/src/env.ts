@@ -5,15 +5,16 @@ import { z } from "zod/v4";
 import { authEnv } from "@turbo/auth/env";
 import { shouldSkipEnvValidation } from "@turbo/shared/env";
 
-/** Accepts a valid value OR an empty string (treated as unset) */
-const optionalUrl = z
-  .string()
-  .transform((val) => (val === "" ? undefined : val))
-  .pipe(z.url().optional());
-const optionalStr = z
-  .string()
-  .transform((val) => (val === "" ? undefined : val))
-  .pipe(z.string().min(1).optional());
+/** Non-empty value, empty string, or missing var — only the first counts as set. */
+const optionalUrl = z.preprocess(
+  (val) => (val === "" ? undefined : val),
+  z.url().optional(),
+);
+/** Non-empty string, empty string, or missing var — only the first counts as set. */
+const optionalStr = z.preprocess(
+  (val) => (val === "" ? undefined : val),
+  z.string().min(1).optional(),
+);
 
 export const env = createEnv({
   extends: [authEnv(), vercel()],

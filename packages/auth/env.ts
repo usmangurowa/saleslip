@@ -3,11 +3,11 @@ import { z } from "zod/v4";
 
 import { shouldSkipEnvValidation } from "@turbo/shared/env";
 
-/** Accepts a non-empty string OR an empty string (treated as unset) */
-const optionalString = z
-  .string()
-  .transform((val) => (val === "" ? undefined : val))
-  .optional();
+/** Non-empty string, empty string, or missing var — only the first counts as set. */
+const optionalString = z.preprocess(
+  (val) => (val === "" ? undefined : val),
+  z.string().min(1).optional(),
+);
 
 export function authEnv() {
   const skipStrict = shouldSkipEnvValidation();
