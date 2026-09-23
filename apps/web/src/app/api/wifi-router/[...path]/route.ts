@@ -1,6 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { auth } from "@/auth/server";
 import { env } from "@/env";
+
+import { resolveAllowlist } from "@turbo/shared";
 
 /**
  * Same-origin proxy to the router-backed console on `apps/server`.
@@ -19,6 +22,20 @@ const proxy = async (
   { params }: { params: Promise<{ path: string[] }> },
 ) => {
   const { path } = await params;
+
+  // Defense-in-depth admin gate: the standalone server also enforces this via
+  // adminMiddleware, but refusing here avoids forwarding anonymous traffic.
+  const session = await auth.api.getSession({ headers: request.headers });
+  const email = session?.user.email.toLowerCase();
+  const isAdmin = !!email && resolveAllowlist(env.ADMIN_EMAILS).includes(email);
+
+  if (!isAdmin) {
+    return NextResponse.json(
+      { error: session ? "Forbidden" : "Unauthorized" },
+      { status: session ? 403 : 401 },
+    );
+  }
+
   const serverUrl = env.SERVER_URL.replace(/\/+$/, "");
   const target = new URL(`${serverUrl}/wifi-router/${path.join("/")}`);
   target.search = request.nextUrl.search;

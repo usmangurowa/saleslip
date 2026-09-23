@@ -37,13 +37,19 @@ vi.mock("../wifi/repository", async (importOriginal) => {
 
 const { createWifiRouterApp } = await import("../router/wifi-router");
 
+// The admin console gates on ADMIN_EMAILS; seed it so the default mock user
+// is an admin, and so the non-admin 403 case has a clear contrast value.
+process.env.ADMIN_EMAILS = "u@example.com";
+
 const user = { id: "u1", email: "u@example.com", name: "U" };
 
-const auth = (signedIn: boolean): AuthWithApi =>
+const auth = (signedIn: boolean, email = user.email): AuthWithApi =>
   ({
     api: {
       getSession: () =>
-        Promise.resolve(signedIn ? { user, session: {} } : null),
+        Promise.resolve(
+          signedIn ? { user: { ...user, email }, session: {} } : null,
+        ),
     },
   }) as unknown as AuthWithApi;
 
@@ -154,15 +160,17 @@ const voucherRow = (overrides: Partial<repositoryModule.WifiVoucherRow> = {}) =>
 const build = ({
   hotspot,
   signedIn = true,
+  email,
   repo = {},
 }: {
   hotspot?: HotspotService;
   signedIn?: boolean;
+  email?: string;
   repo?: Partial<repositoryModule.WifiConsoleRepository>;
 } = {}) => {
   state.repo = repo;
   return createWifiRouterApp({
-    auth: auth(signedIn),
+    auth: auth(signedIn, email),
     db: {} as Db,
     hotspot,
     now: () => new Date("2025-01-15T10:00:00Z"),
@@ -180,6 +188,15 @@ describe("wifi router console auth", () => {
     });
     const res = await app.request("/health");
     expect(res.status).toBe(401);
+  });
+
+  it("rejects authenticated non-admins with 403", async () => {
+    const app = build({
+      hotspot: createFakeHotspot().hotspot,
+      email: "intruder@example.com",
+    });
+    const res = await app.request("/health");
+    expect(res.status).toBe(403);
   });
 
   it("503s every router-backed route when no router is configured", async () => {

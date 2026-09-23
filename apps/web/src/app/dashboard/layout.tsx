@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getSession } from "@/auth/server";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { HeaderActions } from "@/components/dashboard/header-actions";
 import { PageTitle } from "@/components/dashboard/page-title";
 import { SearchProvider } from "@/components/dashboard/search-context";
+import { env } from "@/env";
 
+import { resolveAllowlist } from "@turbo/shared";
 import { Separator } from "@turbo/ui/components/separator";
 import {
   SidebarInset,
@@ -17,9 +21,16 @@ export const metadata: Metadata = {
   description: "Your workspace overview",
 };
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const session = await getSession();
+  const email = session?.user.email.toLowerCase();
+  const isAdmin = !!email && resolveAllowlist(env.ADMIN_EMAILS).includes(email);
+
+  if (!session) redirect("/login");
+  if (!isAdmin) redirect("/");
+
   return (
     <SidebarProvider>
       <SearchProvider>

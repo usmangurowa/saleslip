@@ -33,6 +33,24 @@ export const getMostFrequent = <T>(arr: T[]): T | undefined => {
 };
 
 /**
+ * Parse a comma-separated allowlist value (e.g. `ADMIN_EMAILS`) into a
+ * normalized list: trimmed, lowercased, empty entries dropped. An unset or
+ * blank value yields an empty list so callers can treat "not configured" as
+ * "no one allowed".
+ *
+ * @example
+ * ```ts
+ * resolveAllowlist("a@x.com, B@X.com , ,"); // ["a@x.com", "b@x.com"]
+ * resolveAllowlist(undefined); // []
+ * ```
+ */
+export const resolveAllowlist = (raw: string | undefined): string[] =>
+  (raw ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+
+/**
  * Format a date as a human-readable relative time string.
  * Returns strings like "Just now", "5 mins ago", "2 hours ago", "3 days ago".
  *

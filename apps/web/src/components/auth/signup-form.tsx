@@ -16,14 +16,11 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@turbo/ui/components/field";
 import { Input } from "@turbo/ui/components/input";
 import { Spinner } from "@turbo/ui/components/spinner";
 import { cn } from "@turbo/ui/lib/utils";
 import { createAccountSchema } from "@turbo/validators";
-
-import { GithubIcon } from "./github-icon";
 
 export const SignupForm = ({
   className,
@@ -65,13 +62,6 @@ export const SignupForm = ({
 
     // Step 3: Redirect to verify-email page with email
     router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
-  };
-
-  const handleGithubAuth = async () => {
-    await authClient.signIn.social({
-      provider: "github",
-      callbackURL: "/onboarding",
-    });
   };
 
   return (
@@ -137,20 +127,6 @@ export const SignupForm = ({
             <Button type="submit" className="h-11" disabled={isSubmitting}>
               {isSubmitting && <Spinner data-icon="inline-start" />}
               Create account
-            </Button>
-          </Field>
-
-          <FieldSeparator>or</FieldSeparator>
-
-          <Field>
-            <Button
-              variant="secondary"
-              type="button"
-              className="h-11"
-              onClick={handleGithubAuth}
-            >
-              <GithubIcon />
-              Continue with GitHub
             </Button>
           </Field>
         </FieldGroup>
