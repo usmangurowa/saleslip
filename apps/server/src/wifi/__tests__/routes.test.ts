@@ -54,7 +54,7 @@ describe("phone normalisation", () => {
   });
 
   it("derives a stable fallback email", () => {
-    expect(fallbackEmail("+2348012345678")).toBe("2348012345678@saleslip.wifi");
+    expect(fallbackEmail("+2348012345678")).toBe("2348012345678@buyers.saleslip.app");
   });
 });
 
@@ -107,7 +107,7 @@ describe("shop routes", () => {
     expect(order.loginUrl).toBe("http://r/login");
     expect(calls[0]).toMatchObject({
       reference: order.id,
-      email: "2348012345678@saleslip.wifi",
+      email: "2348012345678@buyers.saleslip.app",
       amount: 100_000,
       metadata: { orderId: order.id, planId: "day-1", mac: "AA:BB" },
     });
