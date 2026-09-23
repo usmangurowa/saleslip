@@ -22,6 +22,11 @@ describe("mikrotik login.html", () => {
     expect(html).toContain('<script src="/md5.js"></script>');
     expect(html).toContain('"$(chap-challenge)" == ""');
     expect(html).toContain("hexMD5");
+    // RouterOS http-chap: MD5 over chap-id + password + chap-challenge,
+    // concatenated into a single string — hexMD5 takes one argument.
+    expect(html).toContain(
+      'hexMD5(\n          "$(chap-id)" + voucher + "$(chap-challenge)"',
+    );
   });
 
   it("submits the voucher as both username and password", () => {

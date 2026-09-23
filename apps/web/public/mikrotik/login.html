@@ -273,9 +273,10 @@
         }
 
         document.sendin.username.value = voucher;
+        // RouterOS http-chap expects MD5(chap-id + password + chap-challenge)
+        // as a single concatenated string — hexMD5 takes one argument.
         document.sendin.password.value = hexMD5(
-          "$(chap-challenge)",
-          voucher,
+          "$(chap-id)" + voucher + "$(chap-challenge)",
         );
         document.sendin.submit();
         return false;

@@ -101,8 +101,13 @@ portal.
   first). No walled-garden changes are needed because the page is served from
   the router. Vouchers are hotspot users with username = password.
 - MikroTik replaces `$(...)` placeholders server-side; `$(link-login-only)`,
-  `$(link-orig)`, `$(error)`, and `$(chap-challenge)` must remain literal in
-  the source file.
+  `$(link-orig)`, `$(error)`, `$(chap-id)`, and `$(chap-challenge)` must remain
+  literal in the source file.
+- RouterOS `http-chap` hashes `MD5(chap-id + password + chap-challenge)` as one
+  concatenated string — `hexMD5("$(chap-id)" + voucher + "$(chap-challenge)")`.
+  `hexMD5` takes a single argument; passing the voucher as a second argument is
+  silently ignored and produces a valid-looking but wrong hash (every login
+  rejected as invalid).
 - `/md5.js` is served automatically by the router from the hotspot directory;
   it must not be inlined or removed.
 - The React `/portal` page is a design reference only — it performs no
