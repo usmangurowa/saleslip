@@ -38,9 +38,13 @@ export const env = createEnv({
      * the dashboard still builds without the hotspot configured; each falls
      * back to the default profile name on the router.
      */
-    WIFI_PROFILE_DAILY_UNLIMITED: optionalStr,
-    WIFI_PROFILE_DAILY_1GB: optionalStr,
-    WIFI_PROFILE_WEEKLY_5GB: optionalStr,
+    WIFI_PROFILE_DAY_1: optionalStr,
+    WIFI_PROFILE_DAY_2: optionalStr,
+    WIFI_PROFILE_WEEK_1: optionalStr,
+    WIFI_PROFILE_WEEK_2: optionalStr,
+    WIFI_PROFILE_MONTH_1: optionalStr,
+    WIFI_PROFILE_MONTH_2: optionalStr,
+    ADMIN_EMAILS: optionalStr,
   },
 
   /**

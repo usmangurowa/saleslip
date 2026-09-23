@@ -379,7 +379,7 @@ Routes (all on the server, port 3001):
 | `POST /webhooks/telegram/:secret`    | grammY webhook; 404 unless the secret matches `TELEGRAM_WEBHOOK_SECRET`.                      |
 | `GET /health`                        | Database and router reachability.                                                             |
 
-Plans are a TypeScript array in `packages/wifi/src/plans.ts` (shared by both runtimes as `@turbo/wifi`). Each plan references an existing RouterOS hotspot user profile, and the profile's on-login script owns expiry. Profile names come from `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB` and `WIFI_PROFILE_WEEKLY_5GB`.
+Plans are a TypeScript array in `packages/wifi/src/plans.ts` (shared by both runtimes as `@turbo/wifi`). Each plan references an existing RouterOS hotspot user profile, and the profile's on-login script owns expiry. Profile names come from the `WIFI_PROFILE_*` variables below (`DAY_1`…`MONTH_2`).
 
 Environment (see `.env.example`):
 
@@ -392,9 +392,10 @@ Environment (see `.env.example`):
 | `WG_GATEWAY_HOST`                                                      | Container only: the wg-easy container the entrypoint routes `10.8.0.0/24` through.                                                      |
 | `WIFI_HOTSPOT_SERVER`                                                  | Optional: the RouterOS hotspot server name when the router runs more than one (`server=` on created users). Unset means all servers.   |
 | `SERVER_URL`                                                           | Web only: where the console proxy forwards `/api/wifi-router/*` (for example `http://server:3001`).                                     |
-| `WIFI_PROFILE_DAILY_UNLIMITED`, `WIFI_PROFILE_DAILY_1GB`, `WIFI_PROFILE_WEEKLY_5GB` | RouterOS hotspot user profile names per plan; both runtimes must resolve the same values.                                  |
+| `WIFI_PROFILE_DAY_1`, `WIFI_PROFILE_DAY_2`, `WIFI_PROFILE_WEEK_1`, `WIFI_PROFILE_WEEK_2`, `WIFI_PROFILE_MONTH_1`, `WIFI_PROFILE_MONTH_2` | RouterOS hotspot user profile names per plan; both runtimes must resolve the same values. |
+| `ADMIN_EMAILS`                                                        | Comma-separated emails allowed to sign in to the admin dashboard.                                                                        |
 
-Fulfilment: `charge.success` (signature-checked, idempotent by reference) marks the order paid, generates a `GW#####` code, creates the hotspot user (`username = password = code`, the plan's profile, comment `saleslip|<orderId>|<phone>`, `limit-bytes-total` for data plans), stores the voucher and marks the order fulfilled. Telegram orders get the code by DM. If the router is unreachable the order becomes `pending_router` and an in-process retry with backoff finishes it; the sweep also runs on boot. A watchdog DMs the admins when the router has been down for five minutes and again when it recovers.
+Fulfilment: `charge.success` (signature-checked, idempotent by reference) marks the order paid, generates a `GW#####` code, creates the hotspot user (`username = password = code`, the plan's profile, comment `saleslip|<orderId>|<phone>`), stores the voucher and marks the order fulfilled. Telegram orders get the code by DM. If the router is unreachable the order becomes `pending_router` and an in-process retry with backoff finishes it; the sweep also runs on boot. A watchdog DMs the admins when the router has been down for five minutes and again when it recovers.
 
 ### WiFi admin console (Saleslip)
 

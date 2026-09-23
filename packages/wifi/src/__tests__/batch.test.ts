@@ -17,7 +17,7 @@ const planOf = (id: string): WifiPlan => {
   return plan;
 };
 
-const dailyPlan = planOf("daily-1gb");
+const dailyPlan = planOf("day-1");
 
 const neverExists = () => Promise.resolve(false);
 
@@ -68,17 +68,15 @@ describe("mintVoucherBatch", () => {
     expect(new Set(vouchers.map((v) => v.code)).size).toBe(5);
   });
 
-  it("carries the plan profile and byte limit onto every voucher", async () => {
+  it("carries the plan profile onto every voucher and leaves unlimited plans uncapped", async () => {
     const vouchers = await mintVoucherBatch({
       exists: neverExists,
       quantity: 2,
       plan: dailyPlan,
       random: incrementingRandom(),
     });
-    expect(vouchers.every((v) => v.profile === "Daily-1GB")).toBe(true);
-    expect(
-      vouchers.every((v) => v.limitBytesTotal === dailyPlan.dataLimitBytes),
-    ).toBe(true);
+    expect(vouchers.every((v) => v.profile === "Saleslip-1d-1")).toBe(true);
+    expect(vouchers.every((v) => v.limitBytesTotal === undefined)).toBe(true);
   });
 
   it("retries when a proposal collides with a code already minted in the batch", async () => {

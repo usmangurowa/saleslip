@@ -11,9 +11,12 @@ import { buildPlans } from "@turbo/wifi";
  */
 export const resolvePlans = () =>
   buildPlans({
-    dailyUnlimited: process.env.WIFI_PROFILE_DAILY_UNLIMITED,
-    daily1gb: process.env.WIFI_PROFILE_DAILY_1GB,
-    weekly5gb: process.env.WIFI_PROFILE_WEEKLY_5GB,
+    day1: process.env.WIFI_PROFILE_DAY_1,
+    day2: process.env.WIFI_PROFILE_DAY_2,
+    week1: process.env.WIFI_PROFILE_WEEK_1,
+    week2: process.env.WIFI_PROFILE_WEEK_2,
+    month1: process.env.WIFI_PROFILE_MONTH_1,
+    month2: process.env.WIFI_PROFILE_MONTH_2,
   });
 
 /**

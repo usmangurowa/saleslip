@@ -129,7 +129,7 @@ describe("telegram bot", () => {
     expect(h.sent.some((s) => s.method === "answerCallbackQuery")).toBe(true);
     expect(h.replies().at(-1)?.text).toContain("Choose a plan");
 
-    await h.callback(USER, CALLBACK.plan("daily-1gb"));
+    await h.callback(USER, CALLBACK.plan("day-1"));
     expect(h.replies().at(-1)?.text).toContain("Send the phone number");
 
     await h.text(USER, "0801 234 5678");
@@ -138,7 +138,7 @@ describe("telegram bot", () => {
       channel: "telegram",
       telegramId: String(USER),
       phone: "+2348012345678",
-      planId: "daily-1gb",
+      planId: "day-1",
       status: "pending",
     });
     const pay = h
@@ -154,7 +154,7 @@ describe("telegram bot", () => {
 
   it("accepts a shared contact and rejects bad numbers", async () => {
     const h = harness();
-    await h.callback(USER, CALLBACK.plan("daily-unlimited"));
+    await h.callback(USER, CALLBACK.plan("day-1"));
     await h.text(USER, "12345");
     expect(h.replies().at(-1)?.text).toContain(
       "does not look like a Nigerian phone",
@@ -170,7 +170,7 @@ describe("telegram bot", () => {
     const fake = createFakeHotspot();
     const h = harness({ hotspot: fake.hotspot });
     h.deps.telegram = createTelegramNotifier(h.bot, h.deps.logger);
-    await h.callback(USER, CALLBACK.plan("daily-1gb"));
+    await h.callback(USER, CALLBACK.plan("day-1"));
     await h.text(USER, "08012345678");
     const order = [...h.orders.values()][0];
     if (!order) throw new Error("no order");

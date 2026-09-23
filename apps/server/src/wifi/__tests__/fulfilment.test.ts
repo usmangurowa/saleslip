@@ -14,13 +14,13 @@ import { createFakeHotspot, createTestDeps } from "./helpers";
 
 const newPaidOrder = async (
   t: ReturnType<typeof createTestDeps>,
-  planId = "daily-1gb",
+  planId = "day-1",
 ) => {
   const order = await t.repo.createOrder({
     channel: "web",
     planId,
     phone: "+2348012345678",
-    amountKobo: 30_000,
+    amountKobo: 100_000,
   });
   return order;
 };
@@ -59,9 +59,9 @@ describe("fulfilment", () => {
     expect(result.voucher.rosId).toBe("*1");
 
     const user = fake.users.get(result.voucher.code);
-    expect(user?.profile).toBe("Daily-1GB");
+    expect(user?.profile).toBe("Saleslip-1d-1");
     expect(user?.comment).toBe(`saleslip|${order.id}|+2348012345678`);
-    expect(user?.limitBytesTotal).toBe(1024 ** 3);
+    expect(user?.limitBytesTotal).toBeUndefined();
     expect(t.fulfilled).toHaveLength(1);
   });
 
@@ -157,13 +157,13 @@ describe("fulfilment", () => {
     const voucher = await t.repo.createVoucher({
       orderId: order.id,
       code: "GWABCDE",
-      profile: "Daily-1GB",
+      profile: "Saleslip-1d-1",
       channel: "web",
     });
     await fake.hotspot.createHotspotUser({
       name: voucher.code,
       password: voucher.code,
-      profile: "Daily-1GB",
+      profile: "Saleslip-1d-1",
     });
     fake.calls.length = 0;
 

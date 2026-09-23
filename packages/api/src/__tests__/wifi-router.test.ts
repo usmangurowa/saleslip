@@ -138,10 +138,10 @@ const voucherRow = (overrides: Partial<repositoryModule.WifiVoucherRow> = {}) =>
     orderId: null,
     batchId: "batch-1",
     code: "SALE-1234",
-    profile: "Daily-1GB",
+    profile: "Saleslip-1d-1",
     channel: "manual",
     rosId: null,
-    limitBytesTotal: 1_073_741_824,
+    limitBytesTotal: null,
     status: "active",
     activatedAt: null,
     bytesUsed: 0,
@@ -242,9 +242,9 @@ describe("live sessions", () => {
                       "SALE-1234",
                       {
                         voucherId: "voucher-1",
-                        profile: "Daily-1GB",
+                        profile: "Saleslip-1d-1",
                         phone: "+2348012345678",
-                        limitBytesTotal: 1_073_741_824,
+                        limitBytesTotal: null,
                         activatedAt: new Date("2025-01-15T09:00:00Z"),
                         bytesUsed: 300,
                       },
@@ -270,7 +270,7 @@ describe("live sessions", () => {
         uptime: "5m",
         bytesIn: 100,
         bytesOut: 200,
-        planName: "Daily 1GB",
+        planName: "1 Day · 1 Device",
         phone: "+2348012345678",
         activatedAt: "2025-01-15T09:00:00.000Z",
         known: true,
@@ -308,7 +308,7 @@ describe("live sessions", () => {
     await fake.hotspot.createHotspotUser({
       name: "SALE-1234",
       password: "SALE-1234",
-      profile: "Daily-1GB",
+      profile: "Saleslip-1d-1",
     });
     let recorded:
       Map<string, { bytesUsed: number; syncedAt: Date }> | undefined;
@@ -353,7 +353,7 @@ describe("voucher activation", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        planId: "daily-1gb",
+        planId: "day-1",
         quantity: 2,
         label: "Front desk",
       }),
@@ -396,7 +396,7 @@ describe("voucher activation", () => {
     const res = await app.request("/vouchers/batch", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ planId: "daily-1gb", quantity: 1, label: "x" }),
+      body: JSON.stringify({ planId: "day-1", quantity: 1, label: "x" }),
     });
 
     expect(res.status).toBe(422);
@@ -420,7 +420,7 @@ describe("voucher activation", () => {
     const res = await app.request("/vouchers/voucher-1/activate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ planId: "daily-1gb" }),
+      body: JSON.stringify({ planId: "day-1" }),
     });
 
     expect(res.status).toBe(201);
@@ -430,9 +430,9 @@ describe("voucher activation", () => {
     expect(stamped).toHaveLength(1);
     // Username and password are both the code; the comment traces the batch.
     expect(fake.users.get("SALE-1234")).toMatchObject({
-      profile: "Daily-1GB",
+      profile: "Saleslip-1d-1",
       comment: "saleslip|batch-1",
-      limitBytesTotal: 1_073_741_824,
+      limitBytesTotal: undefined,
     });
   });
 
@@ -451,7 +451,7 @@ describe("voucher activation", () => {
     const res = await app.request("/vouchers/voucher-1/activate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ planId: "daily-1gb" }),
+      body: JSON.stringify({ planId: "day-1" }),
     });
 
     expect(res.status).toBe(409);
@@ -479,7 +479,7 @@ describe("voucher activation", () => {
     const res = await app.request("/vouchers/voucher-1/activate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ planId: "daily-1gb" }),
+      body: JSON.stringify({ planId: "day-1" }),
     });
 
     expect(res.status).toBe(422);
@@ -504,7 +504,7 @@ describe("voucher activation", () => {
     const res = await app.request("/vouchers/voucher-1/activate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ planId: "daily-1gb" }),
+      body: JSON.stringify({ planId: "day-1" }),
     });
 
     expect(res.status).toBe(503);
@@ -516,7 +516,7 @@ describe("voucher activation", () => {
     await fake.hotspot.createHotspotUser({
       name: "SALE-1234",
       password: "SALE-1234",
-      profile: "Daily-1GB",
+      profile: "Saleslip-1d-1",
     });
     fake.calls.length = 0;
     const app = build({
@@ -531,7 +531,7 @@ describe("voucher activation", () => {
     const res = await app.request("/vouchers/voucher-1/activate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ planId: "daily-1gb" }),
+      body: JSON.stringify({ planId: "day-1" }),
     });
 
     expect(res.status).toBe(201);
@@ -543,7 +543,7 @@ describe("voucher activation", () => {
     await fake.hotspot.createHotspotUser({
       name: "SALE-1234",
       password: "SALE-1234",
-      profile: "Daily-1GB",
+      profile: "Saleslip-1d-1",
     });
     fake.calls.length = 0;
     const app = build({
