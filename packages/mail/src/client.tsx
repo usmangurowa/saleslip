@@ -27,9 +27,10 @@ if (!RESEND_API_KEY && requireResendConfig) {
 export const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 /**
  * Default sender email address.
- * Override this in your application or per-email.
+ * Override via MAIL_FROM (e.g. `Saleslip <no-reply@saleslip.app>`) or per-email.
  */
-export const DEFAULT_FROM = "no-reply@turbo.app";
+export const DEFAULT_FROM =
+  process.env.MAIL_FROM ?? "Saleslip <no-reply@saleslip.app>";
 
 export interface SendEmailOptions {
   /** Recipient email address(es) */
