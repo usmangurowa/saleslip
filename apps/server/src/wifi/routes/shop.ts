@@ -2,7 +2,11 @@ import { Hono } from "hono";
 import QRCode from "qrcode";
 import { z } from "zod";
 
-import { nigerianPhoneSchema, optionalEmailSchema } from "@turbo/validators";
+import {
+  nigerianPhoneSchema,
+  optionalEmailSchema,
+  optionalNigerianPhoneSchema,
+} from "@turbo/validators";
 import { findPlan } from "@turbo/wifi";
 
 import type { WifiDeps } from "../deps";
@@ -17,7 +21,6 @@ import { receiptPage } from "../pages/receipt";
  * here for existing consumers and tests.
  */
 export const phoneSchema = nigerianPhoneSchema;
-
 const optionalText = (max: number) =>
   z
     .string()
@@ -34,14 +37,16 @@ const loginUrlSchema = optionalText(2048).refine(
 
 export const orderFormSchema = z.object({
   planId: z.string().trim().min(1, "Choose a plan"),
-  phone: phoneSchema,
   email: optionalEmailSchema,
+  phone: optionalNigerianPhoneSchema,
   mac: optionalText(64),
   ip: optionalText(64),
   login: loginUrlSchema,
 });
 
+/** Captive-portal query params; `planId` preselects a plan on the buy page. */
 export const portalParamsSchema = z.object({
+  planId: optionalText(64),
   mac: optionalText(64),
   ip: optionalText(64),
   login: loginUrlSchema,

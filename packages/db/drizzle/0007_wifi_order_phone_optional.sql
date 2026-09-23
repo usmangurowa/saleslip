@@ -1,0 +1,1 @@
+ALTER TABLE "wifi_order" ALTER COLUMN "phone" DROP NOT NULL;

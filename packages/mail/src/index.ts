@@ -14,3 +14,6 @@ export type { WelcomeEmailProps } from "./templates/welcome";
 
 export { OTPEmail } from "./templates/otp";
 export type { OTPEmailProps } from "./templates/otp";
+
+export { VoucherEmail } from "./templates/voucher";
+export type { VoucherEmailProps } from "./templates/voucher";
