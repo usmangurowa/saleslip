@@ -48,6 +48,12 @@ router. The web app additionally hosts a React design-reference page at
       test.
 - [x] Hotspot profile `hsprof4` login-by is `cookie,http-chap,http-pap` —
       `http-pap` accepts the JS-less native fallback POST.
+- [x] ES3-safe script (2025): no ES5+ syntax — no `.trim()` (regex replace
+      instead), no `hidden` attribute/property (`style="display: none"` +
+      `err.style.display` instead), no arrow functions, `const`, or `let`.
+      Old Windows captive-portal browsers (IE8-era) can run `doLogin()`
+      fully. Pinned by the "is ES3-safe for old captive-portal browsers"
+      test.
 - [x] `$(error)` renders as destructive error text under the input and the
       input re-focuses after a failed attempt.
 - [x] The voucher input auto-focuses on page load in both artifacts.

@@ -64,4 +64,14 @@ describe("mikrotik login.html", () => {
   it("auto-focuses the voucher input", () => {
     expect(html).toContain('getElementById("voucher").focus()');
   });
+
+  it("is ES3-safe for old captive-portal browsers", () => {
+    const scriptBlocks = html.match(/<script>[\s\S]*?<\/script>/g) ?? [];
+    const inline = scriptBlocks.join("\n");
+    expect(inline).not.toContain(".trim(");
+    expect(inline).not.toContain(".hidden");
+    expect(inline).not.toContain("=>");
+    expect(inline).not.toContain("const ");
+    expect(inline).not.toContain("let ");
+  });
 });

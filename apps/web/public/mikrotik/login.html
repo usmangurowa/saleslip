@@ -244,7 +244,7 @@
         <p class="error" role="alert">$(error)</p>
         $(endif)
 
-        <p class="error" id="client-error" role="alert" hidden></p>
+        <p class="error" id="client-error" role="alert" style="display: none"></p>
 
         <button type="submit">Connect</button>
         <p class="hint">
@@ -256,11 +256,16 @@
     <script src="/md5.js"></script>
     <script>
       function doLogin() {
-        var voucher = document.login.username.value.trim();
+        // ES3-safe: old captive-portal browsers (IE8-era) lack trim() and
+        // the hidden property — regex and style.display work everywhere.
+        var voucher = document.login.username.value.replace(
+          /^\s+|\s+$/g,
+          "",
+        );
         if (!voucher) {
           var err = document.getElementById("client-error");
           err.textContent = "Voucher code is required";
-          err.hidden = false;
+          err.style.display = "block";
           document.login.username.focus();
           return false;
         }
