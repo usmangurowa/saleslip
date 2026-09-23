@@ -20,14 +20,21 @@ describe("mikrotik login.html", () => {
     expect(html).toContain('name="login"');
     expect(html).toContain('onsubmit="return doLogin()"');
     expect(html).toContain('<script src="/md5.js"></script>');
-    // CHAP material is read from hidden inputs so substitutions stay in
-    // HTML attributes, never inside the inline script.
-    expect(html).toContain('id="chap-id" value="$(chap-id)"');
+    // The challenge hex in an attribute doubles as the no-CHAP detector.
     expect(html).toContain('id="chap-challenge" value="$(chap-challenge)"');
     expect(html).toContain('challenge == ""');
     // RouterOS http-chap: MD5 over chap-id + password + chap-challenge,
     // concatenated into a single string — hexMD5 takes one argument.
-    expect(html).toContain("hexMD5(chapId + voucher + challenge)");
+    // chap-id MUST be substituted inside a JS string literal (vendor
+    // pattern): RouterOS emits it as a backslash-octal JS escape for
+    // non-printable bytes, which only the JS engine in a string literal
+    // decodes back to the raw byte. In an HTML attribute the browser
+    // keeps the literal "\023" text and the hash is computed over the
+    // wrong string — every login then fails "invalid username or
+    // password".
+    expect(html).toContain(
+      "hexMD5('$(chap-id)' + voucher + '$(chap-challenge)')",
+    );
   });
 
   it("submits the voucher as both username and password", () => {
@@ -45,13 +52,19 @@ describe("mikrotik login.html", () => {
   });
 
   it("keeps substitutions out of fragile JS logic", () => {
-    // $(error) is only allowed inside the $(if error) HTML block — a
-    // substituted error string inside a JS string literal can break the
-    // whole inline script (leaving doLogin undefined and the form
-    // submitting natively with missing credentials).
+    // $(error) and friends are only allowed inside HTML blocks — a
+    // substituted string inside a JS string literal can break the whole
+    // inline script. The ONE exception is the CHAP pair: RouterOS
+    // substitutes $(chap-id) as a backslash-octal JS escape (e.g. \023),
+    // so it is only correct inside a JS string literal, where the engine
+    // decodes the escape back to the raw byte. $(chap-challenge) is plain
+    // hex but rides along in the same literal, mirroring the vendor page.
     const scriptBlocks = html.match(/<script>[\s\S]*?<\/script>/g) ?? [];
     for (const block of scriptBlocks) {
-      expect(block).not.toContain("$(");
+      const substitutions = block.match(/\$\([^)]*\)/g) ?? [];
+      const allowed = ["$(chap-id)", "$(chap-challenge)"];
+      const illegal = substitutions.filter((s) => !allowed.includes(s));
+      expect(illegal).toEqual([]);
     }
   });
 

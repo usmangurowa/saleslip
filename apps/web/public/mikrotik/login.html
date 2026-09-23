@@ -184,9 +184,12 @@
       <input type="hidden" name="password" />
       <input type="hidden" name="dst" value="$(link-orig)" />
       <input type="hidden" name="popup" value="true" />
-      <!-- CHAP material lives in the DOM, not in JS string literals, so a
-           raw substituted byte can never break the inline script's parse. -->
-      <input type="hidden" id="chap-id" value="$(chap-id)" />
+      <!-- Only the challenge hex lives here, as a no-CHAP detector for the
+           script. The chap-id byte NEVER goes in an attribute: RouterOS
+           substitutes $(chap-id) as a backslash-octal JS escape (e.g. \023)
+           for non-printable bytes, and HTML attributes do not decode
+           backslash escapes — the .value would be the literal "\023" text
+           and the CHAP hash would be computed over the wrong string. -->
       <input type="hidden" id="chap-challenge" value="$(chap-challenge)" />
     </form>
 
@@ -278,16 +281,20 @@
         // empty-credential POST.
         document.login.password.value = voucher;
 
-        var chapId = document.getElementById("chap-id").value;
         var challenge = document.getElementById("chap-challenge").value;
         if (challenge == "") {
           return true;
         }
 
         document.sendin.username.value = voucher;
-        // RouterOS http-chap expects MD5(chap-id + password + chap-challenge)
-        // as a single concatenated string — hexMD5 takes one argument.
-        document.sendin.password.value = hexMD5(chapId + voucher + challenge);
+        // RouterOS http-chap expects MD5(chap-id + password + chap-challenge).
+        // $(chap-id) and $(chap-challenge) must be embedded directly in JS
+        // string literals, exactly like the vendor login.html: RouterOS
+        // substitutes chap-id as a backslash-octal JS escape (e.g. \023) when
+        // the byte is non-printable, and only the JS engine inside a string
+        // literal decodes that escape back to the raw byte. Reading it from
+        // an HTML attribute would hash the literal "\023" text instead.
+        document.sendin.password.value = hexMD5('$(chap-id)' + voucher + '$(chap-challenge)');
         document.sendin.submit();
         return false;
       }

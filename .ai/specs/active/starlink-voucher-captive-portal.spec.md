@@ -156,11 +156,19 @@ portal.
   `$(link-orig)`, `$(error)`, `$(chap-id)`, and `$(chap-challenge)` must remain
   literal in the source file.
 - RouterOS `http-chap` hashes `MD5(chap-id + password + chap-challenge)` as one
-  concatenated string — `hexMD5(chapId + voucher + challenge)` where `chapId`
-  and `challenge` come from the hidden `#chap-id` / `#chap-challenge` inputs.
-  `hexMD5` takes a single argument; passing the voucher as a second argument is
-  silently ignored and produces a valid-looking but wrong hash (every login
-  rejected as invalid).
+  concatenated string. Root cause #3 (2026-09-23): RouterOS substitutes
+  `$(chap-id)` as a **backslash-octal JS escape** (e.g. `\023`) when the byte
+  is non-printable. In an HTML attribute the browser does NOT decode backslash
+  escapes, so reading chap-id from a hidden input hashed the literal `\023`
+  text — logins failed "invalid username or password" on every session whose
+  chap-id byte was non-printable (~63%), regardless of browser age. The fix is
+  the vendor pattern: embed both CHAP substitutions directly in JS string
+  literals — `hexMD5('$(chap-id)' + voucher + '$(chap-challenge)')` — where
+  the JS engine decodes the escape back to the raw byte. The hidden
+  `#chap-challenge` input (plain hex, attribute-safe) remains only as the
+  no-CHAP detector that falls back to a native PAP post. `hexMD5` takes a
+  single argument; passing the voucher as a second argument is silently
+  ignored and produces a valid-looking but wrong hash (root cause #1).
 - `/md5.js` is served automatically by the router from the hotspot directory;
   it must not be inlined or removed.
 - The React `/portal` page is a design reference only — it performs no
