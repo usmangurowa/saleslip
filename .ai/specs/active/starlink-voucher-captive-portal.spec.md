@@ -262,3 +262,41 @@ internet — the store resolves without any whitelist.
   allows exactly 7 storefront hrefs (6 plan rows + buy button, all
   `https://api.saleslip.app/?login=` prefix), new planId link test, trial
   href assertion updated to the store-redirect dst.
+
+## Post-Login Pages (2026-09-24, alogin.html + status.html)
+
+The router previously served stock RouterOS `flash/hotspot/alogin.html`
+("You are logged in", 2s refresh, popup-opener JS that modern browsers
+block) and `status.html` (trial/username greeting, IP, bytes, uptime).
+Both are now branded in `apps/web/public/mikrotik/` with the same design
+tokens, panel shell, and Wifi SVG mark as `login.html`.
+
+- **alogin.html** — "You're online" confirmation shown right after voucher
+  auth. Voucher code box (`.code-box`, mirrors the login input style) with
+  `$(if login-by == 'trial')` → trial note / `$(elif login-by != 'mac')` →
+  code box showing `$(username)`. Meta-refresh 3s to `$(link-redirect)`,
+  a primary `.go` Continue link to the same target, divider, text-link to
+  `$(link-status)`. Zero script blocks.
+- **status.html** — "Your session" dashboard: `<dl class="rows">` with
+  conditional voucher/trial row, `$(if session-time-left)` time-left row,
+  `$(uptime)` connected-for row, `$(bytes-in-nice) / $(bytes-out-nice)`
+  data row. Divider. "Buy more time" storefront link
+  `https://api.saleslip.app/?login=$(link-login-only)&amp;mac=$(mac)&amp;ip=$(ip)`
+  (same format as login.html buy links). "Log out" is a plain anchor to
+  `$(link-logout)` (GET URL; no form, no JS — the stock form exists only
+  to feed the popup-opener JS). Keeps the stock
+  `$(if refresh-timeout)` meta-refresh; manual refresh link to
+  `$(link-status)`.
+- **No plan details on these pages** — plan name/price/device-count live
+  in the API DB, unreachable from router pages; they stay on buy/receipt.
+- **RouterOS variables**: `$(username)` IS the voucher code.
+  Attribute-position substitutions (`content="3; url=$(link-redirect)"`,
+  `href="…$(mac)…"`) rely on RouterOS HTML-escaping in attributes — same
+  vendor pattern the stock pages use.
+- **Tests**: `mikrotik-hotspot-pages.test.ts` (12 tests) — placeholder
+  presence, self-contained (no external CSS/JS, allowlisted hrefs:
+  alogin zero external, status exactly one), Wifi mark, logout link,
+  meta-refresh conditionals. Run with
+  `pnpm --filter web exec vitest run src/__tests__/`.
+- **`.prettierignore`** now ignores the whole `apps/web/public/mikrotik/`
+  directory (was login.html only).
