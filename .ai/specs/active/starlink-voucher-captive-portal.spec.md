@@ -201,3 +201,36 @@ The portal now links to the Saleslip storefront so guests can self-serve:
   parse (root cause #2, commit d069ae0).
 - Pending: support/Telegram contact line — waiting on the Telegram bot
   username from the user.
+
+## Trial Gateway (2026-09-24)
+
+The buy link was dead pre-login: every walled-garden entry (api.saleslip.app,
+checkout.paystack.com, paystack.com) reports `.about: "inactivated, not
+allowed by device-mode"` even though `/system/device-mode` shows `home` with
+`hotspot=true`. The unresolvable contradiction (plus a PUT that wiped a
+dst-host during probing) led to a design pivot: skip the walled garden
+entirely and give guests a rate-limited trial session, which has full
+internet — the store resolves without any whitelist.
+
+- **Router config (hsprof4, id `*4`)**: `login-by` =
+  `cookie,http-chap,http-pap,trial`; `trial-uptime-limit` = `5m`
+  (REST field name — CLI docs say `trial-uptime`, REST rejects it as
+  "unknown parameter"); `trial-uptime-reset` = `0s` = never resets = once
+  per MAC; `trial-user-profile` = `trial-5m` (id `*9`, rate-limit 2M/2M,
+  shared-users 1, deliberately NO Mikhmon on-login script — trials must
+  not create billing records, unlike the Mikhmon profiles `*2`–`*8`).
+- **Portal button**: "Get 5 free minutes" links to
+  `$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)` — the
+  vendor per-MAC trial pseudo-username, no password — wrapped in
+  `$(if trial == 'yes')` so RouterOS hides it once the device has spent its
+  trial. How-it-works steps now: free 5 minutes → buy online → enter code.
+- **Caveats**: trial state is in-memory — a router reboot/power-cycle
+  re-grants trials to every MAC; MAC spoofing also bypasses the limit.
+  Accepted trade-offs.
+- REST notes: always PATCH hsprof4 (`PUT` = full replace, clears unset
+  fields); GET only returns non-default fields, so `trial-*` was invisible
+  before being set.
+- Pending: post-purchase bonus 5-minute voucher (platform side, sibling
+  worktree `apps/server/src/wifi/`) — after every order, mint a 5-minute
+  single-use voucher shown on the receipt page so buyers can re-purchase
+  when their data finishes. Needs user go-ahead before editing that tree.
