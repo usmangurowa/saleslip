@@ -78,12 +78,13 @@ const app = new Hono<AppContext>()
   })
   .get("/stats", async (c) => {
     const repo = createWifiConsoleRepository(c.get("db"));
-    const [today, orders, vouchers] = await Promise.all([
+    const [today, orders, vouchers, generated] = await Promise.all([
       repo.todaySummary(),
       repo.countOrdersByStatus(),
       repo.countVouchersByStatus(),
+      repo.voucherGenerationSummary(),
     ]);
-    return c.json({ today, orders, vouchers });
+    return c.json({ today, orders, vouchers, generated });
   });
 
 export default app;

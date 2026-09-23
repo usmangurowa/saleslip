@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@turbo/ui/components/table";
-import { formatBytes } from "@turbo/wifi/format";
+import { formatNaira, formatBytes } from "@turbo/wifi/format";
 
 const KickButton = ({ session }: { session: HotspotSession }) => {
   const kick = useKickSession();
@@ -87,6 +87,7 @@ export const WifiSessionsTable = () => {
             <TableHead>Code</TableHead>
             <TableHead>Plan</TableHead>
             <TableHead>Customer</TableHead>
+            <TableHead>Paid</TableHead>
             <TableHead>Address</TableHead>
             <TableHead>Connected</TableHead>
             <TableHead>Data</TableHead>
@@ -97,14 +98,14 @@ export const WifiSessionsTable = () => {
           {isPending ? (
             Array.from({ length: 3 }, (_, index) => (
               <TableRow key={index} className="hover:bg-transparent">
-                <TableCell colSpan={7}>
+                <TableCell colSpan={8}>
                   <Skeleton className="h-6 w-full" />
                 </TableCell>
               </TableRow>
             ))
           ) : sessions.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={7} className="h-24 text-center">
+              <TableCell colSpan={8} className="h-24 text-center">
                 <span className="text-muted-foreground text-sm">
                   Nobody is connected right now.
                 </span>
@@ -134,6 +135,11 @@ export const WifiSessionsTable = () => {
                         Not issued here
                       </span>
                     ))}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {session.amountKobo != null
+                    ? formatNaira(session.amountKobo)
+                    : "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">
                   {session.address ?? "—"}

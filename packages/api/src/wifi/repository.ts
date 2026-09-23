@@ -69,9 +69,17 @@ export interface SessionVoucher {
   voucherId: string;
   profile: string;
   phone: string | null;
+  /** What the owning order collected; null for counter/batch vouchers. */
+  amountKobo: number | null;
   limitBytesTotal: number | null;
   activatedAt: Date | null;
   bytesUsed: number;
+}
+
+/** Vouchers issued ever and so far today — every kind, bonus included. */
+export interface VoucherGenerationSummary {
+  total: number;
+  today: number;
 }
 
 export interface VoucherUsage {
@@ -97,6 +105,9 @@ export interface WifiConsoleRepository {
   listBatches: (limit: number) => Promise<WifiVoucherBatchRow[]>;
   countOrdersByStatus: () => Promise<Record<WifiOrderStatus, number>>;
   countVouchersByStatus: () => Promise<Record<WifiVoucherStatus, number>>;
+  voucherGenerationSummary: (
+    now?: Date,
+  ) => Promise<VoucherGenerationSummary>;
   todaySummary: (
     now?: Date,
   ) => Promise<{ paidOrders: number; revenueKobo: number }>;
@@ -229,6 +240,20 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
       .from(wifiVoucher)
       .groupBy(wifiVoucher.status);
     return zeroFilled(WIFI_VOUCHER_STATUSES, rows);
+  },
+
+  voucherGenerationSummary: async (now = new Date()) => {
+    const [totalRow] = await db
+      .select({ total: count() })
+      .from(wifiVoucher);
+    const [todayRow] = await db
+      .select({ today: count() })
+      .from(wifiVoucher)
+      .where(gte(wifiVoucher.createdAt, startOfDay(now)));
+    return {
+      total: totalRow?.total ?? 0,
+      today: todayRow?.today ?? 0,
+    };
   },
 
   todaySummary: async (now = new Date()) => {
@@ -369,6 +394,7 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
         activatedAt: wifiVoucher.activatedAt,
         bytesUsed: wifiVoucher.bytesUsed,
         phone: wifiOrder.phone,
+        amountKobo: wifiOrder.amountKobo,
       })
       .from(wifiVoucher)
       .leftJoin(wifiOrder, eq(wifiVoucher.orderId, wifiOrder.id))
@@ -381,6 +407,7 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
           voucherId: row.voucherId,
           profile: row.profile,
           phone: row.phone ?? null,
+          amountKobo: row.amountKobo ?? null,
           limitBytesTotal: row.limitBytesTotal ?? null,
           activatedAt: row.activatedAt ?? null,
           bytesUsed: row.bytesUsed,

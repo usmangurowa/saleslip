@@ -1,43 +1,29 @@
-"use client";
+import Link from "next/link";
 
-import type {
-  TaskPriority,
-  TaskSortKey,
-  TaskStatus,
-} from "@/components/dashboard/tasks-table";
-import * as React from "react";
-import { Integrations } from "@/components/dashboard/integrations";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { Button } from "@turbo/ui/components/button";
+import { Icon } from "@turbo/ui/components/icon";
+import { OverviewStatRow } from "@/components/dashboard/overview-stat-row";
 import { PageToolbar } from "@/components/dashboard/page-toolbar";
-import { StatCards } from "@/components/dashboard/stat-cards";
-import { TasksTable } from "@/components/dashboard/tasks-table";
-import { TasksToolbar } from "@/components/dashboard/tasks-toolbar";
+import { WifiSessionsTable } from "@/components/dashboard/wifi/wifi-sessions-table";
 
-export const OverviewView = () => {
-  const [sortBy, setSortBy] = React.useState<TaskSortKey>("date");
-  const [statuses, setStatuses] = React.useState<TaskStatus[]>([]);
-  const [priorities, setPriorities] = React.useState<TaskPriority[]>([]);
-
-  return (
-    <div className="flex flex-1 flex-col">
-      <PageToolbar>
-        <TasksToolbar
-          sortBy={sortBy}
-          onSortByChange={setSortBy}
-          statuses={statuses}
-          onStatusesChange={setStatuses}
-          priorities={priorities}
-          onPrioritiesChange={setPriorities}
-        />
-      </PageToolbar>
-      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-        <StatCards />
-        <TasksTable
-          sortBy={sortBy}
-          statuses={statuses}
-          priorities={priorities}
-        />
-        <Integrations />
-      </div>
+export const OverviewView = () => (
+  <>
+    <PageToolbar className="rounded-2xl border px-4">
+      <p className="text-muted-foreground text-sm">
+        Live pulse of the hotspot business — vouchers, payments, and who is
+        online right now.
+      </p>
+      <Button variant="outline" size="sm" asChild>
+        <Link href="/dashboard/wifi">
+          Open WiFi console
+          <Icon icon={ArrowRight01Icon} className="size-4" strokeWidth={1.5} />
+        </Link>
+      </Button>
+    </PageToolbar>
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <OverviewStatRow />
+      <WifiSessionsTable />
     </div>
-  );
-};
+  </>
+);

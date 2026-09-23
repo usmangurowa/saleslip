@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   aiNav,
-  analyticsNav,
   platformNav,
   settingsNavItem,
   wifiNav,
@@ -104,7 +103,6 @@ export const AppSidebar = (props: React.ComponentProps<typeof Sidebar>) => {
         <NavGroup label="Platform" items={platformNav} pathname={pathname} />
         <NavGroup label="WiFi" items={wifiNav} pathname={pathname} />
         <NavGroup label="AI" items={aiNav} pathname={pathname} />
-        <NavGroup label="Analytics" items={analyticsNav} pathname={pathname} />
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>

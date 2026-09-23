@@ -66,3 +66,7 @@
 - Do not fetch data in client components when server components suffice (web)
 - Do not invent page, loading, empty, or error-state compositions outside the
   documented grammar
+- Do not keep a dynamic `[section]`-style catch-all whose `generateStaticParams`
+  can return an empty array — Cache Components requires at least one result per
+  `generateStaticParams`; delete the catch-all once every real section has a
+  static route (see `apps/web/src/app/dashboard/`)
