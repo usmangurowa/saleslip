@@ -78,6 +78,29 @@ router. The web app additionally hosts a React design-reference page at
 6. Update ROADMAP_AI.md and .ai memory; mark spec implemented.
 ```
 
+## Hotspot Plan Catalog (live on router)
+
+Profiles on the router (all 5M/5M rate-limit, Mikhmon-compatible on-login
+expiry scripts, validity runs from first activation):
+
+| Profile           | Price  | Duration | Devices (`shared-users`) |
+| ----------------- | ------ | -------- | ------------------------ |
+| 1-Day-Unlimited   | ₦1,000 | 24h      | 1                        |
+| 1-Week-Unlimited  | ₦3,000 | 7d       | 1                        |
+| 1-Month-Unlimited | ₦6,000 | 30d      | 1                        |
+| Duo-1-Day         | ₦1,500 | 24h      | 2                        |
+| Duo-1-Week        | ₦4,000 | 7d       | 2                        |
+| Duo-1-Month       | ₦8,000 | 30d      | 2                        |
+
+Duo profiles (2026-09-22) share the Personal profile scripts with the price
+and profile-name substituted, so Mikhmon reporting continues to work.
+
+Operational notes for this router (RouterOS 7.19.6, REST API):
+
+- REST **create** requires the `/add` suffix: `POST /rest/ip/hotspot/user/profile/add`
+  (a bare `POST` to the collection returns `no such command`).
+- Duo vouchers use the same username = password convention as Personal.
+
 ## Validation Plan
 
 - [x] `pnpm design:lint`
