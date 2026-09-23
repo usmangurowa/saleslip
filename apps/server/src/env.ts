@@ -4,10 +4,11 @@ import { z } from "zod/v4";
 import { authEnv } from "@turbo/auth/env";
 import { shouldSkipEnvValidation } from "@turbo/shared/env";
 
-const optionalString = z
-  .string()
-  .transform((value) => (value === "" ? undefined : value))
-  .pipe(z.string().min(1).optional());
+/** Non-empty string, empty string, or missing var — only the first counts as set. */
+const optionalString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional(),
+);
 
 const flag = z
   .string()
