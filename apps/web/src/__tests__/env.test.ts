@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-properties -- this test deliberately mutates the raw environment to exercise the schema. */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { env as WebEnv } from "../env";

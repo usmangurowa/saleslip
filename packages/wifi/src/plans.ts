@@ -80,6 +80,22 @@ export const findPlan = (
   id: string,
 ): WifiPlan | undefined => plans.find((plan) => plan.id === id);
 
+/**
+ * Non-purchasable companion plan: every paid order also mints one
+ * single-use 5-minute bonus voucher (`trial-5m` profile) so the customer
+ * can get back online and repurchase when their data runs out.
+ * Intentionally NOT in `buildPlans` — checkout only sells listed plans.
+ */
+export const bonusPlan: WifiPlan = {
+  id: "bonus-5m",
+  name: "Bonus 5 minutes",
+  description: "Single-use 5-minute top-up to buy again when data finishes.",
+  priceKobo: 0,
+  rosProfile: "trial-5m",
+  uptimeLimit: "5m",
+  validityLabel: "5 minutes",
+};
+
 export const VOUCHER_COMMENT_PREFIX = "saleslip";
 
 /**

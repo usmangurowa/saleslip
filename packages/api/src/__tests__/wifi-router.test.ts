@@ -145,6 +145,7 @@ const voucherRow = (overrides: Partial<repositoryModule.WifiVoucherRow> = {}) =>
     batchId: "batch-1",
     code: "SALE-1234",
     profile: "Saleslip-1d-1",
+    kind: "primary",
     channel: "manual",
     rosId: null,
     limitBytesTotal: null,

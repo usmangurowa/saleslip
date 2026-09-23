@@ -100,6 +100,7 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
       logger: logger.child({ component: "fulfilment" }),
       onFulfilled: async (order, voucher) => {
         if (order.channel === "telegram" && order.telegramId && deps.telegram) {
+          const bonus = await repo.getBonusVoucherForOrder(order.id);
           await deps.telegram.sendMessage(
             order.telegramId,
             [
@@ -108,6 +109,14 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
               voucher.code,
               ``,
               `Join the ${env.BRAND_NAME} WiFi, open the login page and enter the code as both username and password.`,
+              ...(bonus
+                ? [
+                    ``,
+                    `Bonus code for 5 free minutes when your data finishes:`,
+                    ``,
+                    bonus.code,
+                  ]
+                : []),
             ].join("\n"),
           );
         }

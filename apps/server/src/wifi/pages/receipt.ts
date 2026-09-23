@@ -12,6 +12,8 @@ export interface ReceiptPageProps {
   order: WifiOrderRecord;
   plan: WifiPlan | undefined;
   voucher: WifiVoucherRecord | undefined;
+  /** Single-use 5-minute repurchase code minted with the paid plan. */
+  bonusVoucher?: WifiVoucherRecord;
   /** Inline SVG for the voucher code; omitted while still pending. */
   qrSvg?: string;
   timeZone?: string;
@@ -57,17 +59,53 @@ const POLL_SCRIPT = `
 })();
 `;
 
+/** Delegated copy buttons: any element with data-copy="CODE" copies on click. */
+const COPY_SCRIPT = `
+(function () {
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest("[data-copy]");
+    if (!el) return;
+    var value = el.getAttribute("data-copy");
+    var original = el.textContent;
+    var done = function () {
+      el.textContent = "Copied";
+      setTimeout(function () { el.textContent = original; }, 1500);
+    };
+    var fallback = function () {
+      var ta = document.createElement("textarea");
+      ta.value = value;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (err) {}
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(done).catch(fallback);
+    } else {
+      fallback();
+    }
+  });
+})();
+`;
+
 export const receiptPage = (props: ReceiptPageProps) => {
-  const { order, plan, voucher } = props;
+  const { order, plan, voucher, bonusVoucher } = props;
   const isFinal = order.status === "fulfilled" || order.status === "failed";
   const ready = order.status === "fulfilled" && voucher;
 
-  const head = isFinal
-    ? undefined
-    : html`<meta http-equiv="refresh" content="5" />
-        <script>
-          ${raw(POLL_SCRIPT)};
-        </script>`;
+  const head = html`
+    ${
+      isFinal
+        ? ""
+        : html`<meta http-equiv="refresh" content="5" />
+            <script>
+              ${raw(POLL_SCRIPT)};
+            </script>`
+    }
+    <script>
+      ${raw(COPY_SCRIPT)};
+    </script>
+  `;
 
   return layout(
     {
@@ -87,6 +125,13 @@ export const receiptPage = (props: ReceiptPageProps) => {
                   ${voucher.code}
                 </div>
                 ${props.qrSvg ? html`<div class="qr">${raw(props.qrSvg)}</div>` : ""}
+                <button
+                  class="btn secondary no-print"
+                  type="button"
+                  data-copy="${voucher.code}"
+                >
+                  Copy code
+                </button>
                 <p class="muted">
                   Username and password are both this code. Keep this page or
                   take a screenshot.
@@ -146,6 +191,29 @@ export const receiptPage = (props: ReceiptPageProps) => {
                 </div>
               `
             : ""
+      }
+      ${
+        ready && bonusVoucher
+          ? html`
+              <div class="card">
+                <h2>Bonus code · 5 free minutes</h2>
+                <div class="code" aria-label="Bonus voucher code">
+                  ${bonusVoucher.code}
+                </div>
+                <button
+                  class="btn secondary no-print"
+                  type="button"
+                  data-copy="${bonusVoucher.code}"
+                >
+                  Copy bonus code
+                </button>
+                <p class="muted">
+                  Save this code — when your data finishes, use it for 5 free
+                  minutes to buy again. It works once.
+                </p>
+              </div>
+            `
+          : ""
       }
 
       <div class="card">

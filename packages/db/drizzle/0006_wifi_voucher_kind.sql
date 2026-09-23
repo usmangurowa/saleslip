@@ -1,0 +1,1 @@
+ALTER TABLE "wifi_voucher" ADD COLUMN "kind" text DEFAULT 'primary' NOT NULL;

@@ -1402,6 +1402,7 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `GITHUB_CLIENT_SECRET`
 - `GOOGLE_GENERATIVE_AI_API_KEY`
 - `GROQ_API_KEY`
+- `MAIL_FROM`
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_PORT`
 - `NEXT_PUBLIC_POSTHOG_KEY`
@@ -1455,6 +1456,7 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `GITHUB_CLIENT_SECRET`
 - `GOOGLE_GENERATIVE_AI_API_KEY`
 - `GROQ_API_KEY`
+- `MAIL_FROM`
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_PORT`
 - `NEXT_PUBLIC_POSTHOG_KEY`

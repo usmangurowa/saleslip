@@ -110,6 +110,35 @@ const Voucher = ({ order }: { order: ShopOrder }) => (
       <p className="text-muted-foreground text-sm">
         {order.plan?.name ?? "Your plan"} · {formatNaira(order.amountKobo)}
       </p>
+      {order.bonusVoucherCode ? (
+        <div className="w-full rounded-lg border border-dashed px-4 py-3">
+          <p className="text-muted-foreground text-sm font-medium">
+            Bonus code · 5 free minutes
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <code className="font-mono text-lg font-semibold tracking-wider">
+              {order.bonusVoucherCode}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (order.bonusVoucherCode) {
+                  await navigator.clipboard.writeText(order.bonusVoucherCode);
+                  toast.success("Bonus code copied");
+                }
+              }}
+            >
+              Copy
+            </Button>
+          </div>
+          <p className="text-muted-foreground mt-2 text-sm">
+            Save this code — when your data finishes, use it for 5 free minutes
+            to buy again. It works once.
+          </p>
+        </div>
+      ) : null}
     </CardContent>
   </Card>
 );
