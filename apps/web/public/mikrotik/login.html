@@ -336,6 +336,25 @@
 
       <hr class="divider" />
 
+      <!-- Trial gateway: the walled garden is not open pre-login, so the
+           buy link only works once online. The free 5-minute trial session
+           (once per device, rate-limited) is how a guest without a voucher
+           reaches the storefront. RouterOS hides this whole block once the
+           device has used its trial. T-$(mac-esc) is the vendor's per-MAC
+           trial pseudo-username; no password is needed. -->
+      $(if trial == 'yes')
+      <section>
+        <a
+          class="buy-button"
+          href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)"
+          >Get 5 free minutes</a
+        >
+        <p class="hint">
+          One free session per device &mdash; enough to buy a voucher online.
+        </p>
+      </section>
+      $(endif)
+
       <section>
         <a
           class="buy-button"
@@ -348,9 +367,9 @@
       <section>
         <p class="section-title">How it works</p>
         <div class="steps">
-          <div class="step"><span class="step-num">1</span>Buy online</div>
-          <div class="step"><span class="step-num">2</span>Enter the code</div>
-          <div class="step"><span class="step-num">3</span>You&rsquo;re online</div>
+          <div class="step"><span class="step-num">1</span>Free 5 minutes</div>
+          <div class="step"><span class="step-num">2</span>Buy online</div>
+          <div class="step"><span class="step-num">3</span>Enter the code</div>
         </div>
       </section>
 

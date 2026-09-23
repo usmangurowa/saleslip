@@ -86,6 +86,19 @@ describe("mikrotik login.html", () => {
     );
   });
 
+  it("offers the once-per-device trial session when the router allows it", () => {
+    // The walled garden is closed pre-login, so the buy link only works
+    // once online: the 5-minute trial is the guest's path to the store.
+    // RouterOS hides the block via $(if trial == 'yes') once the device
+    // has spent its trial. T-$(mac-esc) is the vendor's per-MAC trial
+    // pseudo-username — no password — and dst must be the escaped
+    // original URL so the trial lands where the guest was heading.
+    expect(html).toContain("$(if trial == 'yes')");
+    expect(html).toContain(
+      'href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)"',
+    );
+  });
+
   it("auto-focuses the voucher input", () => {
     expect(html).toContain('getElementById("voucher").focus()');
   });
