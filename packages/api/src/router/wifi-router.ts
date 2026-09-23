@@ -162,6 +162,7 @@ export const createWifiRouterApp = ({
                 bytesOut: session.bytesOut ?? 0,
                 planName: plan?.name ?? null,
                 phone: voucher?.phone ?? null,
+                amountKobo: voucher?.amountKobo ?? null,
                 activatedAt: voucher?.activatedAt?.toISOString() ?? null,
                 known: voucher !== undefined,
               };

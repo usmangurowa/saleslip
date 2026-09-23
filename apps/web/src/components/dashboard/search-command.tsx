@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   aiNav,
-  analyticsNav,
   platformNav,
   settingsNavItem,
   wifiNav,
@@ -33,7 +32,6 @@ const groups = [
   { heading: "Navigation", items: platformNav },
   { heading: "WiFi", items: wifiNav },
   { heading: "AI", items: aiNav },
-  { heading: "Analytics", items: analyticsNav },
 ];
 
 export const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {

@@ -113,9 +113,31 @@ Copy the `packages/shared` setup (or `apps/web` for React components):
 - [ ] Tests pass: `pnpm test`
 - [ ] No test depends on external services or network
 
+## Testing Hono API routes
+
+`app.request(path, init, env)` sets Hono `env`, NOT context `Variables` — middleware that
+reads `c.get("session")` / `c.get("db")` sees nothing. Inject `Variables` by wrapping the
+router under test:
+
+```ts
+const app = new Hono<AppContext>().use("*", (c, next) => {
+  c.set("session", makeSession(email)); // cast: `as unknown as AppContext["Variables"]["session"]`
+  c.set("db", {} as Db);
+  return next();
+}).route("/", routerUnderTest);
+```
+
+- Default-export singleton routers (e.g. `packages/api/src/router/wifi.ts`) need this
+  wrapper; factory routers (e.g. `createWifiRouterApp`) accept options directly.
+- Mock the repository with `vi.hoisted` state + `vi.mock("../<feature>/repository", ...)`
+  — see `packages/api/src/__tests__/wifi.test.ts` and `wifi-router.test.ts`.
+- `__tests__/` files are typechecked by `pnpm turbo run build`; the session cast above is
+  the sanctioned way to satisfy the full Better Auth session shape.
+
 ## Anti-patterns (do NOT do)
 
 - Do not use Jest — use Vitest
 - Do not place test files outside `__tests__/` directories
 - Do not test implementation details — test behavior
 - Do not use `test()` — use `it()` for consistency
+- Do not pass a session object as `app.request`'s third argument — it sets `env`, not `Variables`
