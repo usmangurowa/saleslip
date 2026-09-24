@@ -395,6 +395,8 @@ Environment (see `.env.example`):
 | `WIFI_PROFILE_DAY_1`, `WIFI_PROFILE_DAY_2`, `WIFI_PROFILE_WEEK_1`, `WIFI_PROFILE_WEEK_2`, `WIFI_PROFILE_MONTH_1`, `WIFI_PROFILE_MONTH_2` | RouterOS hotspot user profile names per plan; both runtimes must resolve the same values. |
 | `ADMIN_EMAILS`                                                        | Comma-separated emails allowed to sign in to the admin dashboard.                                                                        |
 
+Production mapping (Mikhmon-managed profiles on the hEX, verified from boot logs): `DAY_1` → `1-Day-Unlimited`, `DAY_2` → `Duo-1-Day`, `WEEK_1` → `1-Week-Unlimited`, `WEEK_2` → `Duo-1-Week`, `MONTH_1` → `1-Month-Unlimited`, `MONTH_2` → `Duo-1-Month`. If a plan 422s with `input does not match any value of profile`, the env value no longer matches a router profile — check the boot log's `router hotspot profiles` line for the current names.
+
 Fulfilment: `charge.success` (signature-checked, idempotent by reference) marks the order paid, generates a `GW#####` code, creates the hotspot user (`username = password = code`, the plan's profile, comment `saleslip|<orderId>|<phone>`), stores the voucher and marks the order fulfilled. Telegram orders get the code by DM. If the router is unreachable the order becomes `pending_router` and an in-process retry with backoff finishes it; the sweep also runs on boot. A watchdog DMs the admins when the router has been down for five minutes and again when it recovers.
 
 ### WiFi admin console (Saleslip)

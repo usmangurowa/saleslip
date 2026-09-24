@@ -57,9 +57,15 @@ services:
       ROUTER_PORT: "8728"
       ROUTER_API_USER: mikhmon
       ROUTER_API_PASSWORD: ${ROUTER_API_PASSWORD}
-      WIFI_PROFILE_DAILY_UNLIMITED: Daily-Unlimited
-      WIFI_PROFILE_DAILY_1GB: Daily-1GB
-      WIFI_PROFILE_WEEKLY_5GB: Weekly-5GB
+      # Real Mikhmon hotspot profiles on the router (managed via Mikhmon UI).
+      # Singles map to `1-*-Unlimited`, Duo variants to `Duo-1-*`. Never let
+      # code create these profiles — they carry rate limits + voucher expiry.
+      WIFI_PROFILE_DAY_1: 1-Day-Unlimited
+      WIFI_PROFILE_DAY_2: Duo-1-Day
+      WIFI_PROFILE_WEEK_1: 1-Week-Unlimited
+      WIFI_PROFILE_WEEK_2: Duo-1-Week
+      WIFI_PROFILE_MONTH_1: 1-Month-Unlimited
+      WIFI_PROFILE_MONTH_2: Duo-1-Month
 
       PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
       PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY}
