@@ -9,7 +9,7 @@ import { Icon } from "@turbo/ui/components/icon";
 
 export const OverviewView = () => (
   <>
-    <PageToolbar className="rounded-2xl border px-4">
+    <PageToolbar>
       <p className="text-muted-foreground text-sm">
         Live pulse of the hotspot business — vouchers, payments, and who is
         online right now.

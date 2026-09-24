@@ -13,11 +13,13 @@ import { WifiStatRow } from "@/components/dashboard/wifi/wifi-stat-row";
 export default function WifiOrdersPage() {
   return (
     <>
-      <PageToolbar className="rounded-2xl border px-4">
+      <PageToolbar>
         <WifiBatchDialog />
       </PageToolbar>
-      <WifiStatRow />
-      <WifiOrdersTable />
+      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+        <WifiStatRow />
+        <WifiOrdersTable />
+      </div>
     </>
   );
 }

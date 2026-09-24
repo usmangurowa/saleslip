@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageToolbar } from "@/components/dashboard/page-toolbar";
 import { WifiPlansTable } from "@/components/dashboard/wifi/wifi-plans-table";
 
 export const metadata: Metadata = {
@@ -16,10 +15,8 @@ export const metadata: Metadata = {
  */
 export default function WifiPlansPage() {
   return (
-    <>
-      <PageToolbar className="rounded-2xl border px-4">
-        <WifiPlansTable />
-      </PageToolbar>
-    </>
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <WifiPlansTable />
+    </div>
   );
 }
