@@ -11,6 +11,8 @@ export interface WifiConfig {
   supportPhone?: string;
   /** Public origin for Paystack callbacks and Telegram links, no trailing slash. */
   publicBaseUrl?: string;
+  /** Web app origin for buyer-facing links (receipts), no trailing slash. */
+  webBaseUrl?: string;
   paystackSecretKey?: string;
   paystackPublicKey?: string;
   telegramWebhookSecret?: string;

@@ -58,7 +58,7 @@ export const startCheckout = async (
     amount: order.amountKobo,
     email: paystackEmail(order),
     reference: order.paystackReference,
-    callbackUrl: `${config.publicBaseUrl}/orders/${order.id}`,
+    callbackUrl: `${config.webBaseUrl ?? config.publicBaseUrl}/orders/${order.id}`,
     channels: [...PAYSTACK_CHANNELS],
     metadata: {
       orderId: order.id,

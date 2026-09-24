@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ComponentProps } from "react";
 import { Button as ReactEmailButton } from "react-email";
 

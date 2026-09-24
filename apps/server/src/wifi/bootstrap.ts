@@ -79,6 +79,7 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
       brandName: env.BRAND_NAME,
       supportPhone: env.SUPPORT_PHONE,
       publicBaseUrl: env.PUBLIC_BASE_URL?.replace(/\/+$/, ""),
+      webBaseUrl: env.WEB_APP_URL?.replace(/\/+$/, ""),
       paystackSecretKey: env.PAYSTACK_SECRET_KEY,
       paystackPublicKey: env.PAYSTACK_PUBLIC_KEY,
       telegramWebhookSecret: env.TELEGRAM_WEBHOOK_SECRET,

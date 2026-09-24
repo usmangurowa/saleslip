@@ -115,6 +115,41 @@ describe("shop routes", () => {
     });
   });
 
+  it("points the Paystack callback at the web app when webBaseUrl is set", async () => {
+    const calls: { callbackUrl?: string }[] = [];
+    const t = createTestDeps({
+      paystack: fakePaystack(calls),
+      webBaseUrl: "https://saleslip.app",
+    });
+    const app = createWifiApp(t.deps);
+
+    const res = await app.request(
+      form({ planId: "day-1", phone: "08012345678" }),
+    );
+    expect(res.status).toBe(303);
+    const order = [...t.orders.values()][0];
+    if (!order) throw new Error("order not created");
+    expect(calls[0]?.callbackUrl).toBe(
+      `https://saleslip.app/orders/${order.id}`,
+    );
+  });
+
+  it("falls back to the API base for the Paystack callback without webBaseUrl", async () => {
+    const calls: { callbackUrl?: string }[] = [];
+    const t = createTestDeps({ paystack: fakePaystack(calls) });
+    const app = createWifiApp(t.deps);
+
+    const res = await app.request(
+      form({ planId: "day-1", phone: "08012345678" }),
+    );
+    expect(res.status).toBe(303);
+    const order = [...t.orders.values()][0];
+    if (!order) throw new Error("order not created");
+    expect(calls[0]?.callbackUrl).toBe(
+      `https://buy.example.test/orders/${order.id}`,
+    );
+  });
+
   it("preselects the plan from ?planId", async () => {
     const t = createTestDeps({ paystack: fakePaystack() });
     const res = await createWifiApp(t.deps).request("/?planId=week-1");

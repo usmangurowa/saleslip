@@ -208,6 +208,7 @@ export interface TestDepsOptions {
   paystack?: WifiDeps["paystack"];
   paystackSecretKey?: string;
   publicBaseUrl?: string;
+  webBaseUrl?: string;
   telegramWebhookSecret?: string;
   telegramAdminIds?: string[];
   pingDb?: () => Promise<void>;
@@ -234,6 +235,7 @@ export const createTestDeps = (options: TestDepsOptions = {}) => {
       brandName: "Test WiFi",
       supportPhone: "+2348000000000",
       publicBaseUrl: options.publicBaseUrl ?? "https://buy.example.test",
+      webBaseUrl: options.webBaseUrl,
       paystackSecretKey: options.paystackSecretKey ?? "sk_test_secret",
       telegramWebhookSecret: options.telegramWebhookSecret,
       telegramAdminIds: options.telegramAdminIds ?? ["1"],
