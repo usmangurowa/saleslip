@@ -57,6 +57,13 @@
       "when": 1790183833147,
       "tag": "0007_wifi_order_phone_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790269000000,
+      "tag": "0008_wifi_plans",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   index,
   integer,
@@ -144,5 +145,36 @@ export const wifiVoucher = pgTable(
       "wifi_voucher_owner_check",
       sql`num_nonnulls(${table.orderId}, ${table.batchId}) = 1`,
     ),
+  ],
+);
+
+/**
+ * The sellable plan catalogue. Rows here feed `/buy`, checkout, and voucher
+ * minting — adding one makes it sellable immediately, no deploy. `rosProfile`
+ * is the RouterOS hotspot profile codes are minted against, matching a name on
+ * the router (manage those from the Profiles tab).
+ *
+ * Deactivation is soft (`active = false`) so historical orders and vouchers
+ * keep resolving to their plan.
+ */
+export const wifiPlan = pgTable(
+  "wifi_plan",
+  {
+    /** Authored slug, e.g. `day-1` — referenced by orders and batches. */
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    priceKobo: integer("price_kobo").notNull(),
+    rosProfile: text("ros_profile").notNull(),
+    dataLimitBytes: bigint("data_limit_bytes", { mode: "number" }),
+    uptimeLimit: text("uptime_limit"),
+    validityLabel: text("validity_label").notNull(),
+    active: boolean("active").default(true).notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    check("wifi_plan_price_check", sql`${table.priceKobo} >= 0`),
   ],
 );

@@ -91,4 +91,90 @@ describe("wifi console router", () => {
       generated: { total: 7, today: 2 },
     });
   });
+
+  it("lists plans from the DB mapped to the UI shape", async () => {
+    state.repo = {
+      listPlans: () =>
+        Promise.resolve([
+          {
+            id: "day-1",
+            name: "1 Day · 1 Device",
+            description: "Unlimited data for 24 hours on one device.",
+            priceKobo: 100_000,
+            rosProfile: "1-Day-Unlimited",
+            validityLabel: "24 hours",
+          },
+        ]),
+    };
+    const res = await build().request("/plans");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      plans: Record<string, unknown>[];
+    };
+    expect(body.plans).toEqual([
+      {
+        id: "day-1",
+        name: "1 Day · 1 Device",
+        description: "Unlimited data for 24 hours on one device.",
+        priceKobo: 100_000,
+        rosProfile: "1-Day-Unlimited",
+        profile: "1-Day-Unlimited",
+        dataLimitBytes: null,
+        uptimeLimit: null,
+        validityLabel: "24 hours",
+      },
+    ]);
+  });
+
+  it("creates a plan from a validated payload", async () => {
+    const created = {
+      id: "hour-1",
+      name: "1 Hour · 1 Device",
+      description: "Unlimited data for one hour.",
+      priceKobo: 20_000,
+      rosProfile: "1-Hour-Unlimited",
+      uptimeLimit: "1 hour",
+      validityLabel: "1 hour",
+    };
+    state.repo = { createPlan: (input) => Promise.resolve(created) };
+    const res = await build().request("/plans", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        id: "hour-1",
+        name: "1 Hour · 1 Device",
+        description: "Unlimited data for one hour.",
+        priceKobo: 20_000,
+        profile: "1-Hour-Unlimited",
+        uptimeLimit: "1 hour",
+        validityLabel: "1 hour",
+      }),
+    });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({ plan: created });
+  });
+
+  it("archives a plan via PATCH", async () => {
+    const archived = {
+      id: "day-1",
+      name: "1 Day · 1 Device",
+      description: "Unlimited data for 24 hours on one device.",
+      priceKobo: 100_000,
+      rosProfile: "1-Day-Unlimited",
+      validityLabel: "24 hours",
+      active: false,
+    };
+    state.repo = { updatePlan: vi.fn(() => Promise.resolve(archived)) };
+    const res = await build().request("/plans/day-1", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ active: false }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ plan: archived });
+    expect(state.repo.updatePlan).toHaveBeenCalledWith(
+      "day-1",
+      expect.objectContaining({ active: false }),
+    );
+  });
 });

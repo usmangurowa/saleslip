@@ -44,7 +44,7 @@ export type FulfilmentResult =
 
 export interface FulfilmentDeps {
   repo: OrderRepository;
-  plans: readonly WifiPlan[];
+  plans: () => Promise<readonly WifiPlan[]>;
   /**
    * Non-purchasable plan minted as a bonus voucher with every purchase so
    * the customer can get back online and repurchase when data runs out.
@@ -171,7 +171,7 @@ export const createFulfilmentService = (
         return { outcome: "failed", order, reason: `order is ${order.status}` };
       }
 
-      const plan = findPlan(deps.plans, order.planId);
+      const plan = findPlan(await deps.plans(), order.planId);
       if (!plan) {
         const failed = await deps.repo.transition(order.id, "failed", {
           lastError: `unknown plan ${order.planId}`,

@@ -4,8 +4,10 @@ import { LandingNav } from "@/components/landing/landing-nav";
 import { BuyForm } from "@/components/shop/buy-form";
 import { PlanCard } from "@/components/shop/plan-card";
 
+import { loadShopPlans } from "@/lib/wifi-plans";
+
 import { Button } from "@turbo/ui/components/button";
-import { buildPlans, findPlan } from "@turbo/wifi";
+import { findPlan } from "@turbo/wifi";
 
 export const metadata: Metadata = {
   title: "Buy WiFi — Saleslip",
@@ -22,7 +24,8 @@ export default async function BuyPage({
 }) {
   const params = await searchParams;
   const planId = params.planId ?? params.plan;
-  const plan = planId ? findPlan(buildPlans(), planId) : undefined;
+  const plans = await loadShopPlans();
+  const plan = planId ? findPlan(plans, planId) : undefined;
 
   return (
     <div className="bg-background min-h-svh">
@@ -47,7 +50,7 @@ export default async function BuyPage({
               </p>
             </div>
             <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {buildPlans().map((p) => (
+              {plans.map((p) => (
                 <PlanCard key={p.id} plan={p} />
               ))}
             </div>

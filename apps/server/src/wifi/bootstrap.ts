@@ -1,10 +1,12 @@
-import { sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { webhookCallback } from "grammy";
 
 import { db } from "@turbo/db/client";
+import { wifiPlan } from "@turbo/db";
 import { createPaystackClient } from "@turbo/paystack";
 import { createHotspotService, createRouterOsClient } from "@turbo/routeros";
 import { buildPlans } from "@turbo/wifi";
+import type { WifiPlan } from "@turbo/wifi";
 
 import type { env as ServerEnv } from "../env";
 import type { WifiDeps } from "./deps";
@@ -64,7 +66,9 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
       : undefined;
   if (!paystack) logger.warn("paystack disabled", { reason: "not configured" });
 
-  const plans = buildPlans({
+  // Plans are DB-managed from the web console; env overrides are the seed
+  // fallback so a fresh database still has a sellable catalogue.
+  const fallbackPlans = buildPlans({
     day1: env.WIFI_PROFILE_DAY_1,
     day2: env.WIFI_PROFILE_DAY_2,
     week1: env.WIFI_PROFILE_WEEK_1,
@@ -72,6 +76,34 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
     month1: env.WIFI_PROFILE_MONTH_1,
     month2: env.WIFI_PROFILE_MONTH_2,
   });
+
+  const loadPlans = async (): Promise<readonly WifiPlan[]> => {
+    try {
+      const rows = await db
+        .select()
+        .from(wifiPlan)
+        .where(eq(wifiPlan.active, true))
+        .orderBy(asc(wifiPlan.sortOrder), asc(wifiPlan.id));
+      if (rows.length === 0) return fallbackPlans;
+      return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        priceKobo: row.priceKobo,
+        rosProfile: row.rosProfile,
+        ...(row.dataLimitBytes !== null
+          ? { dataLimitBytes: row.dataLimitBytes }
+          : {}),
+        ...(row.uptimeLimit !== null ? { uptimeLimit: row.uptimeLimit } : {}),
+        validityLabel: row.validityLabel,
+      }));
+    } catch (error) {
+      logger.warn("plan catalogue query failed; using env fallback", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return fallbackPlans;
+    }
+  };
 
   const repo = createOrderRepository(db);
   const deps: WifiDeps = {
@@ -87,7 +119,7 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
       hotspotServer: env.WIFI_HOTSPOT_SERVER,
       timeZone: "Africa/Lagos",
     },
-    plans,
+    plans: loadPlans,
     repo,
     paystack,
     hotspot,
@@ -97,7 +129,7 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
     },
     fulfilment: createFulfilmentService({
       repo,
-      plans,
+      plans: loadPlans,
       hotspot,
       logger: logger.child({ component: "fulfilment" }),
       onFulfilled: async (order, voucher) => {
@@ -142,7 +174,7 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
               order,
               voucher,
               bonusVoucher: bonus,
-              plans,
+              plans: await deps.plans(),
               supportPhone: env.SUPPORT_PHONE,
             });
             if (result.success) {
@@ -181,8 +213,9 @@ export const createWifiRuntime = (env: WifiEnv): WifiRuntime => {
   const boot: (() => Promise<unknown>)[] = [() => deps.fulfilment.sweep()];
 
   if (deps.hotspot) {
-    const { hotspot, plans } = deps;
+    const { hotspot } = deps;
     boot.push(async () => {
+      const plans = await deps.plans();
       logger.info("plan profile mapping", {
         plans: plans.map((plan) => ({
           id: plan.id,

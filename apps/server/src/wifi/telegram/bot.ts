@@ -105,7 +105,7 @@ export const createTelegramBot = ({
   botInfo,
 }: TelegramBotOptions) => {
   const bot = new Bot(token, botInfo ? { botInfo } : undefined);
-  const { config, plans, repo, logger } = deps;
+  const { config, repo, logger } = deps;
   const pending = new Map<number, AwaitingPhone>();
 
   const showMenu = (ctx: Context) =>
@@ -114,14 +114,16 @@ export const createTelegramBot = ({
       { reply_markup: mainMenu() },
     );
 
-  const showPlans = (ctx: Context) =>
-    ctx.reply(["Choose a plan:", "", ...plans.map(planLine)].join("\n"), {
+  const showPlans = async (ctx: Context) => {
+    const plans = await deps.plans();
+    await ctx.reply(["Choose a plan:", "", ...plans.map(planLine)].join("\n"), {
       reply_markup: planMenu(plans),
     });
+  };
 
   const askPhone = async (ctx: Context, planId: string) => {
     const chatId = ctx.chat?.id;
-    const plan = findPlan(plans, planId);
+    const plan = findPlan(await deps.plans(), planId);
     if (chatId === undefined || !plan) {
       await ctx.reply("That plan is no longer available.");
       return;
@@ -209,7 +211,7 @@ export const createTelegramBot = ({
             : undefined;
         return describeOrder(
           order,
-          findPlan(plans, order.planId),
+          findPlan(await deps.plans(), order.planId),
           voucher?.code,
           config.timeZone,
         );

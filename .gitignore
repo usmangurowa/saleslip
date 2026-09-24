@@ -64,9 +64,10 @@ dist/
 
 
 
-# Advisor plan files — session artifacts, never committed
-plans/
-advisor-plans/
+# Advisor plan files — session artifacts, never committed (anchored to repo
+# root so route directories like apps/web/.../wifi/plans/ are not ignored)
+/plans/
+/advisor-plans/
 
 # Local browser-test artifacts and env backups
 .playwright-mcp/

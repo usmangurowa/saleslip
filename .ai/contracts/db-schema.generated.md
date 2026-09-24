@@ -23,6 +23,7 @@
 | `wifiOrder` | `wifi_order` | `packages/db/src/wifi-schema.ts` |
 | `wifiVoucherBatch` | `wifi_voucher_batch` | `packages/db/src/wifi-schema.ts` |
 | `wifiVoucher` | `wifi_voucher` | `packages/db/src/wifi-schema.ts` |
+| `wifiPlan` | `wifi_plan` | `packages/db/src/wifi-schema.ts` |
 
 ## Relations
 

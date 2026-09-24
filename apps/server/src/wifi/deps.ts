@@ -29,7 +29,8 @@ export interface TelegramNotifier {
 /** Everything the HTTP layer needs; tests construct it with fakes. */
 export interface WifiDeps {
   config: WifiConfig;
-  plans: readonly WifiPlan[];
+  /** Resolved per request so DB-managed plans appear without a restart. */
+  plans: () => Promise<readonly WifiPlan[]>;
   repo: OrderRepository;
   paystack: PaystackClient | undefined;
   hotspot: HotspotService | undefined;

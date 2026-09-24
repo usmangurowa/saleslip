@@ -11,6 +11,10 @@ export interface WifiPlan {
   /** RouterOS duration, e.g. `1d`, `7d`. */
   uptimeLimit?: string;
   validityLabel: string;
+  /** Whether the plan is purchasable; catalogue rows carry this, minting ignores it. */
+  active?: boolean;
+  /** Display order for the buy page; lower numbers first. */
+  sortOrder?: number;
 }
 
 export interface PlanProfileOverrides {

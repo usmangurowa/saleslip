@@ -11,6 +11,7 @@ const tabs = [
   { label: "Vouchers", href: "/dashboard/wifi/vouchers" },
   { label: "Live", href: "/dashboard/wifi/live" },
   { label: "Profiles", href: "/dashboard/wifi/profiles" },
+  { label: "Plans", href: "/dashboard/wifi/plans" },
 ] as const;
 
 /**

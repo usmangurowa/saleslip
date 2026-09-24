@@ -56,19 +56,20 @@ const firstIssue = (error: z.ZodError) =>
   error.issues[0]?.message ?? "Please check the form and try again";
 
 export const createShopRoutes = (deps: WifiDeps) => {
-  const { config, plans, repo } = deps;
+  const { config, repo } = deps;
   const page = {
     brandName: config.brandName,
     supportPhone: config.supportPhone,
   };
 
-  const renderBuy = (
+  const renderBuy = async (
     portal: PortalParams,
     extra: Partial<Parameters<typeof buyPage>[0]> = {},
-  ) => buyPage({ ...page, plans, portal, ...extra });
+  ) =>
+    buyPage({ ...page, plans: await deps.plans(), portal, ...extra });
 
   return new Hono()
-    .get("/", (c) => {
+    .get("/", async (c) => {
       const parsed = portalParamsSchema.safeParse(c.req.query());
       const portal: PortalParams = parsed.success ? parsed.data : {};
       if (!deps.paystack) {
@@ -77,7 +78,7 @@ export const createShopRoutes = (deps: WifiDeps) => {
           503,
         );
       }
-      return c.html(renderBuy(portal));
+      return c.html(await renderBuy(portal));
     })
 
     .post("/orders", async (c) => {
@@ -180,6 +181,7 @@ export const createShopRoutes = (deps: WifiDeps) => {
     .get("/orders/:id", async (c) => {
       const order = await repo.getOrder(c.req.param("id"));
       if (!order) return c.notFound();
+      const plans = await deps.plans();
       const voucher =
         order.status === "fulfilled"
           ? await repo.getVoucherForOrder(order.id)

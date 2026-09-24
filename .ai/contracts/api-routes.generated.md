@@ -18,10 +18,12 @@
 | GET | `/wifi/plans` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/stats` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/vouchers` | `packages/api/src/router/wifi.ts` | no |
+| PATCH | `/wifi/plans/:id` | `packages/api/src/router/wifi.ts` | no |
 | POST | `/ai/chat` | `packages/api/src/router/ai.ts` | yes |
 | POST | `/apikeys` | `packages/api/src/router/api-key.ts` | yes |
 | POST | `/support` | `packages/api/src/router/support.ts` | yes |
 | POST | `/tasks` | `packages/api/src/router/task.ts` | yes |
+| POST | `/wifi/plans` | `packages/api/src/router/wifi.ts` | no |
 
 ## Typed client source
 

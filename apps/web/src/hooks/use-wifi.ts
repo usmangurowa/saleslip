@@ -2,7 +2,7 @@
 
 import type { InferResponseType } from "hono/client";
 import { api } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 /** One hotspot order as returned by GET /api/wifi/orders */
 export type WifiOrder = InferResponseType<
@@ -52,7 +52,8 @@ export const wifiKeys = {
     [...wifiKeys.all, "vouchers", filters] as const,
   batches: () => [...wifiKeys.all, "batches"] as const,
   stats: () => [...wifiKeys.all, "stats"] as const,
-  plans: () => [...wifiKeys.all, "plans"] as const,
+  plans: (includeInactive = false) =>
+    [...wifiKeys.all, "plans", includeInactive] as const,
 };
 
 const wifiQueryOptions = {
@@ -135,11 +136,13 @@ export const useWifiStats = () =>
   });
 
 /** The plan catalogue — prices and RouterOS profiles come from the server. */
-export const useWifiPlans = () =>
+export const useWifiPlans = (includeInactive = false) =>
   useQuery({
-    queryKey: wifiKeys.plans(),
+    queryKey: wifiKeys.plans(includeInactive),
     queryFn: async () => {
-      const res = await api.wifi.plans.$get();
+      const res = await api.wifi.plans.$get({
+        query: includeInactive ? { includeInactive: "true" } : {},
+      });
       if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to fetch WiFi plans");
       const { plans } = await res.json();
@@ -148,3 +151,65 @@ export const useWifiPlans = () =>
     // Profile names only change on deploy; no reason to refetch.
     staleTime: 5 * 60_000,
   });
+
+/** Writable fields for creating a plan; the id is the URL-stable slug. */
+export interface WifiPlanInput {
+  id: string;
+  name: string;
+  description: string;
+  priceKobo: number;
+  profile: string;
+  dataLimitBytes?: number | null;
+  uptimeLimit?: string | null;
+  validityLabel: string;
+  sortOrder?: number;
+}
+
+/** Writable fields for editing a plan (id is immutable). */
+export interface WifiPlanUpdate extends Partial<Omit<WifiPlanInput, "id">> {
+  active?: boolean;
+}
+
+const planApiError = async (res: Response, fallback: string) => {
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  return new Error(body?.error ?? fallback);
+};
+
+/** Create a plan so new mikhmon profiles become purchasable immediately. */
+export const useCreateWifiPlan = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: WifiPlanInput) => {
+      const res = await api.wifi.plans.$post({ json: input });
+      if (!res.ok) throw await planApiError(res, "Failed to create plan");
+      const { plan } = await res.json();
+      return plan;
+    },
+    // Prefix key: refreshes both active-only and include-inactive plan queries.
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: wifiKeys.plans().slice(0, 2),
+      }),
+  });
+};
+
+/** Edit an existing plan; the id never changes, only its fields. */
+export const useUpdateWifiPlan = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...input }: WifiPlanUpdate & { id: string }) => {
+      const res = await api.wifi.plans[":id"].$patch({
+        param: { id },
+        json: input,
+      });
+      if (!res.ok) throw await planApiError(res, "Failed to update plan");
+      const { plan } = await res.json();
+      return plan;
+    },
+    // Prefix key: refreshes both active-only and include-inactive plan queries.
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: wifiKeys.plans().slice(0, 2),
+      }),
+  });
+};

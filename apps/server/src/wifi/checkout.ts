@@ -43,7 +43,7 @@ export const startCheckout = async (
   input: Omit<CreateOrderInput, "amountKobo">,
 ): Promise<CheckoutResult> => {
   const { config, repo, logger } = deps;
-  const plan = findPlan(deps.plans, input.planId);
+  const plan = findPlan(await deps.plans(), input.planId);
   if (!plan) return { ok: false, reason: "unknown_plan" };
   if (!deps.paystack || !config.publicBaseUrl) {
     return { ok: false, reason: "payments_unavailable" };

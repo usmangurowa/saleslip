@@ -11,6 +11,7 @@ import {
   WIFI_ORDER_STATUSES,
   WIFI_VOUCHER_STATUSES,
   wifiOrder,
+  wifiPlan,
   wifiVoucher,
   wifiVoucherBatch,
 } from "@turbo/db/schema";
@@ -44,6 +45,23 @@ export interface ListVouchersParams {
   limit: number;
   offset: number;
 }
+
+export interface CreatePlanInput {
+  id: string;
+  name: string;
+  description: string;
+  priceKobo: number;
+  rosProfile: string;
+  dataLimitBytes?: number | null;
+  uptimeLimit?: string | null;
+  validityLabel: string;
+  sortOrder?: number;
+}
+
+export type UpdatePlanInput = Partial<Omit<CreatePlanInput, "id">> & {
+  active?: boolean;
+  sortOrder?: number;
+};
 
 export interface CreateVoucherBatchInput {
   label: string;
@@ -102,6 +120,12 @@ export interface VoucherUsage {
 export interface WifiConsoleRepository {
   listOrders: (params: ListOrdersParams) => Promise<Page<WifiOrderRow>>;
   listVouchers: (params: ListVouchersParams) => Promise<Page<WifiVoucherRow>>;
+  /** The DB-backed plan catalogue; inactive rows are hidden unless asked for. */
+  listPlans: (params?: {
+    includeInactive?: boolean;
+  }) => Promise<WifiPlan[]>;
+  createPlan: (input: CreatePlanInput) => Promise<WifiPlan>;
+  updatePlan: (id: string, input: UpdatePlanInput) => Promise<WifiPlan | undefined>;
   listBatches: (limit: number) => Promise<WifiVoucherBatchRow[]>;
   countOrdersByStatus: () => Promise<Record<WifiOrderStatus, number>>;
   countVouchersByStatus: () => Promise<Record<WifiVoucherStatus, number>>;
@@ -197,6 +221,99 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
       db.select({ total: count() }).from(wifiOrder).where(where),
     ]);
     return { rows, total: Number(total?.total ?? 0) };
+  },
+
+  listPlans: async ({ includeInactive } = {}) => {
+    const where = includeInactive ? undefined : eq(wifiPlan.active, true);
+    const rows = await db
+      .select()
+      .from(wifiPlan)
+      .where(where)
+      .orderBy(wifiPlan.sortOrder, wifiPlan.id);
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      priceKobo: row.priceKobo,
+      rosProfile: row.rosProfile,
+      dataLimitBytes: row.dataLimitBytes ?? undefined,
+      uptimeLimit: row.uptimeLimit ?? undefined,
+      validityLabel: row.validityLabel,
+      active: row.active,
+      sortOrder: row.sortOrder,
+    }));
+  },
+
+  createPlan: async (input) => {
+    const [row] = await db
+      .insert(wifiPlan)
+      .values({
+        id: input.id,
+        name: input.name,
+        description: input.description,
+        priceKobo: input.priceKobo,
+        rosProfile: input.rosProfile,
+        dataLimitBytes: input.dataLimitBytes ?? null,
+        uptimeLimit: input.uptimeLimit ?? null,
+        validityLabel: input.validityLabel,
+        sortOrder: input.sortOrder ?? 0,
+      })
+      .returning();
+    if (!row) throw new Error("plan insert returned no row");
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      priceKobo: row.priceKobo,
+      rosProfile: row.rosProfile,
+      dataLimitBytes: row.dataLimitBytes ?? undefined,
+      uptimeLimit: row.uptimeLimit ?? undefined,
+      validityLabel: row.validityLabel,
+    };
+  },
+
+  updatePlan: async (id, input) => {
+    const [row] = await db
+      .update(wifiPlan)
+      .set({
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.description !== undefined
+          ? { description: input.description }
+          : {}),
+        ...(input.priceKobo !== undefined
+          ? { priceKobo: input.priceKobo }
+          : {}),
+        ...(input.rosProfile !== undefined
+          ? { rosProfile: input.rosProfile }
+          : {}),
+        ...(input.dataLimitBytes !== undefined
+          ? { dataLimitBytes: input.dataLimitBytes }
+          : {}),
+        ...(input.uptimeLimit !== undefined
+          ? { uptimeLimit: input.uptimeLimit }
+          : {}),
+        ...(input.validityLabel !== undefined
+          ? { validityLabel: input.validityLabel }
+          : {}),
+        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.sortOrder !== undefined
+          ? { sortOrder: input.sortOrder }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(wifiPlan.id, id))
+      .returning();
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      priceKobo: row.priceKobo,
+      rosProfile: row.rosProfile,
+      dataLimitBytes: row.dataLimitBytes ?? undefined,
+      uptimeLimit: row.uptimeLimit ?? undefined,
+      validityLabel: row.validityLabel,
+    };
   },
 
   listVouchers: async ({ status, batchId, limit, offset }) => {
