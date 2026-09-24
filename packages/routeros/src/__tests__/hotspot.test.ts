@@ -189,4 +189,56 @@ describe("createHotspotService", () => {
       "/ip/hotspot/user/profile/print",
     );
   });
+
+  it("creates a profile and returns the new .id", async () => {
+    const transport = makeTransport({
+      "/ip/hotspot/user/profile/add": [{ ret: "*9" }],
+    });
+    const service = createHotspotService(transport);
+    await expect(
+      service.createProfile({
+        name: "Saleslip-1d-1",
+        rateLimit: "5M/5M",
+        sharedUsers: 1,
+        sessionTimeout: "1d",
+      }),
+    ).resolves.toEqual({ id: "*9" });
+    expect(transport.write).toHaveBeenCalledWith(
+      "/ip/hotspot/user/profile/add",
+      [
+        "=name=Saleslip-1d-1",
+        "=rate-limit=5M/5M",
+        "=shared-users=1",
+        "=session-timeout=1d",
+      ],
+    );
+  });
+
+  it("updates a profile by .id with only the given fields", async () => {
+    const transport = makeTransport({});
+    await createHotspotService(transport).updateProfile("*2", {
+      rateLimit: "10M/10M",
+    });
+    expect(transport.write).toHaveBeenCalledWith(
+      "/ip/hotspot/user/profile/set",
+      ["=.id=*2", "=rate-limit=10M/10M"],
+    );
+  });
+
+  it("removes a profile by .id or by name", async () => {
+    const byId = makeTransport({});
+    await createHotspotService(byId).removeProfile("*2");
+    expect(byId.write).toHaveBeenCalledWith("/ip/hotspot/user/profile/remove", [
+      "=.id=*2",
+    ]);
+
+    const byName = makeTransport({
+      "/ip/hotspot/user/profile/print": [{ ".id": "*2", name: "Old-Plan" }],
+    });
+    await createHotspotService(byName).removeProfile("Old-Plan");
+    expect(byName.write).toHaveBeenCalledWith(
+      "/ip/hotspot/user/profile/remove",
+      ["=.id=*2"],
+    );
+  });
 });

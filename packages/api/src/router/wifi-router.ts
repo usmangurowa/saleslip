@@ -41,6 +41,26 @@ const defaultBatchLabel = (at: Date) =>
 
 const activateSchema = z.object({ planId: z.string().min(1) });
 
+// Profile writes stay on the safe subset: no on-login script, no server-wide
+// knobs. `name` is the identity plans reference, so it is required on create.
+const profileFieldsSchema = {
+  name: z.string().trim().min(1).max(64),
+  rateLimit: z.string().trim().min(1).max(64).optional(),
+  sharedUsers: z.number().int().min(1).max(255).optional(),
+  sessionTimeout: z.string().trim().min(1).max(32).optional(),
+};
+const profileCreateSchema = z.object(profileFieldsSchema);
+const profileUpdateSchema = z
+  .object({
+    ...profileFieldsSchema,
+    name: profileFieldsSchema.name.optional(),
+  })
+  .refine(
+    (input) =>
+      Object.values(input).some((value) => value !== undefined),
+    { message: "At least one field is required" },
+  );
+
 type WifiRouterContext = Context<AppContext>;
 
 /**
@@ -146,6 +166,36 @@ export const createWifiRouterApp = ({
           c.json({ profiles: await service.listProfiles() }),
         ),
       )
+      .post(
+        "/profiles",
+        zValidator("json", profileCreateSchema),
+        async (c) => {
+          const input = c.req.valid("json");
+          return withRouter(async (service, ctx) => {
+            const { id } = await service.createProfile(input);
+            return ctx.json({ profile: { id, ...input } }, 201);
+          })(c);
+        },
+      )
+      .patch(
+        "/profiles/:id",
+        zValidator("json", profileUpdateSchema),
+        async (c) => {
+          const id = c.req.param("id");
+          const input = c.req.valid("json");
+          return withRouter(async (service, ctx) => {
+            await service.updateProfile(id, input);
+            return ctx.json({ ok: true });
+          })(c);
+        },
+      )
+      .delete("/profiles/:id", async (c) => {
+        const id = c.req.param("id");
+        return withRouter(async (service, ctx) => {
+          await service.removeProfile(id);
+          return ctx.json({ ok: true });
+        })(c);
+      })
       .get(
         "/sessions",
         withRouter(async (service, c) => {

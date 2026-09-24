@@ -53,6 +53,16 @@ export interface HotspotProfile {
   /** RouterOS rate expression such as `5M/5M`, unset means unlimited. */
   rateLimit?: string;
   sharedUsers?: number;
+  /** RouterOS duration such as `1d`, unset means unlimited. */
+  sessionTimeout?: string;
+}
+
+/** Writable profile fields; omits on-login script and other risky knobs. */
+export interface HotspotProfileInput {
+  name?: string;
+  rateLimit?: string;
+  sharedUsers?: number;
+  sessionTimeout?: string;
 }
 
 export interface SystemResource {

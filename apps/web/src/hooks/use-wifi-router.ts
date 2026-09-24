@@ -30,6 +30,26 @@ export type HotspotSession = InferResponseType<
   200
 >["sessions"][number];
 
+/** A hotspot user profile as configured on the router. */
+export type HotspotProfile = InferResponseType<
+  RouterApi["profiles"]["$get"],
+  200
+>["profiles"][number];
+
+/** Response body for a profile create. */
+export type CreatedProfile = InferResponseType<
+  RouterApi["profiles"]["$post"],
+  201
+>;
+
+/** Writable profile fields. */
+export interface HotspotProfileInput {
+  name?: string;
+  rateLimit?: string;
+  sharedUsers?: number;
+  sessionTimeout?: string;
+}
+
 /** Router reachability plus its resource readout. */
 export type RouterHealth = InferResponseType<RouterApi["health"]["$get"], 200>;
 
@@ -43,6 +63,7 @@ export const wifiRouterKeys = {
   all: ["wifi-router"] as const,
   health: () => [...wifiRouterKeys.all, "health"] as const,
   sessions: () => [...wifiRouterKeys.all, "sessions"] as const,
+  profiles: () => [...wifiRouterKeys.all, "profiles"] as const,
 };
 
 /** Pulls the server's error message so toasts say what actually failed. */
@@ -160,6 +181,79 @@ export const useMintVoucherBatch = () => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: wifiRouterKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["wifi"] });
+    },
+  });
+};
+
+/** Lists the hotspot user profiles minting references by name. */
+export const useHotspotProfiles = () =>
+  useQuery({
+    queryKey: wifiRouterKeys.profiles(),
+    queryFn: async () => {
+      const res = await routerApi().profiles.$get();
+      if (res.status === 401) return null;
+      if (!res.ok) throw await errorFrom(res, "Failed to load profiles");
+      return res.json();
+    },
+  });
+
+export const useCreateProfile = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: HotspotProfileInput): Promise<CreatedProfile> => {
+      const res = await routerApi().profiles.$post({
+        json: input as { name: string } & HotspotProfileInput,
+      });
+      if (!res.ok) throw await errorFrom(res, "Failed to create profile");
+      return res.json();
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: wifiRouterKeys.profiles(),
+      });
+    },
+  });
+};
+
+export const useUpdateProfile = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...input
+    }: HotspotProfileInput & { id: string }) => {
+      const res = await routerApi().profiles[":id"].$patch({
+        param: { id },
+        json: input,
+      });
+      if (!res.ok) throw await errorFrom(res, "Failed to update profile");
+      return res.json();
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: wifiRouterKeys.profiles(),
+      });
+    },
+  });
+};
+
+export const useDeleteProfile = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await routerApi().profiles[":id"].$delete({
+        param: { id },
+      });
+      if (!res.ok) throw await errorFrom(res, "Failed to delete profile");
+      return res.json();
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: wifiRouterKeys.profiles(),
+      });
     },
   });
 };

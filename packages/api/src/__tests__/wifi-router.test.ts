@@ -63,7 +63,7 @@ const sampleResource: SystemResource = {
 const sampleProfiles: HotspotProfile[] = [
   { id: "*1", name: "Daily-1GB", rateLimit: "5M/5M", sharedUsers: 2 },
   { id: "*2", name: "default" },
-];
+].map((entry) => ({ ...entry }));
 
 const sampleSession = (overrides: Partial<HotspotActiveSession> = {}) =>
   ({
@@ -124,6 +124,35 @@ const createFakeHotspot = () => {
     listProfiles: async () => {
       await guard();
       return sampleProfiles;
+    },
+    createProfile: async (input) => {
+      calls.push(`createProfile:${input.name ?? ""}`);
+      await guard();
+      const id = `*p${++seq}`;
+      const profile: HotspotProfile = {
+        id,
+        name: input.name ?? "",
+        rateLimit: input.rateLimit,
+        sharedUsers: input.sharedUsers,
+        sessionTimeout: input.sessionTimeout,
+      };
+      sampleProfiles.push(profile);
+      return { id };
+    },
+    updateProfile: async (id, input) => {
+      calls.push(`updateProfile:${id}`);
+      await guard();
+      const index = sampleProfiles.findIndex((p) => p.id === id);
+      const current = sampleProfiles[index];
+      if (current) sampleProfiles[index] = { ...current, ...input };
+    },
+    removeProfile: async (idOrName) => {
+      calls.push(`removeProfile:${idOrName}`);
+      await guard();
+      const index = sampleProfiles.findIndex(
+        (p) => p.id === idOrName || p.name === idOrName,
+      );
+      if (index >= 0) sampleProfiles.splice(index, 1);
     },
     removeUser: async (idOrName) => {
       calls.push(`remove:${idOrName}`);
@@ -258,6 +287,78 @@ describe("hotspot profiles", () => {
     const res = await app.request("/profiles");
     expect(res.status).toBe(200);
     expect(await json(res)).toEqual({ profiles: sampleProfiles });
+  });
+
+  it("creates a profile", async () => {
+    const fake = createFakeHotspot();
+    const app = build({ hotspot: fake.hotspot });
+
+    const res = await app.request("/profiles", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Saleslip-7d-10",
+        rateLimit: "10M/10M",
+        sharedUsers: 1,
+        sessionTimeout: "7d",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.profile).toMatchObject({
+      name: "Saleslip-7d-10",
+      rateLimit: "10M/10M",
+      sharedUsers: 1,
+      sessionTimeout: "7d",
+    });
+    const created = body.profile as { id?: string };
+    expect(created.id).toBeTruthy();
+    expect(fake.calls).toContain("createProfile:Saleslip-7d-10");
+  });
+
+  it("rejects a profile create with a missing name", async () => {
+    const app = build({ hotspot: createFakeHotspot().hotspot });
+    const res = await app.request("/profiles", {
+      method: "POST",
+      body: JSON.stringify({ rateLimit: "5M/5M" }),
+      headers: { "content-type": "application/json" },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("updates a profile by id", async () => {
+    const fake = createFakeHotspot();
+    const app = build({ hotspot: fake.hotspot });
+
+    const res = await app.request("/profiles/*1", {
+      method: "PATCH",
+      body: JSON.stringify({ sharedUsers: 4 }),
+      headers: { "content-type": "application/json" },
+    });
+    expect(res.status).toBe(200);
+    expect(fake.calls).toContain("updateProfile:*1");
+    const list = await app.request("/profiles");
+    const body = await json(list);
+    const profiles = body.profiles as Array<Record<string, unknown>>;
+    expect(profiles[0]).toMatchObject({
+      id: "*1",
+      name: "Daily-1GB",
+      sharedUsers: 4,
+    });
+  });
+
+  it("removes a profile by id", async () => {
+    const fake = createFakeHotspot();
+    const app = build({ hotspot: fake.hotspot });
+
+    const res = await app.request("/profiles/*2", { method: "DELETE" });
+    expect(res.status).toBe(200);
+    expect(fake.calls).toContain("removeProfile:*2");
+    const list = await app.request("/profiles");
+    const body = await json(list);
+    expect(
+      (body.profiles as Array<{ id: string }>).some((p) => p.id === "*2"),
+    ).toBe(false);
   });
 });
 

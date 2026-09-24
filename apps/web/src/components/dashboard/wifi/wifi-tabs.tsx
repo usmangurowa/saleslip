@@ -10,12 +10,13 @@ const tabs = [
   { label: "Orders", href: "/dashboard/wifi" },
   { label: "Vouchers", href: "/dashboard/wifi/vouchers" },
   { label: "Live", href: "/dashboard/wifi/live" },
+  { label: "Profiles", href: "/dashboard/wifi/profiles" },
 ] as const;
 
 /**
- * The console's three views. Orders is the money view, vouchers is the code
- * view, and live is the router itself — who is connected and whether it is
- * answering at all.
+ * The console's views. Orders is the money view, vouchers is the code view,
+ * live is the router itself, and profiles manage the speed plans codes are
+ * minted against.
  */
 export const WifiTabs = () => {
   const pathname = usePathname();

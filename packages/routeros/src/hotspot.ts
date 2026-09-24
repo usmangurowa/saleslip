@@ -1,6 +1,7 @@
 import type {
   HotspotActiveSession,
   HotspotProfile,
+  HotspotProfileInput,
   HotspotUser,
   HotspotUserInput,
   RouterOsRow,
@@ -51,7 +52,27 @@ export const parseHotspotProfile = (row: RouterOsRow): HotspotProfile => ({
   name: row.name ?? "",
   rateLimit: row["rate-limit"],
   sharedUsers: toInt(row["shared-users"]),
+  sessionTimeout: row["session-timeout"],
 });
+
+/**
+ * Map a profile create/update request onto `/ip/hotspot/user/profile/{add,set}`
+ * words. Only sends the fields that are set; `withId` switches to `.id` form.
+ */
+export const toHotspotProfileParams = (
+  input: HotspotProfileInput,
+  withId?: string,
+): string[] => {
+  const params: string[] = [];
+  if (withId !== undefined) params.push(`=.id=${withId}`);
+  if (input.name) params.push(`=name=${input.name}`);
+  if (input.rateLimit) params.push(`=rate-limit=${input.rateLimit}`);
+  if (input.sharedUsers !== undefined)
+    params.push(`=shared-users=${Math.floor(input.sharedUsers)}`);
+  if (input.sessionTimeout)
+    params.push(`=session-timeout=${input.sessionTimeout}`);
+  return params;
+};
 
 export const parseActiveSession = (row: RouterOsRow): HotspotActiveSession => ({
   id: row[".id"] ?? "",
@@ -83,6 +104,12 @@ export interface HotspotService {
   listActive: () => Promise<HotspotActiveSession[]>;
   /** Lists the hotspot user profiles configured on the router. */
   listProfiles: () => Promise<HotspotProfile[]>;
+  /** Adds a hotspot user profile and returns its RouterOS `.id`. */
+  createProfile: (input: HotspotProfileInput) => Promise<{ id: string }>;
+  /** Updates a hotspot user profile by `.id` with only the given fields. */
+  updateProfile: (id: string, input: HotspotProfileInput) => Promise<void>;
+  /** Removes a hotspot user profile by `.id` or by name. */
+  removeProfile: (idOrName: string) => Promise<void>;
   /** Removes a hotspot user by RouterOS `.id` or by name. */
   removeUser: (idOrName: string) => Promise<void>;
   /** Drops every active session for the given username. */
@@ -124,6 +151,37 @@ export const createHotspotService = (
   async listProfiles() {
     const rows = await transport.write("/ip/hotspot/user/profile/print");
     return rows.map(parseHotspotProfile);
+  },
+
+  async createProfile(input) {
+    const rows = await transport.write(
+      "/ip/hotspot/user/profile/add",
+      toHotspotProfileParams(input),
+    );
+    const id = rows.find((row) => row.ret)?.ret ?? "";
+    return { id };
+  },
+
+  async updateProfile(id, input) {
+    await transport.write(
+      "/ip/hotspot/user/profile/set",
+      toHotspotProfileParams(input, id),
+    );
+  },
+
+  async removeProfile(idOrName) {
+    const target = idOrName.startsWith("*")
+      ? idOrName
+      : (
+          await transport.write("/ip/hotspot/user/profile/print", [
+            `?name=${idOrName}`,
+            "=.proplist=.id",
+          ])
+        )[0]?.[".id"];
+    if (!target) return;
+    await transport.write("/ip/hotspot/user/profile/remove", [
+      `=.id=${target}`,
+    ]);
   },
 
   async removeUser(idOrName) {
