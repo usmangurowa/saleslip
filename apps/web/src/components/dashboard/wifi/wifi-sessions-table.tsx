@@ -55,13 +55,21 @@ const KickButton = ({ session }: { session: HotspotSession }) => {
  * them would make the list quietly lie about the load on the router.
  */
 export const WifiSessionsTable = () => {
-  const { data, isPending, isError, refetch } = useHotspotSessions();
+  const { data, isPending, isError, error, refetch } = useHotspotSessions();
 
   if (isError) {
+    const routerDown = (error as Error & { status?: number }).status === 503;
+
     return (
       <TableCard title="Live sessions" padding="sm">
         <QueryError
           title="Could not load live sessions"
+          description={
+            routerDown
+              ? "The hotspot is offline. Sessions appear once it is reachable."
+              : undefined
+          }
+          showSignIn={!routerDown}
           framed={false}
           onRetry={() => void refetch()}
         />

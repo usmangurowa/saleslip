@@ -46,6 +46,22 @@ describe("QueryError", () => {
     expect(unframedClass).not.toContain("rounded-2xl");
   });
 
+  it("replaces the description when given and hides the sign-in link with showSignIn={false}", () => {
+    const html = render(
+      renderQueryError({
+        description: "The hotspot is offline. Sessions appear once it is reachable.",
+        showSignIn: false,
+      }),
+    );
+
+    expect(html).toContain(
+      "The hotspot is offline. Sessions appear once it is reachable.",
+    );
+    expect(html).not.toContain("session expired");
+    expect(html).toMatch(/<button[^>]*>Try again<\/button>/);
+    expect(html).not.toMatch(/<a[^>]*href="\/login"/);
+  });
+
   it("appends className to the state itself", () => {
     const html = render(
       renderQueryError({ framed: false, className: "border-t border-dashed" }),

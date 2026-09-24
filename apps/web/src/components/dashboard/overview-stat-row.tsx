@@ -1,5 +1,6 @@
 "use client";
 
+import { QueryError } from "@/components/dashboard/query-error";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { useWifiStats } from "@/hooks/use-wifi";
 import { useHotspotSessions } from "@/hooks/use-wifi-router";
@@ -34,6 +35,17 @@ export const OverviewStatRow = () => {
   const sessions = useHotspotSessions();
 
   if (stats.isPending || sessions.isPending) return <StatSkeleton />;
+  // A failed stats query still surfaces an explicit error row — never a
+  // silently blank overview.
+  if (stats.isError) {
+    return (
+      <QueryError
+        title="Could not load overview metrics"
+        framed={false}
+        onRetry={() => void stats.refetch()}
+      />
+    );
+  }
   if (!stats.data) return null;
 
   const { today, vouchers, generated } = stats.data;

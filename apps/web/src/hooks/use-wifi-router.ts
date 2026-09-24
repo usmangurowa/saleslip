@@ -50,7 +50,10 @@ const errorFrom = async (res: Response, fallback: string) => {
   const body = (await res.json().catch(() => null)) as {
     error?: string;
   } | null;
-  return new Error(body?.error ?? fallback);
+  const error = new Error(body?.error ?? fallback);
+  // Status rides along so callers can tell infra failures (503) from auth ones.
+  (error as Error & { status?: number }).status = res.status;
+  return error;
 };
 
 /**

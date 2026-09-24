@@ -12,14 +12,26 @@ import {
 } from "@turbo/ui/components/empty";
 import { cn } from "@turbo/ui/lib/utils";
 
-/** Error state for dashboard queries — the sign-in link covers expired sessions. */
+/**
+ * Error state for dashboard queries — the sign-in link covers expired sessions.
+ *
+ * Pass `description` and `showSignIn={false}` when the failure is
+ * infrastructure (e.g. the hotspot is unreachable) so the state does not
+ * wrongly suggest an auth problem.
+ */
 export const QueryError = ({
   title,
+  description,
+  showSignIn = true,
   onRetry,
   framed = true,
   className,
 }: {
   title: string;
+  /** Overrides the default "check your connection" copy. */
+  description?: string;
+  /** Hide the sign-in link when the failure is not auth-related. */
+  showSignIn?: boolean;
   onRetry: () => void;
   /** Dashed frame around the state. Turn off when the parent card already has one. */
   framed?: boolean;
@@ -37,7 +49,8 @@ export const QueryError = ({
     <EmptyHeader>
       <EmptyTitle>{title}</EmptyTitle>
       <EmptyDescription>
-        Check your connection, or sign in again if your session expired.
+        {description ??
+          "Check your connection, or sign in again if your session expired."}
       </EmptyDescription>
     </EmptyHeader>
     <EmptyContent>
@@ -45,9 +58,11 @@ export const QueryError = ({
         <Button variant="outline" size="sm" onClick={onRetry}>
           Try again
         </Button>
-        <Button size="sm" asChild>
-          <Link href="/login">Sign in</Link>
-        </Button>
+        {showSignIn ? (
+          <Button size="sm" asChild>
+            <Link href="/login">Sign in</Link>
+          </Button>
+        ) : null}
       </div>
     </EmptyContent>
   </Empty>
