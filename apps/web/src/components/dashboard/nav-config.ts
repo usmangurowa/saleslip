@@ -2,8 +2,12 @@ import type { IconSvgElement } from "@hugeicons/react";
 import {
   AiChat02Icon,
   DashboardSquare01Icon,
+  Layers02Icon,
+  RouterIcon,
   Settings01Icon,
-  Wifi01Icon,
+  SignalIcon,
+  Ticket01Icon,
+  UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 
 export interface DashboardNavItem {
@@ -32,7 +36,31 @@ export const platformNav: DashboardNavItem[] = [
 ];
 
 export const wifiNav: DashboardNavItem[] = [
-  item("WiFi", "wifi", Wifi01Icon, "Vouchers, hotspot orders, and revenue."),
+  item("Orders", "wifi", RouterIcon, "Hotspot orders, revenue, and batches."),
+  item(
+    "Vouchers",
+    "wifi/vouchers",
+    Ticket01Icon,
+    "Every voucher code issued for the hotspot.",
+  ),
+  item(
+    "Live",
+    "wifi/live",
+    SignalIcon,
+    "Clients connected to the hotspot right now.",
+  ),
+  item(
+    "Profiles",
+    "wifi/profiles",
+    UserGroupIcon,
+    "Router speed profiles vouchers mint against.",
+  ),
+  item(
+    "Plans",
+    "wifi/plans",
+    Layers02Icon,
+    "The purchasable plan catalogue sold on the buy page.",
+  ),
 ];
 
 export const aiNav: DashboardNavItem[] = [

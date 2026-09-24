@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { PageToolbar } from "@/components/dashboard/page-toolbar";
 import { WifiPlansTable } from "@/components/dashboard/wifi/wifi-plans-table";
-import { WifiTabs } from "@/components/dashboard/wifi/wifi-tabs";
 
 export const metadata: Metadata = {
   title: "WiFi plans",
@@ -19,9 +18,8 @@ export default function WifiPlansPage() {
   return (
     <>
       <PageToolbar className="rounded-2xl border px-4">
-        <WifiTabs />
+        <WifiPlansTable />
       </PageToolbar>
-      <WifiPlansTable />
     </>
   );
 }
