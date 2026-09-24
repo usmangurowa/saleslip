@@ -1,6 +1,6 @@
 import type { Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
-import { Bot, InlineKeyboard, Keyboard } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 
 import type { WifiPlan } from "@turbo/wifi";
 import { isRouterOsUnavailable } from "@turbo/routeros";
@@ -9,18 +9,12 @@ import { findPlan, formatData, formatNaira } from "@turbo/wifi";
 import type { TelegramNotifier, WifiDeps } from "../deps";
 import type { WifiOrderRecord } from "../orders";
 import { startCheckout } from "../checkout";
-import { phoneSchema } from "../routes/shop";
 
 export interface TelegramBotOptions {
   token: string;
   deps: WifiDeps;
   /** Pre-supplied bot identity so tests skip the `getMe` round trip. */
   botInfo?: UserFromGetMe;
-}
-
-interface AwaitingPhone {
-  step: "await_phone";
-  planId: string;
 }
 
 export const CALLBACK = {
@@ -95,9 +89,8 @@ const isAdmin = (deps: WifiDeps, ctx: Context) => {
 };
 
 /**
- * Buy-flow bot. Conversation state lives in memory keyed by chat id; the only
- * multi-step interaction is "pick a plan → send a phone number", which is
- * cheap to lose across restarts.
+ * Buy-flow bot. Picking a plan goes straight to checkout — the voucher and
+ * receipt are delivered in this chat, so no contact details are collected.
  */
 export const createTelegramBot = ({
   token,
@@ -106,7 +99,6 @@ export const createTelegramBot = ({
 }: TelegramBotOptions) => {
   const bot = new Bot(token, botInfo ? { botInfo } : undefined);
   const { config, repo, logger } = deps;
-  const pending = new Map<number, AwaitingPhone>();
 
   const showMenu = (ctx: Context) =>
     ctx.reply(
@@ -121,45 +113,13 @@ export const createTelegramBot = ({
     });
   };
 
-  const askPhone = async (ctx: Context, planId: string) => {
-    const chatId = ctx.chat?.id;
-    const plan = findPlan(await deps.plans(), planId);
-    if (chatId === undefined || !plan) {
-      await ctx.reply("That plan is no longer available.");
-      return;
-    }
-    pending.set(chatId, { step: "await_phone", planId });
-    await ctx.reply(
-      `${plan.name} — ${formatNaira(plan.priceKobo)}.\nSend the phone number for this voucher (e.g. 08012345678), or tap the button to share your number.`,
-      {
-        reply_markup: new Keyboard()
-          .requestContact("📱 Share my number")
-          .oneTime()
-          .resized(),
-      },
-    );
-  };
-
-  const completeOrder = async (
-    ctx: Context,
-    planId: string,
-    rawPhone: string,
-  ) => {
+  const startOrder = async (ctx: Context, planId: string) => {
     const chatId = ctx.chat?.id;
     if (chatId === undefined) return;
-    const phone = phoneSchema.safeParse(rawPhone);
-    if (!phone.success) {
-      await ctx.reply(
-        "That does not look like a Nigerian phone number. Try again, e.g. 08012345678.",
-      );
-      return;
-    }
-    pending.delete(chatId);
 
     const result = await startCheckout(deps, {
       channel: "telegram",
       planId,
-      phone: phone.data,
       telegramId: String(chatId),
     });
 
@@ -278,20 +238,10 @@ export const createTelegramBot = ({
   });
   bot.callbackQuery(/^plan:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
-    await askPhone(ctx, ctx.match[1] ?? "");
+    await startOrder(ctx, ctx.match[1] ?? "");
   });
 
-  bot.on("message:contact", async (ctx) => {
-    const state = pending.get(ctx.chat.id);
-    if (!state) return showMenu(ctx);
-    await completeOrder(ctx, state.planId, ctx.message.contact.phone_number);
-  });
-
-  bot.on("message:text", async (ctx) => {
-    const state = pending.get(ctx.chat.id);
-    if (!state) return showMenu(ctx);
-    await completeOrder(ctx, state.planId, ctx.message.text);
-  });
+  bot.on("message:text", showMenu);
 
   bot.catch((error) => {
     logger.error("telegram update failed", {
