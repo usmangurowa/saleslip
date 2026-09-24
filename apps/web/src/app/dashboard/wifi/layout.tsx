@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import type * as React from "react";
-import { wifiNav } from "@/components/dashboard/nav-config";
-
-const wifiNavItem = wifiNav[0];
 
 export const metadata: Metadata = {
-  title: wifiNavItem?.label ?? "WiFi",
-  description: wifiNavItem?.description,
+  title: "WiFi console",
+  description: "Vouchers, hotspot orders, and revenue.",
 };
 
 export default function WifiLayout({

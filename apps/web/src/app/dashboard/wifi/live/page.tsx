@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { PageToolbar } from "@/components/dashboard/page-toolbar";
 import { WifiRouterHealth } from "@/components/dashboard/wifi/wifi-router-health";
 import { WifiSessionsTable } from "@/components/dashboard/wifi/wifi-sessions-table";
-import { WifiTabs } from "@/components/dashboard/wifi/wifi-tabs";
 
 export const metadata: Metadata = {
   title: "WiFi live",
@@ -21,9 +20,8 @@ export default function WifiLivePage() {
   return (
     <>
       <PageToolbar className="rounded-2xl border px-4">
-        <WifiTabs />
+        <WifiRouterHealth />
       </PageToolbar>
-      <WifiRouterHealth />
       <WifiSessionsTable />
     </>
   );

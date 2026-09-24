@@ -2,7 +2,6 @@ import { PageToolbar } from "@/components/dashboard/page-toolbar";
 import { WifiBatchDialog } from "@/components/dashboard/wifi/wifi-batch-dialog";
 import { WifiOrdersTable } from "@/components/dashboard/wifi/wifi-orders-table";
 import { WifiStatRow } from "@/components/dashboard/wifi/wifi-stat-row";
-import { WifiTabs } from "@/components/dashboard/wifi/wifi-tabs";
 
 /**
  * WiFi console — the money view.
@@ -15,7 +14,6 @@ export default function WifiOrdersPage() {
   return (
     <>
       <PageToolbar className="rounded-2xl border px-4">
-        <WifiTabs />
         <WifiBatchDialog />
       </PageToolbar>
       <WifiStatRow />

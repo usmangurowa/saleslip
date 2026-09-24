@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { PageToolbar } from "@/components/dashboard/page-toolbar";
 import { WifiBatchList } from "@/components/dashboard/wifi/wifi-batch-list";
-import { WifiTabs } from "@/components/dashboard/wifi/wifi-tabs";
 import { WifiVouchersTable } from "@/components/dashboard/wifi/wifi-vouchers-table";
 
 export const metadata: Metadata = {
@@ -19,9 +18,8 @@ export default function WifiVouchersPage() {
   return (
     <>
       <PageToolbar className="rounded-2xl border px-4">
-        <WifiTabs />
+        <WifiVouchersTable />
       </PageToolbar>
-      <WifiVouchersTable />
       <WifiBatchList />
     </>
   );
