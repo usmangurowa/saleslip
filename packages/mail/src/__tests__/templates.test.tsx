@@ -34,7 +34,7 @@ describe("email templates render", () => {
     const { WelcomeEmail } = await import("../templates/welcome");
     const { renderEmail } = await import("../client");
     const html = await renderEmail(
-      WelcomeEmail({ name: "Ada", dashboardUrl: "https://saleslip.app" }),
+      WelcomeEmail({ name: "Ada", actionUrl: "https://saleslip.app", actionText: "Open dashboard" }),
     );
     expect(html).toContain("Ada");
   });
@@ -43,7 +43,7 @@ describe("email templates render", () => {
     const { SupportEmail } = await import("../templates/support");
     const { renderEmail } = await import("../client");
     const html = await renderEmail(
-      SupportEmail({ message: "My voucher did not work", supportPhone: "+2348010000000" }),
+      SupportEmail({ userEmail: "ada@example.com", type: "issue", message: "My voucher did not work" }),
     );
     expect(html).toContain("My voucher did not work");
   });
