@@ -160,7 +160,6 @@ export const createFakeHotspot = () => {
       await guard();
       return { id: `*profile-${++seq}` };
     },
-    },
     updateProfile: async () => {
       await guard();
     },
