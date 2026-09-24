@@ -52,11 +52,7 @@ const batchSchema = z.object({
     .int("Use a whole number")
     .min(1, "Mint at least one voucher")
     .max(MAX_QUANTITY, `Up to ${MAX_QUANTITY} vouchers per sheet`),
-  label: z
-    .string()
-    .trim()
-    .min(1, "Name this batch so the sheet stays traceable")
-    .max(120, "Keep the label under 120 characters"),
+  label: z.string().trim().max(120, "Keep the label under 120 characters"),
 });
 
 /** `quantity` enters as a string and leaves as a number, so the two differ. */
@@ -109,10 +105,15 @@ export const WifiBatchDialog = () => {
   };
 
   const onSubmit = (data: BatchFormData) => {
-    mintBatch.mutate(data, {
-      onSuccess: (result) => setMinted(result),
-      onError: (error) => toast.error(error.message),
-    });
+    mintBatch.mutate(
+      // An empty label means "stamp it with the current date and time"
+      // — the server fills it in.
+      { ...data, label: data.label.trim() || undefined },
+      {
+        onSuccess: (result) => setMinted(result),
+        onError: (error) => toast.error(error.message),
+      },
+    );
   };
 
   const copyCodes = async () => {
@@ -210,6 +211,10 @@ export const WifiBatchDialog = () => {
                   placeholder={labelPlaceholder}
                   {...register("label")}
                 />
+                <FieldDescription>
+                  Optional. Leave it blank to stamp the batch with the current
+                  date and time.
+                </FieldDescription>
                 <FieldError errors={[errors.label]} />
               </Field>
             </FieldGroup>

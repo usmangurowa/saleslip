@@ -179,6 +179,28 @@ export const createWifiRuntime = (env: WifiEnv): WifiRuntime => {
   const stops: (() => void)[] = [() => deps.fulfilment.stop()];
   const boot: (() => Promise<unknown>)[] = [() => deps.fulfilment.sweep()];
 
+  if (deps.hotspot) {
+    const { hotspot, plans } = deps;
+    boot.push(async () => {
+      logger.info("plan profile mapping", {
+        plans: plans.map((plan) => ({
+          id: plan.id,
+          profile: plan.rosProfile,
+        })),
+      });
+      try {
+        const profiles = await hotspot.listProfiles();
+        logger.info("router hotspot profiles", {
+          profiles: profiles.map((profile) => profile.name),
+        });
+      } catch (error) {
+        logger.warn("could not list router hotspot profiles", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
+  }
+
   if (env.TELEGRAM_BOT_TOKEN && config.telegramWebhookSecret) {
     const bot = createTelegramBot({ token: env.TELEGRAM_BOT_TOKEN, deps });
     deps.telegram = createTelegramNotifier(

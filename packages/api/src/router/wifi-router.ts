@@ -29,8 +29,15 @@ import {
 const batchSchema = z.object({
   planId: z.string().min(1),
   quantity: z.number().int().min(1).max(MAX_BATCH_QUANTITY),
-  label: z.string().trim().min(1).max(120),
+  label: z.string().trim().min(1).max(120).optional(),
 });
+
+/**
+ * Fallback label for batches minted without one: a sortable UTC stamp, so a
+ * stack of printed sheets orders itself chronologically.
+ */
+const defaultBatchLabel = (at: Date) =>
+  `${at.toISOString().slice(0, 10)} ${at.toISOString().slice(11, 16)} UTC`;
 
 const activateSchema = z.object({ planId: z.string().min(1) });
 
@@ -134,6 +141,12 @@ export const createWifiRouterApp = ({
         }),
       )
       .get(
+        "/profiles",
+        withRouter(async (service, c) =>
+          c.json({ profiles: await service.listProfiles() }),
+        ),
+      )
+      .get(
         "/sessions",
         withRouter(async (service, c) => {
           const repo = createWifiConsoleRepository(c.get("db"));
@@ -216,7 +229,7 @@ export const createWifiRouterApp = ({
         const repo = createWifiConsoleRepository(c.get("db"));
         try {
           const result = await repo.createVoucherBatch({
-            label,
+            label: label ?? defaultBatchLabel(clock()),
             plan,
             quantity,
             createdBy: session.user.id,

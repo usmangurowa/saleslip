@@ -1,5 +1,6 @@
 import type {
   HotspotActiveSession,
+  HotspotProfile,
   HotspotUser,
   HotspotUserInput,
   RouterOsRow,
@@ -45,6 +46,13 @@ export const parseHotspotUser = (row: RouterOsRow): HotspotUser => ({
   limitUptime: row["limit-uptime"],
 });
 
+export const parseHotspotProfile = (row: RouterOsRow): HotspotProfile => ({
+  id: row[".id"] ?? "",
+  name: row.name ?? "",
+  rateLimit: row["rate-limit"],
+  sharedUsers: toInt(row["shared-users"]),
+});
+
 export const parseActiveSession = (row: RouterOsRow): HotspotActiveSession => ({
   id: row[".id"] ?? "",
   user: row.user ?? "",
@@ -73,6 +81,8 @@ export interface HotspotService {
   /** Looks a hotspot user up by exact name. */
   findUser: (name: string) => Promise<HotspotUser | undefined>;
   listActive: () => Promise<HotspotActiveSession[]>;
+  /** Lists the hotspot user profiles configured on the router. */
+  listProfiles: () => Promise<HotspotProfile[]>;
   /** Removes a hotspot user by RouterOS `.id` or by name. */
   removeUser: (idOrName: string) => Promise<void>;
   /** Drops every active session for the given username. */
@@ -109,6 +119,11 @@ export const createHotspotService = (
   async listActive() {
     const rows = await transport.write("/ip/hotspot/active/print");
     return rows.map(parseActiveSession);
+  },
+
+  async listProfiles() {
+    const rows = await transport.write("/ip/hotspot/user/profile/print");
+    return rows.map(parseHotspotProfile);
   },
 
   async removeUser(idOrName) {

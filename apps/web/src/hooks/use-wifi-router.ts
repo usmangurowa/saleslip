@@ -151,7 +151,7 @@ export const useMintVoucherBatch = () => {
     mutationFn: async (input: {
       planId: string;
       quantity: number;
-      label: string;
+      label?: string;
     }): Promise<MintedBatch> => {
       const res = await routerApi().vouchers.batch.$post({ json: input });
       if (!res.ok) throw await errorFrom(res, "Failed to generate vouchers");

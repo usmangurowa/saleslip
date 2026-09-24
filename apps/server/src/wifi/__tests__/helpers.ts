@@ -152,6 +152,10 @@ export const createFakeHotspot = () => {
   };
 
   const hotspot: HotspotService = {
+    listProfiles: async () => {
+      await guard();
+      return [];
+    },
     createHotspotUser: async (input) => {
       calls.push(`create:${input.name}`);
       await guard();

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { RouterOsRow, RouterOsTransport } from "../types";
 import {
   createHotspotService,
+  parseHotspotProfile,
   parseHotspotUser,
   parseSystemResource,
   toHotspotUserParams,
@@ -82,6 +83,25 @@ describe("row parsers", () => {
     ).toMatchObject({ version: "7.19.6", cpuLoad: 3, uptime: "1d" });
     expect(parseSystemResource({}).cpuLoad).toBeUndefined();
   });
+
+  it("parses a hotspot user profile row", () => {
+    expect(
+      parseHotspotProfile({
+        ".id": "*5",
+        name: "Daily-1GB",
+        "rate-limit": "5M/5M",
+        "shared-users": "2",
+      }),
+    ).toMatchObject({
+      id: "*5",
+      name: "Daily-1GB",
+      rateLimit: "5M/5M",
+      sharedUsers: 2,
+    });
+    expect(parseHotspotProfile({ ".id": "*6", name: "default" })).toMatchObject(
+      { id: "*6", name: "default", rateLimit: undefined },
+    );
+  });
 });
 
 describe("createHotspotService", () => {
@@ -151,5 +171,22 @@ describe("createHotspotService", () => {
     await expect(
       createHotspotService(makeTransport({})).findUser("nope"),
     ).resolves.toBeUndefined();
+  });
+
+  it("lists hotspot user profiles", async () => {
+    const transport = makeTransport({
+      "/ip/hotspot/user/profile/print": [
+        { ".id": "*1", name: "default" },
+        { ".id": "*2", name: "Daily-1GB", "rate-limit": "5M/5M" },
+      ],
+    });
+    const service = createHotspotService(transport);
+    await expect(service.listProfiles()).resolves.toEqual([
+      { id: "*1", name: "default" },
+      { id: "*2", name: "Daily-1GB", rateLimit: "5M/5M" },
+    ]);
+    expect(transport.write).toHaveBeenCalledWith(
+      "/ip/hotspot/user/profile/print",
+    );
   });
 });

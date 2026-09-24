@@ -46,6 +46,15 @@ export interface HotspotActiveSession {
   bytesOut?: number;
 }
 
+/** A `/ip/hotspot/user/profile` entry as printed by the router. */
+export interface HotspotProfile {
+  id: string;
+  name: string;
+  /** RouterOS rate expression such as `5M/5M`, unset means unlimited. */
+  rateLimit?: string;
+  sharedUsers?: number;
+}
+
 export interface SystemResource {
   uptime?: string;
   version?: string;

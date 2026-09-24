@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type {
   HotspotActiveSession,
+  HotspotProfile,
   HotspotService,
   HotspotUser,
   SystemResource,
@@ -59,6 +60,11 @@ const sampleResource: SystemResource = {
   boardName: "hEX",
 };
 
+const sampleProfiles: HotspotProfile[] = [
+  { id: "*1", name: "Daily-1GB", rateLimit: "5M/5M", sharedUsers: 2 },
+  { id: "*2", name: "default" },
+];
+
 const sampleSession = (overrides: Partial<HotspotActiveSession> = {}) =>
   ({
     id: "*1",
@@ -114,6 +120,10 @@ const createFakeHotspot = () => {
     listActive: async () => {
       await guard();
       return state.active;
+    },
+    listProfiles: async () => {
+      await guard();
+      return sampleProfiles;
     },
     removeUser: async (idOrName) => {
       calls.push(`remove:${idOrName}`);
@@ -204,6 +214,7 @@ describe("wifi router console auth", () => {
     const app = build({ hotspot: undefined });
     for (const [method, path] of [
       ["GET", "/health"],
+      ["GET", "/profiles"],
       ["GET", "/sessions"],
       ["POST", "/sessions/sync"],
       ["POST", "/sessions/abc/kick"],
@@ -238,6 +249,15 @@ describe("router health", () => {
       resource: null,
       error: "connect ECONNREFUSED",
     });
+  });
+});
+
+describe("hotspot profiles", () => {
+  it("lists the profiles configured on the router", async () => {
+    const app = build({ hotspot: createFakeHotspot().hotspot });
+    const res = await app.request("/profiles");
+    expect(res.status).toBe(200);
+    expect(await json(res)).toEqual({ profiles: sampleProfiles });
   });
 });
 
@@ -390,6 +410,34 @@ describe("voucher activation", () => {
       channel: "manual",
       hotspot: fake.hotspot,
     });
+  });
+
+  it("labels the batch with the current date and time when none is given", async () => {
+    const fake = createFakeHotspot();
+    const seen: unknown[] = [];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: {
+        createVoucherBatch: (input) => {
+          seen.push(input);
+          return Promise.resolve({
+            batch: { id: "batch-1" } as never,
+            vouchers: [voucherRow()],
+          });
+        },
+      },
+    });
+
+    const res = await app.request("/vouchers/batch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ planId: "day-1", quantity: 1 }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(seen).toHaveLength(1);
+    // The injected clock is 2025-01-15T10:00:00Z.
+    expect(seen[0]).toMatchObject({ label: "2025-01-15 10:00 UTC" });
   });
 
   it("404s an unknown plan", async () => {
