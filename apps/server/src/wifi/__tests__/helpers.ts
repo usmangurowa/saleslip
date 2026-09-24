@@ -156,6 +156,17 @@ export const createFakeHotspot = () => {
       await guard();
       return [];
     },
+    createProfile: async () => {
+      await guard();
+      const id = `*P${(++seq).toString(16).toUpperCase()}`;
+      return { id };
+    },
+    updateProfile: async () => {
+      await guard();
+    },
+    removeProfile: async () => {
+      await guard();
+    },
     createHotspotUser: async (input) => {
       calls.push(`create:${input.name}`);
       await guard();
