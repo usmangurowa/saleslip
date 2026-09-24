@@ -351,16 +351,35 @@
            percent-encoded as a nested query value, so after the trial
            login succeeds RouterOS redirects straight to the buy page —
            which then has the device's login/mac/ip context to auto-connect
-           after payment. RouterOS hides this whole block once the device
-           has used its trial. T-$(mac-esc) is the vendor's per-MAC trial
-           pseudo-username; no password is needed. -->
+           after payment. On phones the OS slams the captive-portal sheet
+           shut the moment the session starts, so the storefront redirect
+           is never seen there. The only guaranteed-visible channel is
+           pre-login: the first tap reveals this confirmation panel, and
+           the Connect now link inside it fires the actual trial login.
+           RouterOS hides this whole block once the device has used its
+           trial. T-$(mac-esc) is the vendor's per-MAC trial pseudo-
+           username; no password is needed. -->
       $(if trial == 'yes')
       <section>
         <a
           class="buy-button"
-          href="$(link-login-only)?dst=https%3A%2F%2Fapi.saleslip.app%2F%3Flogin%3D$(link-login-only-esc)%26mac%3D$(mac-esc)%26ip%3D$(ip-esc)&amp;username=T-$(mac-esc)"
+          href="#"
+          onclick="document.getElementById('trial-confirm').style.display='block'; this.style.display='none'; return false"
           >Get 5 free minutes</a
         >
+        <div id="trial-confirm" style="display: none">
+          <p class="hint">
+            You&rsquo;ll connect right away. Your phone may close this window
+            once you&rsquo;re online &mdash; that&rsquo;s normal, you&rsquo;re
+            already connected. To buy a voucher, open your browser and go to
+            <strong>saleslip.app/buy</strong>.
+          </p>
+          <a
+            class="buy-button"
+            href="$(link-login-only)?dst=https%3A%2F%2Fapi.saleslip.app%2F%3Flogin%3D$(link-login-only-esc)%26mac%3D$(mac-esc)%26ip%3D$(ip-esc)&amp;username=T-$(mac-esc)"
+            >Connect now</a
+          >
+        </div>
         <p class="hint">
           One free session per device &mdash; enough to buy a voucher online.
         </p>

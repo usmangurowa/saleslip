@@ -101,7 +101,7 @@ describe("mikrotik login.html", () => {
     }
   });
 
-  it("offers the once-per-device trial session when the router allows it", () => {
+  it("reveals a confirm panel before firing the once-per-device trial login", () => {
     // The walled garden is closed pre-login, so the buy links only work
     // once online: the 5-minute trial is the guest's path to the store.
     // RouterOS hides the block via $(if trial == 'yes') once the device
@@ -110,7 +110,15 @@ describe("mikrotik login.html", () => {
     // percent-encoded as a nested query value, so a successful trial
     // login lands the guest on the buy page with their portal context
     // (login/mac/ip) for post-payment auto-connect.
+    //
+    // On phones the OS closes the portal sheet the moment the trial
+    // session starts, so nothing after login is ever seen. The first
+    // tap only reveals a confirm panel (visible pre-login, ES3-safe
+    // inline JS); the real trial href — moved onto "Connect now" —
+    // fires the login only after the guest has read where to buy.
     expect(html).toContain("$(if trial == 'yes')");
+    expect(html).toContain('id="trial-confirm"');
+    expect(html).toContain("saleslip.app/buy");
     expect(html).toContain(
       'href="$(link-login-only)?dst=https%3A%2F%2Fapi.saleslip.app%2F%3Flogin%3D$(link-login-only-esc)%26mac%3D$(mac-esc)%26ip%3D$(ip-esc)&amp;username=T-$(mac-esc)"',
     );

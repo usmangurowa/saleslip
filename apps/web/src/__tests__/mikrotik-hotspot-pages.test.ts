@@ -11,10 +11,13 @@ describe("mikrotik alogin.html", () => {
   const html = readFileSync("public/mikrotik/alogin.html", "utf8");
 
   it("forwards the guest to their original destination after a beat", () => {
-    // Meta refresh, not JS: the oldest portal browser honors it, and it
-    // gives the guest ~3s to actually see their voucher code.
+    // Meta refresh, not JS: the oldest portal browser honors it. The
+    // beat is long (15s) so a guest who keeps the page open has time to
+    // read their voucher code; on phones the OS closes the sheet long
+    // before it fires anyway, so a short delay would only rush desktop
+    // guests. The Continue link covers anyone who won't wait.
     expect(html).toContain(
-      '<meta http-equiv="refresh" content="3; url=$(link-redirect)"',
+      '<meta http-equiv="refresh" content="15; url=$(link-redirect)"',
     );
     expect(html).toContain('href="$(link-redirect)"');
   });
