@@ -399,6 +399,8 @@ Production mapping (Mikhmon-managed profiles on the hEX, verified from boot logs
 
 Fulfilment: `charge.success` (signature-checked, idempotent by reference) marks the order paid, generates a `GW#####` code, creates the hotspot user (`username = password = code`, the plan's profile, comment `saleslip|<orderId>|<phone>`), stores the voucher and marks the order fulfilled. Telegram orders get the code by DM. If the router is unreachable the order becomes `pending_router` and an in-process retry with backoff finishes it; the sweep also runs on boot. A watchdog DMs the admins when the router has been down for five minutes and again when it recovers.
 
+**Voucher codes: one generator of record.** Saleslip is the only place vouchers should be minted (dashboard batch or shop purchase); use Mikhmon purely for monitoring and user management. RouterOS hotspot logins are case-sensitive, so mixed formats (Mikhmon's default lowercase `cckp9942` vs Saleslip's `GWGC7MG`) mean two code styles to type exactly — and Mikhmon-generated users never enter the Saleslip DB, so they are invisible to voucher metrics, batch history, and order lookups. If vouchers must ever be minted in Mikhmon directly, set its generator to uppercase letters + digits (length 7) so the style matches, and expect the `GW` prefix to be absent.
+
 ### WiFi admin console (Saleslip)
 
 The web dashboard at `/dashboard/wifi` is the operator surface: revenue and order stats, every order, every issued code, counter batches, and a **Live** tab showing who is online. It reads through `/api/wifi/*`.
