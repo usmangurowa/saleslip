@@ -237,7 +237,7 @@ Reuse Mikhmon's proven script text; don't reinvent.
 
 **Voucher pool worker** (BullMQ, every 5 min + on purchase): for each active plan, `count(status='pooled') < pool_target` → generate codes → `createUsers` → insert as `pooled`. If router offline → insert as `pending_router`, retry later.
 
-**Code format**: `${prefix}${5 digits}` e.g. `GW48213` — short enough to type on a phone, unambiguous chars only (no 0/O/1/I). Uniqueness enforced per router.
+**Code format**: `${prefix}${5 digits}` e.g. `SL48213` — short enough to type on a phone, unambiguous chars only (no 0/O/1/I). Uniqueness enforced per router.
 
 ---
 
@@ -309,7 +309,7 @@ Reached from the captive portal's **Buy** button with `?mac=…&ip=…&router=�
 - Tenant logo, name, address, plan, validity, price, code, QR (encodes the auto-login URL), "how to connect" steps, support phone, footer text.
 - Formats: web page, **58mm thermal** print CSS, PNG (satori/`@vercel/og`) for WhatsApp/Telegram, PDF download.
 - **Receipt template editor** in Settings: logo, colours, footer, show/hide fields. Live preview.
-- SMS delivery via **Termii** (cheap, Nigerian): "Your Saleslip Starlink code: GW48213. Valid 24h. Receipt: saleslip.app/r/…". Optional per tenant (they pay per SMS or you bundle).
+- SMS delivery via **Termii** (cheap, Nigerian): "Your Saleslip Starlink code: SL48213. Valid 24h. Receipt: saleslip.app/r/…". Optional per tenant (they pay per SMS or you bundle).
 
 ### 6.4 3DS reality
 

@@ -22,8 +22,8 @@ const order = {
   email: "buyer@example.com",
 } as unknown as WifiOrderRecord;
 
-const voucher = { code: "GWABCDE" } as WifiVoucherRecord;
-const bonus = { code: "GWBONUS" } as WifiVoucherRecord;
+const voucher = { code: "SLABCDE" } as WifiVoucherRecord;
+const bonus = { code: "SLBONUS" } as WifiVoucherRecord;
 
 beforeEach(() => {
   vi.mocked(sendEmail).mockClear();
@@ -52,8 +52,8 @@ describe("sendVoucherEmail", () => {
     expect(text).toContain("Validity: 24 hours");
     expect(text).toContain("Devices: 1");
     expect(text).toContain("₦1,000");
-    expect(text).toContain("GWABCDE");
-    expect(text).toContain("GWBONUS");
+    expect(text).toContain("SLABCDE");
+    expect(text).toContain("SLBONUS");
     expect(text).toContain("+2348010000000");
   });
 
@@ -68,8 +68,8 @@ describe("sendVoucherEmail", () => {
     const call = vi.mocked(sendEmail).mock.calls[0]?.[0];
     if (!call) throw new Error("sendEmail not called");
     const text = await renderEmailText(call.template);
-    expect(text).toContain("GWABCDE");
-    expect(text).not.toContain("GWBONUS");
+    expect(text).toContain("SLABCDE");
+    expect(text).not.toContain("SLBONUS");
   });
 
   it("fails without sending when the plan is unknown", async () => {

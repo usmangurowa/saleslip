@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 
-export const VOUCHER_PREFIX = "GW";
+export const VOUCHER_PREFIX = "SL";
 export const VOUCHER_BODY_LENGTH = 5;
 
 /** Uppercase alphanumerics minus the glyphs people confuse when typing. */

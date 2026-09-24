@@ -11,10 +11,10 @@ import {
 } from "../voucher-code";
 
 describe("generateVoucherCode", () => {
-  it("produces GW + 5 characters from the unambiguous alphabet", () => {
+  it("produces SL + 5 characters from the unambiguous alphabet", () => {
     for (let i = 0; i < 200; i++) {
       const code = generateVoucherCode();
-      expect(code).toMatch(/^GW[A-Z2-9]{5}$/);
+      expect(code).toMatch(/^SL[A-Z2-9]{5}$/);
       for (const ch of code.slice(VOUCHER_PREFIX.length)) {
         expect(VOUCHER_ALPHABET).toContain(ch);
       }
@@ -26,23 +26,23 @@ describe("generateVoucherCode", () => {
   });
 
   it("is deterministic given the random source", () => {
-    expect(generateVoucherCode(() => 0)).toBe("GWAAAAA");
+    expect(generateVoucherCode(() => 0)).toBe("SLAAAAA");
     expect(generateVoucherCode(() => VOUCHER_ALPHABET.length - 1)).toBe(
-      "GW99999",
+      "SL99999",
     );
   });
 });
 
 describe("isVoucherCode / normaliseVoucherCode", () => {
   it("accepts well-formed codes and rejects others", () => {
-    expect(isVoucherCode("GWAB2C3")).toBe(true);
-    expect(isVoucherCode("GWAB2C")).toBe(false);
+    expect(isVoucherCode("SLAB2C3")).toBe(true);
+    expect(isVoucherCode("SLAB2C")).toBe(false);
     expect(isVoucherCode("XXAB2C3")).toBe(false);
-    expect(isVoucherCode("GWAB0C3")).toBe(false);
+    expect(isVoucherCode("SLAB0C3")).toBe(false);
   });
 
   it("normalises user input", () => {
-    expect(normaliseVoucherCode(" gw-ab2 c3 ")).toBe("GWAB2C3");
+    expect(normaliseVoucherCode(" sl-ab2 c3 ")).toBe("SLAB2C3");
   });
 });
 
@@ -50,10 +50,10 @@ describe("generateUniqueVoucherCode", () => {
   it("retries until the code is unused", async () => {
     let calls = 0;
     const code = await generateUniqueVoucherCode(
-      (candidate) => Promise.resolve(candidate === "GWAAAAA"),
+      (candidate) => Promise.resolve(candidate === "SLAAAAA"),
       { random: () => (calls++ < 5 ? 0 : 1) },
     );
-    expect(code).toBe("GWBBBBB");
+    expect(code).toBe("SLBBBBB");
   });
 
   it("throws once the attempt budget is exhausted", async () => {

@@ -87,9 +87,9 @@ describe("mintVoucherBatch", () => {
       random: collidingRandom([0, 0, 1, 1, 2]),
     });
     expect(vouchers.map((v) => v.code)).toEqual([
-      "GWAAAAA",
-      "GWBBBBB",
-      "GWCCCCC",
+      "SLAAAAA",
+      "SLBBBBB",
+      "SLCCCCC",
     ]);
   });
 

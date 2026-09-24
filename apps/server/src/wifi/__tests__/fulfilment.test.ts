@@ -55,7 +55,7 @@ describe("fulfilment", () => {
 
     expect(result.order.status).toBe("fulfilled");
     expect(result.order.paidAt).not.toBeNull();
-    expect(result.voucher.code).toMatch(/^GW[A-Z2-9]{5}$/);
+    expect(result.voucher.code).toMatch(/^SL[A-Z2-9]{5}$/);
     expect(result.voucher.rosId).toBe("*1");
 
     const user = fake.users.get(result.voucher.code);
@@ -210,7 +210,7 @@ describe("fulfilment", () => {
     await t.repo.transition(order.id, "paid", { paidAt: new Date() });
     const voucher = await t.repo.createVoucher({
       orderId: order.id,
-      code: "GWABCDE",
+      code: "SLABCDE",
       profile: "Saleslip-1d-1",
       channel: "web",
     });

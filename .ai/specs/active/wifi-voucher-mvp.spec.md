@@ -23,7 +23,7 @@ slice that ships first.
 - [x] Paystack webhook verifies `x-paystack-signature`, is idempotent by reference,
       and is the only path that fulfils. `GET /webhooks/paystack/verify/:reference`
       exists for manual recovery.
-- [x] Fulfilment generates a unique `GW#####` code, creates the hotspot user
+- [x] Fulfilment generates a unique `SL#####` code, creates the hotspot user
       referencing the plan's existing RouterOS profile (no expiry logic of our own),
       stores a voucher, marks the order fulfilled, and DMs Telegram orders.
 - [x] Router failure parks the order in `pending_router` and retries with backoff.
@@ -72,7 +72,7 @@ slice that ships first.
 ```text
 POST /orders            -> startCheckout: insert order, Paystack initialize, 303 to authorization_url
 POST /webhooks/paystack -> verify HMAC -> charge.success -> markPaid -> fulfil(order)
-fulfil                  -> code = GW + 5 digits (unique) -> hotspot.createHotspotUser
+fulfil                  -> code = SL + 5 digits (unique) -> hotspot.createHotspotUser
                         -> insert voucher -> markFulfilled -> telegram DM if channel=telegram
                         -> on RouterOsUnavailable: pending_router, schedule retry (backoff)
 GET /orders/:id         -> render receipt; client polls JSON until fulfilled

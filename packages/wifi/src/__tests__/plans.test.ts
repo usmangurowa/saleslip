@@ -43,7 +43,7 @@ describe("toHotspotUserInput", () => {
   it("maps a plan to username=password=code with its profile and no byte cap", () => {
     const plan = findPlan(plans, "week-1");
     if (!plan) throw new Error("missing plan");
-    const code = "GWAB2C3";
+    const code = "SLAB2C3";
     const input = toHotspotUserInput(plan, {
       code,
       owner: "order-1",
@@ -65,7 +65,7 @@ describe("toHotspotUserInput", () => {
     const plan = findPlan(plans, "day-1");
     if (!plan) throw new Error("missing plan");
     const input = toHotspotUserInput(plan, {
-      code: "GWZZZZZ",
+      code: "SLZZZZZ",
       owner: "o",
       phone: "p",
     });
@@ -78,7 +78,7 @@ describe("toHotspotUserInput", () => {
     const plan = findPlan(plans, "day-1");
     if (!plan) throw new Error("missing plan");
     const input = toHotspotUserInput(plan, {
-      code: "GWQQQQQ",
+      code: "SLQQQQQ",
       owner: "batch-9",
     });
     expect(input.comment).toBe(`${VOUCHER_COMMENT_PREFIX}|batch-9`);
