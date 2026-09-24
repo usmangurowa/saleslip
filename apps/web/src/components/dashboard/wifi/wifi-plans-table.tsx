@@ -29,6 +29,13 @@ import {
 } from "@turbo/ui/components/field";
 import { Icon } from "@turbo/ui/components/icon";
 import { Input } from "@turbo/ui/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@turbo/ui/components/select";
 import { Skeleton } from "@turbo/ui/components/skeleton";
 import {
   Table,
@@ -56,6 +63,35 @@ const toSlug = (name: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 64) || "plan";
+
+const VALIDITY_UNITS = {
+  d: "day",
+  h: "hour",
+  m: "minute",
+  s: "second",
+} as const;
+
+/**
+ * Read router shorthand back in plain language: "7d" → "7 days",
+ * "1d12h" → "1 day and 12 hours". Returns null when the label isn't
+ * shorthand, so the caller can fall back to the static hint.
+ */
+const describeValidity = (label: string): string | null => {
+  const trimmed = label.trim().toLowerCase();
+  if (trimmed === "" || !/^(?:\d+[dhms])+$/.test(trimmed)) return null;
+  const parts: string[] = [];
+  for (const match of trimmed.matchAll(/(\d+)([dhms])/g)) {
+    const digits = match[1];
+    const unitLetter = match[2];
+    if (!digits || !unitLetter) return null;
+    const amount = Number(digits);
+    const unit = VALIDITY_UNITS[unitLetter as keyof typeof VALIDITY_UNITS];
+    parts.push(`${amount} ${unit}${amount === 1 ? "" : "s"}`);
+  }
+  if (parts.length === 1) return parts[0] ?? null;
+  const last = parts.at(-1);
+  return last ? `${parts.slice(0, -1).join(", ")} and ${last}` : null;
+};
 
 interface PlanForm {
   id: string;
@@ -90,6 +126,7 @@ const PlanDialog = ({
 }) => {
   const isEdit = plan !== undefined;
   const [form, setForm] = React.useState<PlanForm>(() => toForm(plan));
+  const validitySummary = describeValidity(form.validityLabel);
   const createPlan = useCreateWifiPlan();
   const updatePlan = useUpdateWifiPlan();
   const pending = isEdit ? updatePlan : createPlan;
@@ -104,7 +141,13 @@ const PlanDialog = ({
       const value = event.target.value;
       setForm((current) => {
         // On create the slug follows the name until the user edits it by hand.
-        if (key === "name" && !isEdit && current.id === toSlug(current.name)) {
+        // While the ID still matches the auto-generated slug (or is untouched),
+      // keep it in sync so users never hand-edit it.
+      if (
+        key === "name" &&
+        !isEdit &&
+        (current.id === "" || current.id === toSlug(current.name))
+      ) {
           return { ...current, name: value, id: toSlug(value) };
         }
         return { ...current, [key]: value };
@@ -181,8 +224,8 @@ const PlanDialog = ({
               disabled={pending.isPending || isEdit}
             />
             <FieldDescription>
-              Stable identifier used in checkout links; lowercase letters,
-              digits and dashes.
+              Auto-filled from the name (e.g. "1 Day Unlimited" →
+              "1-day-unlimited"); stable identifier used in checkout links.
             </FieldDescription>
           </Field>
           <Field>
@@ -209,22 +252,41 @@ const PlanDialog = ({
           </Field>
           <Field>
             <FieldLabel htmlFor="plan-profile">Router profile</FieldLabel>
-            <Input
-              id="plan-profile"
-              list="plan-profile-options"
+            <Select
               value={form.profile}
-              onChange={set("profile")}
-              placeholder="1-Day-Unlimited"
+              onValueChange={(value) =>
+                setForm((current) => ({ ...current, profile: value }))
+              }
               disabled={pending.isPending}
-            />
-            <datalist id="plan-profile-options">
-              {profiles.map((profile) => (
-                <option key={profile} value={profile} />
-              ))}
-            </datalist>
+            >
+              <SelectTrigger
+                id="plan-profile"
+                className="w-full"
+                aria-label="Router profile"
+              >
+                <SelectValue placeholder="Pick a hotspot profile" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((profile) => (
+                  <SelectItem key={profile} value={profile}>
+                    {profile}
+                  </SelectItem>
+                ))}
+                {form.profile !== "" && !profiles.includes(form.profile) ? (
+                  <SelectItem value={form.profile}>
+                    {form.profile} (missing on router)
+                  </SelectItem>
+                ) : null}
+                {profiles.length === 0 && form.profile === "" ? (
+                  <SelectItem value="none" disabled>
+                    No hotspot profiles found on the router
+                  </SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
             <FieldDescription>
-              Must match a hotspot profile on the router exactly; pick from the
-              list to be safe.
+              Must match a hotspot profile on the router exactly — vouchers
+              mint against it.
             </FieldDescription>
           </Field>
           <Field>
@@ -233,9 +295,18 @@ const PlanDialog = ({
               id="plan-validity"
               value={form.validityLabel}
               onChange={set("validityLabel")}
-              placeholder="24 hours"
+              placeholder="24h"
               disabled={pending.isPending}
             />
+            <FieldDescription>
+              Shorthand works — 12h = 12 hours, 10m = 10 minutes, 7d = 7 days.
+            </FieldDescription>
+            {validitySummary ? (
+              <FieldDescription className="text-foreground">
+                You are setting the validity of this plan to{" "}
+                {validitySummary}.
+              </FieldDescription>
+            ) : null}
           </Field>
           <Field>
             <FieldLabel htmlFor="plan-sort">Sort order</FieldLabel>
