@@ -1,11 +1,11 @@
 import Link from "next/link";
-
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { Button } from "@turbo/ui/components/button";
-import { Icon } from "@turbo/ui/components/icon";
 import { OverviewStatRow } from "@/components/dashboard/overview-stat-row";
 import { PageToolbar } from "@/components/dashboard/page-toolbar";
 import { WifiSessionsTable } from "@/components/dashboard/wifi/wifi-sessions-table";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+
+import { Button } from "@turbo/ui/components/button";
+import { Icon } from "@turbo/ui/components/icon";
 
 export const OverviewView = () => (
   <>

@@ -61,7 +61,9 @@ export const OverviewStatRow = () => {
         icon={UserGroupIcon}
         value={routerUnreachable ? "—" : connected}
         valueCaption={
-          routerUnreachable ? undefined : `${connected} ${connected === 1 ? "client" : "clients"}`
+          routerUnreachable
+            ? undefined
+            : `${connected} ${connected === 1 ? "client" : "clients"}`
         }
         caption={routerUnreachable ? "Router unreachable" : undefined}
         dim={routerUnreachable || connected === 0}

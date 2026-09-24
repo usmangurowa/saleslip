@@ -105,9 +105,7 @@ export interface WifiConsoleRepository {
   listBatches: (limit: number) => Promise<WifiVoucherBatchRow[]>;
   countOrdersByStatus: () => Promise<Record<WifiOrderStatus, number>>;
   countVouchersByStatus: () => Promise<Record<WifiVoucherStatus, number>>;
-  voucherGenerationSummary: (
-    now?: Date,
-  ) => Promise<VoucherGenerationSummary>;
+  voucherGenerationSummary: (now?: Date) => Promise<VoucherGenerationSummary>;
   todaySummary: (
     now?: Date,
   ) => Promise<{ paidOrders: number; revenueKobo: number }>;
@@ -243,9 +241,7 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
   },
 
   voucherGenerationSummary: async (now = new Date()) => {
-    const [totalRow] = await db
-      .select({ total: count() })
-      .from(wifiVoucher);
+    const [totalRow] = await db.select({ total: count() }).from(wifiVoucher);
     const [todayRow] = await db
       .select({ today: count() })
       .from(wifiVoucher)

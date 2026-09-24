@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-
 import { Hono } from "hono";
+import { describe, expect, it, vi } from "vitest";
 
 import type { AppContext, Db } from "../context";
 import type * as repositoryModule from "../wifi/repository";
@@ -33,8 +32,9 @@ const user = { id: "u1", email: "u@example.com", name: "U" };
 
 /** Same shape the better-auth session would carry, cast like wifi-router tests. */
 const makeSession = (email: string | null) =>
-  (email ? { user: { ...user, email }, session: {} } : null) as unknown as
-    AppContext["Variables"]["session"];
+  (email
+    ? { user: { ...user, email }, session: {} }
+    : null) as unknown as AppContext["Variables"]["session"];
 
 /** Mounts the console router with `session` and `db` injected per request. */
 const build = (email: string | null = user.email) => {

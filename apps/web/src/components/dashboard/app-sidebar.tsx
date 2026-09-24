@@ -1,7 +1,7 @@
 "use client";
 
 import type { DashboardNavItem } from "@/components/dashboard/nav-config";
-import * as React from "react";
+import type * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {

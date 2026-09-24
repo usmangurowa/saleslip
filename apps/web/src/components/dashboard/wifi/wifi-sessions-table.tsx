@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@turbo/ui/components/table";
-import { formatNaira, formatBytes } from "@turbo/wifi/format";
+import { formatBytes, formatNaira } from "@turbo/wifi/format";
 
 const KickButton = ({ session }: { session: HotspotSession }) => {
   const kick = useKickSession();

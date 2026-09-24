@@ -49,7 +49,8 @@ describe("QueryError", () => {
   it("replaces the description when given and hides the sign-in link with showSignIn={false}", () => {
     const html = render(
       renderQueryError({
-        description: "The hotspot is offline. Sessions appear once it is reachable.",
+        description:
+          "The hotspot is offline. Sessions appear once it is reachable.",
         showSignIn: false,
       }),
     );

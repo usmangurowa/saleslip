@@ -17,9 +17,6 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
-  "dependencies": {
-    "node-routeros": "^1.6.9"
-  },
   "devDependencies": {
     "@turbo/eslint-config": "workspace:*",
     "@turbo/prettier-config": "workspace:*",

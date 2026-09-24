@@ -57,4 +57,3 @@ export const sectionNavItems: DashboardNavItem[] = [
   ...aiNav,
   settingsNavItem,
 ].filter((navItem) => navItem.slug !== null);
-
