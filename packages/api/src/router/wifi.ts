@@ -131,6 +131,12 @@ const app = new Hono<AppContext>()
     const page = await repo.listVouchers({ status, batchId, limit, offset });
     return c.json(page);
   })
+  .get("/customers", zValidator("query", paginationSchema), async (c) => {
+    const { limit, offset } = c.req.valid("query");
+    const repo = createWifiConsoleRepository(c.get("db"));
+    const page = await repo.customerSummaries({ limit, offset });
+    return c.json(page);
+  })
   .get("/batches", async (c) => {
     const repo = createWifiConsoleRepository(c.get("db"));
     return c.json({ batches: await repo.listBatches(DEFAULT_PAGE_SIZE) });

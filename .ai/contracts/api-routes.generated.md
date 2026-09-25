@@ -14,6 +14,7 @@
 | GET | `/health` | `packages/api/src/index.ts` | no |
 | GET | `/tasks` | `packages/api/src/router/task.ts` | no |
 | GET | `/wifi/batches` | `packages/api/src/router/wifi.ts` | no |
+| GET | `/wifi/customers` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/orders` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/plans` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/stats` | `packages/api/src/router/wifi.ts` | no |

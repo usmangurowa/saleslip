@@ -1,4 +1,14 @@
-import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  sql,
+} from "drizzle-orm";
 
 import type {
   WifiOrderStatus,
@@ -113,6 +123,18 @@ export interface RevenueSummary {
   all: RevenueRangeSummary;
 }
 
+/** One buying customer: every order they have placed, rolled up by phone. */
+export interface CustomerSummary {
+  phone: string;
+  email: string | null;
+  orders: number;
+  paidOrders: number;
+  totalPaidKobo: number;
+  /** Plan of their most recent order, for the "what they last bought" cell. */
+  latestPlanId: string | null;
+  lastOrderAt: Date;
+}
+
 /** Vouchers issued ever and so far today — every kind, bonus included. */
 export interface VoucherGenerationSummary {
   total: number;
@@ -139,6 +161,11 @@ export interface VoucherUsage {
 export interface WifiConsoleRepository {
   listOrders: (params: ListOrdersParams) => Promise<Page<WifiOrderRow>>;
   listVouchers: (params: ListVouchersParams) => Promise<Page<WifiVoucherRow>>;
+  /** Customers rolled up from orders: one row per phone number. */
+  customerSummaries: (params: {
+    limit: number;
+    offset: number;
+  }) => Promise<Page<CustomerSummary>>;
   /** The DB-backed plan catalogue; inactive rows are hidden unless asked for. */
   listPlans: (params?: {
     includeInactive?: boolean;
@@ -237,6 +264,45 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
         .limit(limit)
         .offset(offset),
       db.select({ total: count() }).from(wifiOrder).where(where),
+    ]);
+    return { rows, total: Number(total?.total ?? 0) };
+  },
+
+  /**
+   * The customers view: orders grouped by phone number, because a returning
+   * buyer is one customer no matter how many orders they leave behind. Only
+   * orders with a phone count — a counter sale with no contact cannot be
+   * attributed to anyone. Latest plan rides along so the table can show what
+   * they last bought without a second query per row.
+   */
+  customerSummaries: async ({ limit, offset }) => {
+    const paidFilter = inArray(wifiOrder.status, [...PAID_STATUSES]);
+    const hasPhone = isNotNull(wifiOrder.phone);
+    const [rows, [total]] = await Promise.all([
+      db
+        .select({
+          // min() of the group key is the key itself; this keeps the type
+          // non-nullable now that the where clause excludes null phones.
+          phone: sql<string>`min(${wifiOrder.phone})`,
+          email: sql<string | null>`max(${wifiOrder.email})`,
+          orders: sql<number>`count(*)::int`,
+          paidOrders: sql<number>`(count(*) filter (where ${paidFilter}))::int`,
+          totalPaidKobo: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${paidFilter}), 0)::int`,
+          latestPlanId: sql<
+            string | null
+          >`(array_agg(${wifiOrder.planId} order by ${wifiOrder.createdAt} desc))[1]`,
+          lastOrderAt: sql<Date>`max(${wifiOrder.createdAt})`,
+        })
+        .from(wifiOrder)
+        .where(hasPhone)
+        .groupBy(wifiOrder.phone)
+        .orderBy(desc(sql`max(${wifiOrder.createdAt})`))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ total: countDistinct(wifiOrder.phone) })
+        .from(wifiOrder)
+        .where(hasPhone),
     ]);
     return { rows, total: Number(total?.total ?? 0) };
   },

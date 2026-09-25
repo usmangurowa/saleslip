@@ -16,6 +16,12 @@ export type WifiVoucher = InferResponseType<
   200
 >["rows"][number];
 
+/** One buying customer, as returned by GET /api/wifi/customers */
+export type WifiCustomer = InferResponseType<
+  typeof api.wifi.customers.$get,
+  200
+>["rows"][number];
+
 /** One console minting run, as returned by GET /api/wifi/batches */
 export type WifiBatch = InferResponseType<
   typeof api.wifi.batches.$get,
@@ -44,12 +50,19 @@ export interface WifiVoucherFilters {
   offset?: number;
 }
 
+export interface WifiCustomerFilters {
+  limit?: number;
+  offset?: number;
+}
+
 export const wifiKeys = {
   all: ["wifi"] as const,
   orders: (filters: WifiOrderFilters) =>
     [...wifiKeys.all, "orders", filters] as const,
   vouchers: (filters: WifiVoucherFilters) =>
     [...wifiKeys.all, "vouchers", filters] as const,
+  customers: (filters: WifiCustomerFilters) =>
+    [...wifiKeys.all, "customers", filters] as const,
   batches: () => [...wifiKeys.all, "batches"] as const,
   stats: () => [...wifiKeys.all, "stats"] as const,
   plans: (includeInactive = false) =>
@@ -103,6 +116,27 @@ export const useWifiVouchers = (filters: WifiVoucherFilters = {}) =>
       });
       if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to fetch vouchers");
+      return res.json();
+    },
+    ...wifiQueryOptions,
+  });
+
+/**
+ * List buying customers: orders rolled up by phone, so a returning buyer is
+ * one row with their lifetime totals.
+ */
+export const useWifiCustomers = (filters: WifiCustomerFilters = {}) =>
+  useQuery({
+    queryKey: wifiKeys.customers(filters),
+    queryFn: async () => {
+      const res = await api.wifi.customers.$get({
+        query: {
+          limit: String(filters.limit ?? 25),
+          offset: String(filters.offset ?? 0),
+        },
+      });
+      if (res.status === 401) return null;
+      if (!res.ok) throw new Error("Failed to fetch customers");
       return res.json();
     },
     ...wifiQueryOptions,
