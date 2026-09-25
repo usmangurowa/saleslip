@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import {
-  aiNav,
   platformNav,
   settingsNavItem,
   wifiNav,
@@ -10,7 +9,7 @@ import {
 
 import { Icon } from "@turbo/ui/components/icon";
 
-const allNavItems = [...platformNav, ...wifiNav, ...aiNav, settingsNavItem];
+const allNavItems = [...platformNav, ...wifiNav, settingsNavItem];
 
 export const PageTitle = () => {
   const pathname = usePathname();

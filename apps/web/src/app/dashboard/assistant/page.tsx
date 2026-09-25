@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { AssistantView } from "@/components/dashboard/assistant-view";
-import { aiNav } from "@/components/dashboard/nav-config";
-
-const assistantNavItem = aiNav.find((item) => item.slug === "assistant");
 
 export const metadata: Metadata = {
-  title: assistantNavItem?.label ?? "Assistant",
-  description: assistantNavItem?.description,
+  title: "Assistant",
+  description: "Chat with the Saleslip AI assistant.",
 };
 
 export default function AssistantPage() {

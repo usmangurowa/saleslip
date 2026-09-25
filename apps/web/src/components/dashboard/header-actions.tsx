@@ -10,7 +10,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
-import { Avatar, AvatarFallback } from "@turbo/ui/components/avatar";
 import { Button } from "@turbo/ui/components/button";
 import {
   DropdownMenu,
@@ -21,11 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "@turbo/ui/components/dropdown-menu";
 import { Icon } from "@turbo/ui/components/icon";
-
-const members = [
-  { initials: "AY", className: "bg-primary text-primary-foreground" },
-  { initials: "SC", className: "bg-chart-3 text-primary-foreground" },
-];
 
 export const HeaderActions = () => {
   const { openSearch } = useSearchCommand();
@@ -38,25 +32,6 @@ export const HeaderActions = () => {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="hidden -space-x-2 md:flex">
-        {members.map((member) => (
-          <Avatar
-            key={member.initials}
-            className="ring-background size-7 ring-2"
-          >
-            <AvatarFallback
-              className={`text-xs font-medium ${member.className}`}
-            >
-              {member.initials}
-            </AvatarFallback>
-          </Avatar>
-        ))}
-        <Avatar className="ring-background size-7 ring-2">
-          <AvatarFallback className="bg-muted text-foreground text-xs font-medium">
-            +1
-          </AvatarFallback>
-        </Avatar>
-      </div>
       <Button
         variant="ghost"
         size="icon"

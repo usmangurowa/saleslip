@@ -9,7 +9,6 @@ import {
   Ticket01Icon,
   UserGroupIcon,
 } from "@hugeicons/core-free-icons";
-
 export interface DashboardNavItem {
   label: string;
   slug: string | null;
@@ -33,6 +32,12 @@ const item = (
 
 export const platformNav: DashboardNavItem[] = [
   item("Overview", null, DashboardSquare01Icon, "Your workspace at a glance."),
+  item(
+    "Assistant",
+    "assistant",
+    AiChat02Icon,
+    "Ask questions about your workspace.",
+  ),
 ];
 
 export const wifiNav: DashboardNavItem[] = [
@@ -63,15 +68,6 @@ export const wifiNav: DashboardNavItem[] = [
   ),
 ];
 
-export const aiNav: DashboardNavItem[] = [
-  item(
-    "Assistant",
-    "assistant",
-    AiChat02Icon,
-    "Ask questions about your workspace.",
-  ),
-];
-
 export const settingsNavItem: DashboardNavItem = item(
   "Settings",
   "settings",
@@ -82,6 +78,5 @@ export const settingsNavItem: DashboardNavItem = item(
 export const sectionNavItems: DashboardNavItem[] = [
   ...platformNav,
   ...wifiNav,
-  ...aiNav,
   settingsNavItem,
 ].filter((navItem) => navItem.slug !== null);
