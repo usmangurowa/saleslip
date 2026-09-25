@@ -28,4 +28,22 @@ describe("shouldAllowUserCreate", () => {
     expect(shouldAllowUserCreate(undefined, ["admin@example.com"])).toBe(false);
     expect(shouldAllowUserCreate("", ["admin@example.com"])).toBe(false);
   });
+
+  it("admits any @saleslip.app email when an allowlist is configured", () => {
+    expect(shouldAllowUserCreate("staff@saleslip.app", ["admin@example.com"])).toBe(
+      true,
+    );
+    expect(shouldAllowUserCreate("Staff@Saleslip.APP", ["admin@example.com"])).toBe(
+      true,
+    );
+  });
+
+  it("still blocks non-allowlisted, non-saleslip.app emails", () => {
+    expect(
+      shouldAllowUserCreate("intruder@example.com", ["admin@example.com"]),
+    ).toBe(false);
+    expect(
+      shouldAllowUserCreate("intruder@notsaleslip.app", ["admin@example.com"]),
+    ).toBe(false);
+  });
 });
