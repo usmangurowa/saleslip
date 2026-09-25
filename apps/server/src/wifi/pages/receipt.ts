@@ -13,7 +13,6 @@ export interface ReceiptPageProps {
   plan: WifiPlan | undefined;
   voucher: WifiVoucherRecord | undefined;
   /** Single-use 5-minute repurchase code minted with the paid plan. */
-  bonusVoucher?: WifiVoucherRecord;
   /** Inline SVG for the voucher code; omitted while still pending. */
   qrSvg?: string;
   timeZone?: string;
@@ -89,7 +88,7 @@ const COPY_SCRIPT = `
 `;
 
 export const receiptPage = (props: ReceiptPageProps) => {
-  const { order, plan, voucher, bonusVoucher } = props;
+  const { order, plan, voucher } = props;
   const isFinal = order.status === "fulfilled" || order.status === "failed";
   const ready = order.status === "fulfilled" && voucher;
 
@@ -192,30 +191,6 @@ export const receiptPage = (props: ReceiptPageProps) => {
               `
             : ""
       }
-      ${
-        ready && bonusVoucher
-          ? html`
-              <div class="card">
-                <h2>Bonus code · 5 free minutes</h2>
-                <div class="code" aria-label="Bonus voucher code">
-                  ${bonusVoucher.code}
-                </div>
-                <button
-                  class="btn secondary no-print"
-                  type="button"
-                  data-copy="${bonusVoucher.code}"
-                >
-                  Copy bonus code
-                </button>
-                <p class="muted">
-                  Save this code — when your data finishes, use it for 5 free
-                  minutes to buy again. It works once.
-                </p>
-              </div>
-            `
-          : ""
-      }
-
       <div class="card">
         <h2>Receipt</h2>
         <dl>

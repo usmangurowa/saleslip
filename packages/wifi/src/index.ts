@@ -17,7 +17,6 @@ export {
 export type { WifiOrderStatus } from "./order-state";
 export type { WifiVoucherKind } from "@turbo/db";
 export {
-  bonusPlan,
   buildPlans,
   findPlan,
   toHotspotUserInput,

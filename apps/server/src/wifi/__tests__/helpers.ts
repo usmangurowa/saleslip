@@ -105,12 +105,6 @@ export const createMemoryRepo = (now: () => Date = () => new Date()) => {
           (v) => v.orderId === orderId && v.kind === "primary",
         ),
       ),
-    getBonusVoucherForOrder: (orderId) =>
-      Promise.resolve(
-        [...vouchers.values()].find(
-          (v) => v.orderId === orderId && v.kind === "bonus",
-        ),
-      ),
     setVoucherRosId: (id, rosId) => {
       const v = vouchers.get(id);
       if (v) vouchers.set(id, { ...v, rosId });

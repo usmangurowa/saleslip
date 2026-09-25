@@ -2,10 +2,18 @@
 
 ## Status
 
-- State: complete
+- State: superseded (retired)
 - Owner: AI agent
 - Created: 2026-01-30
 - Updated: 2026-02-06
+
+## Superseded
+
+The bonus voucher was removed (`feat/remove-bonus-voucher`). The daily
+RouterOS trial already gives any offline customer 5 free minutes to get
+back online and repurchase, so minting a bonus voucher with every purchase
+was redundant. The `bonus` voucher kind remains in `WIFI_VOUCHER_KINDS`
+for historical rows; nothing mints or displays it anymore.
 
 ## Problem
 

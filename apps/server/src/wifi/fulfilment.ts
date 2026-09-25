@@ -1,8 +1,7 @@
 import type { HotspotService } from "@turbo/routeros";
-import type { WifiPlan, WifiVoucherKind } from "@turbo/wifi";
+import type { WifiPlan } from "@turbo/wifi";
 import { isRouterOsUnavailable, RouterOsCommandError } from "@turbo/routeros";
 import {
-  bonusPlan,
   findPlan,
   generateUniqueVoucherCode,
   toHotspotUserInput,
@@ -45,12 +44,6 @@ export type FulfilmentResult =
 export interface FulfilmentDeps {
   repo: OrderRepository;
   plans: () => Promise<readonly WifiPlan[]>;
-  /**
-   * Non-purchasable plan minted as a bonus voucher with every purchase so
-   * the customer can get back online and repurchase when data runs out.
-   * Overridable for tests; defaults to `bonusPlan`.
-   */
-  bonusPlan?: WifiPlan;
   /** `undefined` when the router is not configured (`ROUTER_DISABLED`). */
   hotspot: HotspotService | undefined;
   hotspotServer?: string;
@@ -80,7 +73,6 @@ export const createFulfilmentService = (
   deps: FulfilmentDeps,
 ): FulfilmentService => {
   const now = deps.now ?? (() => new Date());
-  const bonus = deps.bonusPlan ?? bonusPlan;
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
   const inFlight = new Set<string>();
 
@@ -100,19 +92,15 @@ export const createFulfilmentService = (
   const ensureVoucher = async (
     order: WifiOrderRecord,
     plan: WifiPlan,
-    kind: WifiVoucherKind,
   ): Promise<WifiVoucherRecord> => {
-    const existing =
-      kind === "bonus"
-        ? await deps.repo.getBonusVoucherForOrder(order.id)
-        : await deps.repo.getVoucherForOrder(order.id);
+    const existing = await deps.repo.getVoucherForOrder(order.id);
     if (existing) return existing;
     const code = await generateUniqueVoucherCode(deps.repo.voucherCodeExists);
     return deps.repo.createVoucher({
       orderId: order.id,
       code,
       profile: plan.rosProfile,
-      kind,
+      kind: "primary",
       channel: order.channel,
       limitBytesTotal: plan.dataLimitBytes,
     });
@@ -180,8 +168,7 @@ export const createFulfilmentService = (
         return { outcome: "failed", order: failed, reason: "unknown plan" };
       }
 
-      const voucher = await ensureVoucher(order, plan, "primary");
-      const bonusVoucher = await ensureVoucher(order, bonus, "bonus");
+      const voucher = await ensureVoucher(order, plan);
 
       if (!deps.hotspot) {
         const pending = await deps.repo.transition(order.id, "pending_router", {
@@ -199,14 +186,6 @@ export const createFulfilmentService = (
           order,
           order.id,
         );
-        await ensureHotspotUser(
-          deps.hotspot,
-          bonusVoucher,
-          bonus,
-          order,
-          `bonus:${order.id}`,
-        );
-
         const fulfilled = await deps.repo.transition(order.id, "fulfilled", {
           fulfilledAt: now(),
           lastError: null,

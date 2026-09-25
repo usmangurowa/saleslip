@@ -14,8 +14,6 @@ export interface VoucherEmailProps {
   deviceCount: number;
   /** The paid plan voucher code */
   code: string;
-  /** The repurchase bonus code, when one was minted */
-  bonusCode?: string;
   /** Optional support line */
   supportPhone?: string;
 }
@@ -31,7 +29,6 @@ export const VoucherEmail = ({
   validityLabel,
   deviceCount,
   code,
-  bonusCode,
   supportPhone,
 }: VoucherEmailProps) => (
   <EmailLayout preview="Your WiFi voucher code is inside">
@@ -72,24 +69,6 @@ export const VoucherEmail = ({
         <br />
         Amount paid: {priceLabel}
       </Text>
-
-      {bonusCode ? (
-        <>
-          <Hr className="border-border my-6" />
-          <Section className="bg-muted mb-6 rounded-lg py-4 text-center">
-            <Text className="text-muted-foreground m-0 mb-1 text-xs font-semibold uppercase">
-              Bonus code · 5 free minutes
-            </Text>
-            <Text className="text-foreground m-0 font-mono text-xl font-bold tracking-[0.25em]">
-              {bonusCode}
-            </Text>
-          </Section>
-          <Text className="text-muted-foreground mb-4 text-sm">
-            When your data finishes, use this bonus code once to get back online
-            and buy a new plan.
-          </Text>
-        </>
-      ) : null}
 
       <Hr className="border-border my-6" />
 

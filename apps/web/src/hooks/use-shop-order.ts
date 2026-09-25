@@ -18,7 +18,6 @@ export interface ShopOrder {
   plan: ShopOrderPlan | null;
   amountKobo: number;
   voucherCode: string | null;
-  bonusVoucherCode: string | null;
   qrSvg: string | null;
   loginUrl: string | null;
   supportPhone: string | null;
