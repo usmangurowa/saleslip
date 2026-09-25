@@ -35,7 +35,7 @@ export const WifiStatRow = () => {
   if (isPending) return <StatSkeleton />;
   if (!data) return null;
 
-  const { today, orders, vouchers } = data;
+  const { revenue, orders, vouchers } = data;
   const awaitingRouter = orders.pending_router;
   const failed = orders.failed;
 
@@ -45,9 +45,9 @@ export const WifiStatRow = () => {
         label="Revenue today"
         hint="Paid hotspot orders captured since midnight, in naira."
         icon={Coins01Icon}
-        value={formatNaira(today.revenueKobo)}
-        valueCaption={`${today.paidOrders} paid ${today.paidOrders === 1 ? "order" : "orders"}`}
-        dim={today.paidOrders === 0}
+        value={formatNaira(revenue.today.revenueKobo)}
+        valueCaption={`${revenue.today.paidOrders} paid ${revenue.today.paidOrders === 1 ? "order" : "orders"}`}
+        dim={revenue.today.paidOrders === 0}
       />
       <StatCard
         label="Awaiting router"

@@ -62,9 +62,10 @@ describe("wifi console router", () => {
   });
 
   it("summarises revenue, orders, vouchers, and generation for /stats", async () => {
+    const range = { paidOrders: 2, revenueKobo: 60_000 };
     state.repo = {
-      todaySummary: () =>
-        Promise.resolve({ paidOrders: 2, revenueKobo: 60_000 }),
+      revenueSummary: () =>
+        Promise.resolve({ today: range, week: range, month: range, all: range }),
       countOrdersByStatus: () =>
         Promise.resolve({
           pending: 1,
@@ -79,7 +80,12 @@ describe("wifi console router", () => {
     const res = await build().request("/stats");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      today: { paidOrders: 2, revenueKobo: 60_000 },
+      revenue: {
+        today: { paidOrders: 2, revenueKobo: 60_000 },
+        week: { paidOrders: 2, revenueKobo: 60_000 },
+        month: { paidOrders: 2, revenueKobo: 60_000 },
+        all: { paidOrders: 2, revenueKobo: 60_000 },
+      },
       orders: {
         pending: 1,
         paid: 2,

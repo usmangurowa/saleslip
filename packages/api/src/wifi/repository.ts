@@ -94,6 +94,25 @@ export interface SessionVoucher {
   bytesUsed: number;
 }
 
+/** Paid orders and revenue over one dashboard range. */
+export interface RevenueRangeSummary {
+  paidOrders: number;
+  revenueKobo: number;
+}
+
+/** Orders counted as money-in for dashboard ranges (paid → fulfilled). */
+const PAID_STATUSES = ["paid", "pending_router", "fulfilled"] as const;
+
+/** Paid orders and revenue for every dashboard range, in one aggregate. */
+export interface RevenueSummary {
+  today: RevenueRangeSummary;
+  /** Trailing 7 days including today. */
+  week: RevenueRangeSummary;
+  /** Trailing 30 days including today. */
+  month: RevenueRangeSummary;
+  all: RevenueRangeSummary;
+}
+
 /** Vouchers issued ever and so far today — every kind, bonus included. */
 export interface VoucherGenerationSummary {
   total: number;
@@ -130,9 +149,8 @@ export interface WifiConsoleRepository {
   countOrdersByStatus: () => Promise<Record<WifiOrderStatus, number>>;
   countVouchersByStatus: () => Promise<Record<WifiVoucherStatus, number>>;
   voucherGenerationSummary: (now?: Date) => Promise<VoucherGenerationSummary>;
-  todaySummary: (
-    now?: Date,
-  ) => Promise<{ paidOrders: number; revenueKobo: number }>;
+  todaySummary: (now?: Date) => Promise<RevenueRangeSummary>;
+  revenueSummary: (now?: Date) => Promise<RevenueSummary>;
   /** Mints a batch and creates every hotspot user; all-or-nothing. */
   createVoucherBatch: (
     input: CreateVoucherBatchInput,
@@ -378,11 +396,49 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
       .from(wifiOrder)
       .where(
         and(
-          inArray(wifiOrder.status, ["paid", "pending_router", "fulfilled"]),
+          inArray(wifiOrder.status, [...PAID_STATUSES]),
           gte(wifiOrder.paidAt, startOfDay(now)),
         ),
       );
     return row ?? { paidOrders: 0, revenueKobo: 0 };
+  },
+
+  revenueSummary: async (now = new Date()) => {
+    const day = startOfDay(now);
+    // Trailing windows include today: 7 days back, 30 days back.
+    const week = new Date(day.getTime() - 6 * 86_400_000);
+    const month = new Date(day.getTime() - 29 * 86_400_000);
+    const [row] = await db
+      .select({
+        todayPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${day}))::int`,
+        todayRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${day}), 0)::int`,
+        weekPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${week}))::int`,
+        weekRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${week}), 0)::int`,
+        monthPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${month}))::int`,
+        monthRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${month}), 0)::int`,
+        allPaid: sql<number>`count(*)::int`,
+        allRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}), 0)::int`,
+      })
+      .from(wifiOrder)
+      .where(inArray(wifiOrder.status, [...PAID_STATUSES]));
+    return {
+      today: {
+        paidOrders: row?.todayPaid ?? 0,
+        revenueKobo: row?.todayRevenue ?? 0,
+      },
+      week: {
+        paidOrders: row?.weekPaid ?? 0,
+        revenueKobo: row?.weekRevenue ?? 0,
+      },
+      month: {
+        paidOrders: row?.monthPaid ?? 0,
+        revenueKobo: row?.monthRevenue ?? 0,
+      },
+      all: {
+        paidOrders: row?.allPaid ?? 0,
+        revenueKobo: row?.allRevenue ?? 0,
+      },
+    };
   },
 
   /**

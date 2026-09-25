@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { QueryError } from "@/components/dashboard/query-error";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { useWifiStats } from "@/hooks/use-wifi";
@@ -11,8 +12,19 @@ import {
   Wifi01Icon,
 } from "@hugeicons/core-free-icons";
 
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@turbo/ui/components/toggle-group";
 import { Skeleton } from "@turbo/ui/components/skeleton";
 import { formatNaira } from "@turbo/wifi/format";
+
+const REVENUE_RANGES = [
+  { value: "today", label: "Today" },
+  { value: "week", label: "7d" },
+  { value: "month", label: "30d" },
+  { value: "all", label: "All" },
+] as const;
 
 const StatSkeleton = () => (
   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -33,6 +45,8 @@ const StatSkeleton = () => (
 export const OverviewStatRow = () => {
   const stats = useWifiStats();
   const sessions = useHotspotSessions();
+  const [range, setRange] =
+    useState<(typeof REVENUE_RANGES)[number]["value"]>("today");
 
   if (stats.isPending || sessions.isPending) return <StatSkeleton />;
   // A failed stats query still surfaces an explicit error row — never a
@@ -48,7 +62,8 @@ export const OverviewStatRow = () => {
   }
   if (!stats.data) return null;
 
-  const { today, vouchers, generated } = stats.data;
+  const { revenue, vouchers, generated } = stats.data;
+  const current = revenue[range];
   const routerUnreachable = sessions.isError || !sessions.data;
   const connected = sessions.data?.live ?? 0;
 
@@ -70,12 +85,30 @@ export const OverviewStatRow = () => {
       />
       <StatCard
         size="hero"
-        label="Revenue today"
-        hint="Paid hotspot orders captured since midnight, in naira."
+        label="Revenue"
+        hint="Paid hotspot orders in naira, over the selected range. 7d and 30d are trailing windows that include today."
         icon={Coins01Icon}
-        value={formatNaira(today.revenueKobo)}
-        valueCaption={`${today.paidOrders} paid ${today.paidOrders === 1 ? "order" : "orders"}`}
-        dim={today.paidOrders === 0}
+        action={
+          <ToggleGroup
+            type="single"
+            size="sm"
+            variant="outline"
+            spacing={0}
+            value={range}
+            onValueChange={(value) => value && setRange(value as typeof range)}
+            aria-label="Revenue range"
+            className="h-7 text-xs"
+          >
+            {REVENUE_RANGES.map((option) => (
+              <ToggleGroupItem key={option.value} value={option.value}>
+                {option.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        }
+        value={formatNaira(current.revenueKobo)}
+        valueCaption={`${current.paidOrders} paid ${current.paidOrders === 1 ? "order" : "orders"}`}
+        dim={current.paidOrders === 0}
       />
       <StatCard
         size="hero"
