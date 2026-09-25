@@ -1,6 +1,7 @@
 "use client";
 
 import { StatCard } from "@/components/dashboard/stat-card";
+import type { RevenueRange } from "@/components/dashboard/revenue-range-toggle";
 import { useWifiStats } from "@/hooks/use-wifi";
 import {
   Alert02Icon,
@@ -21,6 +22,10 @@ const StatSkeleton = () => (
   </div>
 );
 
+interface WifiStatRowProps {
+  revenueRange: RevenueRange;
+}
+
 /**
  * The console pulse row: today's money, what the router still owes us, and how
  * many codes are live.
@@ -29,25 +34,26 @@ const StatSkeleton = () => (
  * hotspot has not accepted yet, and they are the only number here that needs
  * an operator to do something.
  */
-export const WifiStatRow = () => {
+export const WifiStatRow = ({ revenueRange }: WifiStatRowProps) => {
   const { data, isPending } = useWifiStats();
 
   if (isPending) return <StatSkeleton />;
   if (!data) return null;
 
   const { revenue, orders, vouchers } = data;
+  const current = revenue[revenueRange];
   const awaitingRouter = orders.pending_router;
   const failed = orders.failed;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
-        label="Revenue today"
-        hint="Paid hotspot orders captured since midnight, in naira."
+        label="Revenue"
+        hint="Paid hotspot orders in naira, over the selected range."
         icon={Coins01Icon}
-        value={formatNaira(revenue.today.revenueKobo)}
-        valueCaption={`${revenue.today.paidOrders} paid ${revenue.today.paidOrders === 1 ? "order" : "orders"}`}
-        dim={revenue.today.paidOrders === 0}
+        value={formatNaira(current.revenueKobo)}
+        valueCaption={`${current.paidOrders} paid ${current.paidOrders === 1 ? "order" : "orders"}`}
+        dim={current.paidOrders === 0}
       />
       <StatCard
         label="Awaiting router"

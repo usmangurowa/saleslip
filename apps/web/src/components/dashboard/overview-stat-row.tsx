@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { QueryError } from "@/components/dashboard/query-error";
 import { StatCard } from "@/components/dashboard/stat-card";
+import type { RevenueRange } from "@/components/dashboard/revenue-range-toggle";
 import { useWifiStats } from "@/hooks/use-wifi";
 import { useHotspotSessions } from "@/hooks/use-wifi-router";
 import {
@@ -12,19 +12,12 @@ import {
   Wifi01Icon,
 } from "@hugeicons/core-free-icons";
 
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@turbo/ui/components/toggle-group";
 import { Skeleton } from "@turbo/ui/components/skeleton";
 import { formatNaira } from "@turbo/wifi/format";
 
-const REVENUE_RANGES = [
-  { value: "today", label: "Today" },
-  { value: "week", label: "7d" },
-  { value: "month", label: "30d" },
-  { value: "all", label: "All" },
-] as const;
+interface OverviewStatRowProps {
+  revenueRange: RevenueRange;
+}
 
 const StatSkeleton = () => (
   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -42,11 +35,9 @@ const StatSkeleton = () => (
  * `apps/server` cannot reach the hotspot — an unreachable router must not
  * take the rest of the overview down with it.
  */
-export const OverviewStatRow = () => {
+export const OverviewStatRow = ({ revenueRange }: OverviewStatRowProps) => {
   const stats = useWifiStats();
   const sessions = useHotspotSessions();
-  const [range, setRange] =
-    useState<(typeof REVENUE_RANGES)[number]["value"]>("today");
 
   if (stats.isPending || sessions.isPending) return <StatSkeleton />;
   // A failed stats query still surfaces an explicit error row — never a
@@ -63,7 +54,7 @@ export const OverviewStatRow = () => {
   if (!stats.data) return null;
 
   const { revenue, vouchers, generated } = stats.data;
-  const current = revenue[range];
+  const current = revenue[revenueRange];
   const routerUnreachable = sessions.isError || !sessions.data;
   const connected = sessions.data?.live ?? 0;
 
@@ -88,24 +79,6 @@ export const OverviewStatRow = () => {
         label="Revenue"
         hint="Paid hotspot orders in naira, over the selected range. 7d and 30d are trailing windows that include today."
         icon={Coins01Icon}
-        action={
-          <ToggleGroup
-            type="single"
-            size="sm"
-            variant="outline"
-            spacing={0}
-            value={range}
-            onValueChange={(value) => value && setRange(value as typeof range)}
-            aria-label="Revenue range"
-            className="h-7 text-xs"
-          >
-            {REVENUE_RANGES.map((option) => (
-              <ToggleGroupItem key={option.value} value={option.value}>
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        }
         value={formatNaira(current.revenueKobo)}
         valueCaption={`${current.paidOrders} paid ${current.paidOrders === 1 ? "order" : "orders"}`}
         dim={current.paidOrders === 0}
