@@ -133,10 +133,6 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
       hotspot,
       logger: logger.child({ component: "fulfilment" }),
       onFulfilled: async (order, voucher) => {
-        const bonus = await repo
-          .getBonusVoucherForOrder(order.id)
-          .catch(() => null);
-
         // Each delivery channel gets its own try/catch so a failure in one
         // never skips the other.
         if (order.channel === "telegram" && order.telegramId && deps.telegram) {
@@ -149,14 +145,6 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
                 voucher.code,
                 ``,
                 `Join the ${env.BRAND_NAME} WiFi, open the login page and enter the code as both username and password.`,
-                ...(bonus
-                  ? [
-                      ``,
-                      `Bonus code for 5 free minutes when your data finishes:`,
-                      ``,
-                      bonus.code,
-                    ]
-                  : []),
               ].join("\n"),
             );
           } catch (error) {
@@ -173,7 +161,6 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
               to: order.email,
               order,
               voucher,
-              bonusVoucher: bonus,
               plans: await deps.plans(),
               supportPhone: env.SUPPORT_PHONE,
             });

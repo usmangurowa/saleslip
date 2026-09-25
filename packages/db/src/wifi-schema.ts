@@ -33,9 +33,10 @@ export const WIFI_VOUCHER_CHANNELS = ["web", "telegram", "manual"] as const;
 export type WifiVoucherChannel = (typeof WIFI_VOUCHER_CHANNELS)[number];
 
 /**
- * Whether a voucher is the paid plan the customer bought (`primary`) or the
- * single-use ~5-minute bonus (`bonus`) minted alongside it so they can get
- * back online and repurchase when their data runs out.
+ * Whether a voucher is the paid plan the customer bought (`primary`) or a
+ * single-use ~5-minute bonus (`bonus`). Bonus vouchers are no longer minted —
+ * the daily router trial covers getting back online — but the kind is kept
+ * for historical rows.
  */
 export const WIFI_VOUCHER_KINDS = ["primary", "bonus"] as const;
 export type WifiVoucherKind = (typeof WIFI_VOUCHER_KINDS)[number];
@@ -111,7 +112,7 @@ export const wifiVoucher = pgTable(
     }),
     code: text("code").notNull().unique(),
     profile: text("profile").notNull(),
-    /** Paid plan voucher vs the repurchase bonus — see `WIFI_VOUCHER_KINDS`. */
+    /** Paid plan voucher vs the retired bonus kind — see `WIFI_VOUCHER_KINDS`. */
     kind: text("kind", { enum: WIFI_VOUCHER_KINDS })
       .default("primary")
       .notNull(),

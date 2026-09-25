@@ -102,10 +102,6 @@ export interface OrderRepository {
   getVoucherForOrder: (
     orderId: string,
   ) => Promise<WifiVoucherRecord | undefined>;
-  /** The repurchase bonus voucher for an order (kind = `bonus`). */
-  getBonusVoucherForOrder: (
-    orderId: string,
-  ) => Promise<WifiVoucherRecord | undefined>;
   setVoucherRosId: (id: string, rosId: string) => Promise<void>;
   voucherCodeExists: (code: string) => Promise<boolean>;
   todaySummary: (now?: Date) => Promise<DailySummary>;
@@ -240,17 +236,6 @@ export const createOrderRepository = (db: Db): OrderRepository => {
             eq(wifiVoucher.orderId, orderId),
             eq(wifiVoucher.kind, "primary"),
           ),
-        )
-        .limit(1);
-      return row;
-    },
-
-    getBonusVoucherForOrder: async (orderId) => {
-      const [row] = await db
-        .select()
-        .from(wifiVoucher)
-        .where(
-          and(eq(wifiVoucher.orderId, orderId), eq(wifiVoucher.kind, "bonus")),
         )
         .limit(1);
       return row;

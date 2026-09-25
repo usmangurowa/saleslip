@@ -16,7 +16,6 @@ export interface SendVoucherEmailInput {
   to: string;
   order: WifiOrderRecord;
   voucher: WifiVoucherRecord;
-  bonusVoucher?: WifiVoucherRecord | null;
   plans: readonly WifiPlan[];
   supportPhone?: string;
 }
@@ -46,7 +45,6 @@ export const sendVoucherEmail = async (
       validityLabel: plan.validityLabel,
       deviceCount: deviceCountFromPlan(plan),
       code: input.voucher.code,
-      bonusCode: input.bonusVoucher?.code,
       supportPhone: input.supportPhone,
     }),
   });

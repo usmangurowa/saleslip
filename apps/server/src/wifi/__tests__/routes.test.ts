@@ -341,7 +341,7 @@ describe("shop routes", () => {
     expect(body.qrSvg).toContain("<svg");
   });
 
-  it("includes the bonus code in JSON and the receipt HTML once fulfilled", async () => {
+  it("omits the retired bonus code from JSON and the receipt HTML", async () => {
     const fake = createFakeHotspot();
     const t = createTestDeps({
       hotspot: fake.hotspot,
@@ -355,27 +355,16 @@ describe("shop routes", () => {
       amountKobo: 100_000,
     });
 
-    const pending = await app.request(`/orders/${order.id}`, {
-      headers: { accept: "application/json" },
-    });
-    expect(await pending.json()).toMatchObject({ bonusVoucherCode: null });
-
     await t.fulfilment.handlePayment(order.id, "success");
-    const bonus = await t.repo.getBonusVoucherForOrder(order.id);
-    if (!bonus) throw new Error("bonus voucher missing");
 
     const done = await app.request(`/orders/${order.id}`, {
       headers: { accept: "application/json" },
     });
-    expect(await done.json()).toMatchObject({
-      bonusVoucherCode: bonus.code,
-    });
+    expect(await done.json()).toMatchObject({ voucherCode: expect.any(String) });
 
     const html = await (await app.request(`/orders/${order.id}`)).text();
-    expect(html).toContain("Bonus code");
-    expect(html).toContain(bonus.code);
+    expect(html).not.toContain("Bonus code");
     expect(html).toContain("data-copy");
-    expect(html).toContain("5 free minutes");
   });
 });
 
@@ -433,8 +422,8 @@ describe("paystack webhook", () => {
 
     const second = await app.request(post(body, sign(body)));
     expect(await second.text()).toBe("already_fulfilled");
-    // Primary + bonus hotspot users, one pair per order.
-    expect(fake.users.size).toBe(2);
+    // One hotspot user per order — the bonus voucher was retired.
+    expect(fake.users.size).toBe(1);
   });
 
   it("acknowledges other events and unknown references with 200", async () => {

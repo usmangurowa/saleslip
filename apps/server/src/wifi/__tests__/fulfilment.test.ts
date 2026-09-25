@@ -64,16 +64,11 @@ describe("fulfilment", () => {
     expect(user?.limitBytesTotal).toBeUndefined();
     expect(t.fulfilled).toHaveLength(1);
 
-    // Bonus voucher is minted alongside the paid one with its own code.
-    const bonus = await t.repo.getBonusVoucherForOrder(order.id);
-    expect(bonus).toBeDefined();
-    expect(bonus?.code).not.toBe(result.voucher.code);
-    const bonusUser = fake.users.get(bonus?.code ?? "");
-    expect(bonusUser?.profile).toBe("trial-5m");
-    expect(bonusUser?.comment).toBe(
-      `saleslip|bonus:${order.id}|+2348012345678`,
-    );
-    expect(bonusUser?.limitUptime).toBe("5m");
+    // Only the paid voucher exists — the post-purchase bonus was retired
+    // in favour of the daily router trial.
+    expect(await t.repo.getVoucherForOrder(order.id)).toMatchObject({
+      kind: "primary",
+    });
   });
 
   it("is idempotent for duplicate webhooks", async () => {
@@ -87,13 +82,10 @@ describe("fulfilment", () => {
       "success",
     );
     expect(again.outcome).toBe("already_fulfilled");
-    expect(fake.calls.filter((c) => c.startsWith("create:"))).toHaveLength(2);
+    expect(fake.calls.filter((c) => c.startsWith("create:"))).toHaveLength(1);
     expect(t.fulfilled).toHaveLength(1);
     expect(await t.repo.getVoucherForOrder(order.id)).toMatchObject({
       kind: "primary",
-    });
-    expect(await t.repo.getBonusVoucherForOrder(order.id)).toMatchObject({
-      kind: "bonus",
     });
   });
 
@@ -123,9 +115,6 @@ describe("fulfilment", () => {
     // Voucher codes are already reserved so the retry reuses them.
     const voucher = await t.repo.getVoucherForOrder(order.id);
     expect(voucher).toMatchObject({ kind: "primary" });
-    expect(await t.repo.getBonusVoucherForOrder(order.id)).toMatchObject({
-      kind: "bonus",
-    });
 
     fake.state.fail = undefined;
     await vi.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0] ?? 0);
@@ -176,7 +165,7 @@ describe("fulfilment", () => {
       ...fake.hotspot,
       createHotspotUser: async (input) => {
         creates += 1;
-        if (creates === 2)
+        if (creates === 1)
           throw new RouterOsUnavailableError("tunnel dropped mid-fulfil");
         return fake.hotspot.createHotspotUser(input);
       },
@@ -190,16 +179,13 @@ describe("fulfilment", () => {
     );
     expect(first.outcome).toBe("pending_router");
 
-    // Primary user exists on the router; the bonus user does not yet.
     const primary = await t.repo.getVoucherForOrder(order.id);
-    const bonus = await t.repo.getBonusVoucherForOrder(order.id);
-    expect(fake.users.has(primary?.code ?? "")).toBe(true);
-    expect(fake.users.has(bonus?.code ?? "")).toBe(false);
+    expect(fake.users.has(primary?.code ?? "")).toBe(false);
 
     await vi.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0] ?? 0);
     const after = await t.repo.getOrder(order.id);
     expect(after?.status).toBe("fulfilled");
-    expect(fake.users.has(bonus?.code ?? "")).toBe(true);
+    expect(fake.users.has(primary?.code ?? "")).toBe(true);
     t.fulfilment.stop();
   });
 
@@ -223,14 +209,8 @@ describe("fulfilment", () => {
 
     const result = await t.fulfilment.fulfil(order.id);
     expect(result.outcome).toBe("fulfilled");
-    const bonus = await t.repo.getBonusVoucherForOrder(order.id);
-    if (!bonus) throw new Error("bonus voucher missing");
-    // Primary adopted via find; bonus minted fresh (find then create).
-    expect(fake.calls).toEqual([
-      `find:${voucher.code}`,
-      `find:${bonus.code}`,
-      `create:${bonus.code}`,
-    ]);
+    // Primary adopted via find; no bonus voucher minted.
+    expect(fake.calls).toEqual([`find:${voucher.code}`]);
   });
 
   it("parks orders when no router is configured and sweeps them later", async () => {

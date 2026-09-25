@@ -14,12 +14,11 @@ describe("email templates render", () => {
         validityLabel: "24 hours",
         deviceCount: 1,
         code: "SLABC123",
-        bonusCode: "SLBONUS9",
         supportPhone: "+2348010000000",
       }),
     );
     expect(html).toContain("SLABC123");
-    expect(html).toContain("SLBONUS9");
+    expect(html).not.toContain("Bonus");
     expect(html).toContain("+2348010000000");
   });
 

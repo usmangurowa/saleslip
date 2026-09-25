@@ -23,19 +23,17 @@ const order = {
 } as unknown as WifiOrderRecord;
 
 const voucher = { code: "SLABCDE" } as WifiVoucherRecord;
-const bonus = { code: "SLBONUS" } as WifiVoucherRecord;
 
 beforeEach(() => {
   vi.mocked(sendEmail).mockClear();
 });
 
 describe("sendVoucherEmail", () => {
-  it("sends the receipt-style voucher email with both codes", async () => {
+  it("sends the receipt-style voucher email with the code", async () => {
     const result = await sendVoucherEmail({
       to: "buyer@example.com",
       order,
       voucher,
-      bonusVoucher: bonus,
       plans: buildPlans(),
       supportPhone: "+2348010000000",
     });
@@ -53,23 +51,8 @@ describe("sendVoucherEmail", () => {
     expect(text).toContain("Devices: 1");
     expect(text).toContain("₦1,000");
     expect(text).toContain("SLABCDE");
-    expect(text).toContain("SLBONUS");
+    expect(text).not.toContain("Bonus");
     expect(text).toContain("+2348010000000");
-  });
-
-  it("omits the bonus block when there is no bonus voucher", async () => {
-    await sendVoucherEmail({
-      to: "buyer@example.com",
-      order,
-      voucher,
-      plans: buildPlans(),
-    });
-
-    const call = vi.mocked(sendEmail).mock.calls[0]?.[0];
-    if (!call) throw new Error("sendEmail not called");
-    const text = await renderEmailText(call.template);
-    expect(text).toContain("SLABCDE");
-    expect(text).not.toContain("SLBONUS");
   });
 
   it("fails without sending when the plan is unknown", async () => {
