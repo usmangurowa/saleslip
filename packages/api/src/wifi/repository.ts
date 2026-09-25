@@ -474,14 +474,19 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
     // Trailing windows include today: 7 days back, 30 days back.
     const week = new Date(day.getTime() - 6 * 86_400_000);
     const month = new Date(day.getTime() - 29 * 86_400_000);
+    // postgres.js cannot bind raw Date objects inside drizzle `sql` templates
+    // (Buffer.byteLength throws on a Date), so pass ISO strings instead. PG
+    // parses them as timestamps; the trailing "Z" is ignored for `timestamp
+    // without time zone`, which matches how the boundaries were computed.
+    const iso = (d: Date) => d.toISOString();
     const [row] = await db
       .select({
-        todayPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${day}))::int`,
-        todayRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${day}), 0)::int`,
-        weekPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${week}))::int`,
-        weekRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${week}), 0)::int`,
-        monthPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${month}))::int`,
-        monthRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${month}), 0)::int`,
+        todayPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${iso(day)}))::int`,
+        todayRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${iso(day)}), 0)::int`,
+        weekPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${iso(week)}))::int`,
+        weekRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${iso(week)}), 0)::int`,
+        monthPaid: sql<number>`(count(*) filter (where ${wifiOrder.paidAt} >= ${iso(month)}))::int`,
+        monthRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}) filter (where ${wifiOrder.paidAt} >= ${iso(month)}), 0)::int`,
         allPaid: sql<number>`count(*)::int`,
         allRevenue: sql<number>`coalesce(sum(${wifiOrder.amountKobo}), 0)::int`,
       })

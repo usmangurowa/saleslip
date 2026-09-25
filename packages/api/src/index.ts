@@ -46,6 +46,11 @@ export const createApp = (
     // App middleware
     .use("*", contextMiddleware(auth, db))
     .use("*", timingMiddleware)
+    // Log unhandled errors — without this a 500 is completely silent in prod
+    .onError((err, c) => {
+      console.error(`[${c.req.method}] ${c.req.path} -> 500:`, err);
+      return c.json({ error: "Internal server error" }, 500);
+    })
     // Routes
     .route("/auth", authRouter)
     .route("/apikeys", apiKeyRouter)
