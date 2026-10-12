@@ -110,7 +110,7 @@ describe("shop routes", () => {
     expect(calls[0]).toMatchObject({
       reference: order.id,
       email: "2348012345678@buyers.saleslip.app",
-      amount: 100_000,
+      amount: 50_000,
       metadata: { orderId: order.id, planId: "day-1", mac: "AA:BB" },
     });
   });

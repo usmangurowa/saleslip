@@ -2,7 +2,7 @@ import { asc, eq } from "drizzle-orm";
 
 import { db } from "@turbo/db/client";
 import { wifiPlan } from "@turbo/db";
-import { buildPlans, type WifiPlan } from "@turbo/wifi";
+import { buildPlans, sellablePlans, type WifiPlan } from "@turbo/wifi";
 
 /**
  * The purchasable plan catalogue for the shop: DB rows first, env-seeded
@@ -17,7 +17,7 @@ export const loadShopPlans = async (): Promise<readonly WifiPlan[]> => {
       .from(wifiPlan)
       .where(eq(wifiPlan.active, true))
       .orderBy(asc(wifiPlan.sortOrder), asc(wifiPlan.id));
-    if (rows.length === 0) return buildPlans();
+    if (rows.length === 0) return sellablePlans(buildPlans());
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -31,6 +31,6 @@ export const loadShopPlans = async (): Promise<readonly WifiPlan[]> => {
       validityLabel: row.validityLabel,
     }));
   } catch {
-    return buildPlans();
+    return sellablePlans(buildPlans());
   }
 };
