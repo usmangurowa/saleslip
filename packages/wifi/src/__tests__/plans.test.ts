@@ -4,6 +4,7 @@ import { formatData, formatNaira } from "../format";
 import {
   buildPlans,
   findPlan,
+  sellablePlans,
   toHotspotUserInput,
   VOUCHER_COMMENT_PREFIX,
   voucherComment,
@@ -13,12 +14,20 @@ describe("buildPlans", () => {
   it("seeds the six Saleslip plans with default profiles", () => {
     const plans = buildPlans({});
     expect(plans.map((p) => [p.id, p.priceKobo, p.rosProfile])).toEqual([
-      ["day-1", 100_000, "Saleslip-1d-1"],
+      ["day-1", 50_000, "Saleslip-1d-1"],
       ["day-2", 150_000, "Saleslip-1d-2"],
-      ["week-1", 300_000, "Saleslip-7d-1"],
+      ["week-1", 200_000, "Saleslip-7d-1"],
       ["week-2", 400_000, "Saleslip-7d-2"],
-      ["month-1", 600_000, "Saleslip-30d-1"],
+      ["month-1", 500_000, "Saleslip-30d-1"],
       ["month-2", 800_000, "Saleslip-30d-2"],
+    ]);
+  });
+
+  it("keeps duo plans out of the sellable list", () => {
+    expect(sellablePlans(buildPlans({})).map((p) => p.id)).toEqual([
+      "day-1",
+      "week-1",
+      "month-1",
     ]);
   });
 

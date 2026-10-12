@@ -26,6 +26,11 @@ export interface PlanProfileOverrides {
   month2?: string;
 }
 
+/**
+ * Seed catalogue, used when the `wifi_plan` table is empty or unreachable.
+ * Duo plans stay listed (inactive) so vouchers already sold on their profiles
+ * still resolve to a plan; buyer-facing lists filter them out.
+ */
 export const buildPlans = (
   overrides: PlanProfileOverrides = {},
 ): readonly WifiPlan[] => [
@@ -33,7 +38,7 @@ export const buildPlans = (
     id: "day-1",
     name: "1 Day · 1 Device",
     description: "Unlimited data for 24 hours on one device.",
-    priceKobo: 100_000,
+    priceKobo: 50_000,
     rosProfile: overrides.day1 ?? "Saleslip-1d-1",
     validityLabel: "24 hours",
   },
@@ -44,12 +49,13 @@ export const buildPlans = (
     priceKobo: 150_000,
     rosProfile: overrides.day2 ?? "Saleslip-1d-2",
     validityLabel: "24 hours",
+    active: false,
   },
   {
     id: "week-1",
     name: "1 Week · 1 Device",
     description: "Unlimited data for 7 days on one device.",
-    priceKobo: 300_000,
+    priceKobo: 200_000,
     rosProfile: overrides.week1 ?? "Saleslip-7d-1",
     validityLabel: "7 days",
   },
@@ -60,12 +66,13 @@ export const buildPlans = (
     priceKobo: 400_000,
     rosProfile: overrides.week2 ?? "Saleslip-7d-2",
     validityLabel: "7 days",
+    active: false,
   },
   {
     id: "month-1",
     name: "1 Month · 1 Device",
     description: "Unlimited data for 30 days on one device.",
-    priceKobo: 600_000,
+    priceKobo: 500_000,
     rosProfile: overrides.month1 ?? "Saleslip-30d-1",
     validityLabel: "30 days",
   },
@@ -76,8 +83,14 @@ export const buildPlans = (
     priceKobo: 800_000,
     rosProfile: overrides.month2 ?? "Saleslip-30d-2",
     validityLabel: "30 days",
+    active: false,
   },
 ];
+
+/** Plans a buyer can purchase; catalogue rows without `active` count as sellable. */
+export const sellablePlans = (
+  plans: readonly WifiPlan[],
+): readonly WifiPlan[] => plans.filter((plan) => plan.active !== false);
 
 export const findPlan = (
   plans: readonly WifiPlan[],

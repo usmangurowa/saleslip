@@ -19,6 +19,7 @@ export type { WifiVoucherKind } from "@turbo/db";
 export {
   buildPlans,
   findPlan,
+  sellablePlans,
   toHotspotUserInput,
   VOUCHER_COMMENT_PREFIX,
   voucherComment,

@@ -5,7 +5,7 @@ import { db } from "@turbo/db/client";
 import { wifiPlan } from "@turbo/db";
 import { createPaystackClient } from "@turbo/paystack";
 import { createHotspotService, createRouterOsClient } from "@turbo/routeros";
-import { buildPlans } from "@turbo/wifi";
+import { buildPlans, sellablePlans } from "@turbo/wifi";
 import type { WifiPlan } from "@turbo/wifi";
 
 import type { env as ServerEnv } from "../env";
@@ -68,14 +68,16 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
 
   // Plans are DB-managed from the web console; env overrides are the seed
   // fallback so a fresh database still has a sellable catalogue.
-  const fallbackPlans = buildPlans({
-    day1: env.WIFI_PROFILE_DAY_1,
-    day2: env.WIFI_PROFILE_DAY_2,
-    week1: env.WIFI_PROFILE_WEEK_1,
-    week2: env.WIFI_PROFILE_WEEK_2,
-    month1: env.WIFI_PROFILE_MONTH_1,
-    month2: env.WIFI_PROFILE_MONTH_2,
-  });
+  const fallbackPlans = sellablePlans(
+    buildPlans({
+      day1: env.WIFI_PROFILE_DAY_1,
+      day2: env.WIFI_PROFILE_DAY_2,
+      week1: env.WIFI_PROFILE_WEEK_1,
+      week2: env.WIFI_PROFILE_WEEK_2,
+      month1: env.WIFI_PROFILE_MONTH_1,
+      month2: env.WIFI_PROFILE_MONTH_2,
+    }),
+  );
 
   const loadPlans = async (): Promise<readonly WifiPlan[]> => {
     try {
