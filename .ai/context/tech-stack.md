@@ -72,6 +72,7 @@ tooling/
 | Animation (web)    | Motion (Framer Motion) 12.x                                              |
 | Animation (mobile) | react-native-reanimated 4.5.x + worklets 0.10.x                          |
 | Toasts (web)       | sonner (via `@turbo/ui/components/sonner`)                               |
+| QR codes           | `qrcode` 1.5.x — server receipts and web voucher print sheets            |
 
 ## State & Data
 
