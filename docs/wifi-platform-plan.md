@@ -88,7 +88,7 @@ Starlink dish ──► Starlink router (BYPASS MODE, WiFi off)
 ### 1.4 Hotspot tweaks worth doing now
 
 ```
-/ip/hotspot/profile set hsprof3 login-by=http-chap,cookie,mac-cookie http-cookie-lifetime=1d dns-name=wifi.saleslip.app
+/ip/hotspot/profile set hsprof3 login-by=http-chap,http-pap,cookie,mac-cookie http-cookie-lifetime=1d dns-name=wifi.saleslip.app
 /ip/hotspot set hotspot1 idle-timeout=10m
 /ip/hotspot/walled-garden add dst-host=saleslip.app
 /ip/hotspot/walled-garden add dst-host=*.saleslip.app

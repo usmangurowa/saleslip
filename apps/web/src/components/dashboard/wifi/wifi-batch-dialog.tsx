@@ -94,6 +94,10 @@ export const WifiBatchDialog = () => {
     minted?.batch.planId ??
     planId;
 
+  const mintedPlan = minted
+    ? options.find((plan) => plan.id === minted.batch.planId)
+    : undefined;
+
   const onOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (nextOpen) {
@@ -249,9 +253,10 @@ export const WifiBatchDialog = () => {
             <Button
               type="button"
               size="sm"
-              onClick={() =>
-                printVoucherSheet(minted, planName(minted.batch.planId))
-              }
+              disabled={!mintedPlan}
+              onClick={() => {
+                if (mintedPlan) void printVoucherSheet(minted, mintedPlan);
+              }}
             >
               <Icon icon={PrinterIcon} />
               Print sheet
