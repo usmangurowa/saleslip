@@ -9,7 +9,7 @@ export const VOUCHER_BRAND = {
   logoPath: "/brand/guilders-logo.png",
   wifiName: "Guilders Wifi",
   /** Hotspot `dns-name`; customers type it after joining the network. */
-  loginHost: "router.lan",
+  loginHost: "wifi.saleslip.app",
   supportPhone: "0706 926 5013",
 } as const;
 
@@ -156,8 +156,13 @@ export const buildVoucherSheetHtml = ({
 <body>
 ${pages.join("\n")}
 <script>
-  // The logo is fetched after write(); printing before it lands drops it.
-  window.addEventListener("load", () => { window.focus(); window.print(); });
+  // Ensure the page and logo are loaded before printing
+  const triggerPrint = () => { window.focus(); window.print(); };
+  if (document.readyState === "complete") {
+    setTimeout(triggerPrint, 50);
+  } else {
+    window.addEventListener("load", triggerPrint);
+  }
 </script>
 </body>
 </html>`;

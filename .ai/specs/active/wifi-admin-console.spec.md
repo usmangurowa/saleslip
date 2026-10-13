@@ -62,6 +62,13 @@ Three slices; all three ship in this change.
       a stat row, and a generate-batch dialog, composed from the house
       primitives (`StatCard`, `TableCard`, `PageToolbar`, `TablePagination`,
       `QueryError`, `HintLabel`).
+- [x] Voucher batch printing renders an A4 print sheet with 24 vouchers per page
+      (3 columns × 8 rows, ~63 × 35 mm slips, 10mm margins, 0.2mm dashed borders),
+      complete with venue branding (Guilders Wifi logo, SSID, plan name, price,
+      support phone) and an inline SVG QR code (`qrcode`) linking to
+      `http://wifi.saleslip.app/login?username=<CODE>&password=<CODE>`.
+      Requires RouterOS hotspot profile `login-by` to include `http-pap` alongside
+      `http-chap,cookie,mac-cookie`, with hotspot DNS configured to `wifi.saleslip.app`.
 - [x] `packages/wifi` unit tests cover code generation, order transitions, plan
       mapping, formatters, and batch minting.
 

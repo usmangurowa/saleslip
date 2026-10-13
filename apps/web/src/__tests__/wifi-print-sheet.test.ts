@@ -25,10 +25,12 @@ const sheet = (count: number) =>
   });
 
 describe("voucher print sheet", () => {
-  it("logs in with the code as both username and password", () => {
-    expect(hotspotLoginUrl("SLABCDE")).toBe(
-      "http://router.lan/login?username=SLABCDE&password=SLABCDE",
-    );
+  it("logs in with the code as both username and password parameter", () => {
+    const parsed = new URL(hotspotLoginUrl("SLABCDE"));
+    expect(parsed.origin).toBe(`http://${VOUCHER_BRAND.loginHost}`);
+    expect(parsed.pathname).toBe("/login");
+    expect(parsed.searchParams.get("username")).toBe("SLABCDE");
+    expect(parsed.searchParams.get("password")).toBe("SLABCDE");
   });
 
   it("fills one A4 page with 24 vouchers", () => {

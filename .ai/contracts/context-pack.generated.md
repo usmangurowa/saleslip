@@ -379,6 +379,7 @@ architecture, contracts, or conventions.
 | 2026-09-12 | Provider integrations are packages; product surfaces may live in the runtime | `packages/routeros`, `packages/paystack`, `apps/server/src/wifi`, `.ai/specs/active/wifi-voucher-mvp.spec.md` |
 | 2026-09-23 | WiFi domain logic is a package once a second runtime needs it                 | `packages/wifi/**`, `packages/api/src/router/wifi.ts`, `apps/server/src/wifi/**`                              | Voucher codes, order state, plans, and formatters live in `@turbo/wifi`; `apps/server` and `packages/api` both import them. Client components must import `@turbo/wifi/format`, never the barrel — `plans.ts` reaches node-only `@turbo/routeros`. |
 | 2026-09-24 | Router-only routes get their own Hono app, not a flag in `createApp`          | `packages/api/src/router/wifi-router.ts`, `apps/server/src/app.ts`, `apps/web/src/app/api/wifi-router/[...path]/route.ts` | `createApp` is mounted by both runtimes, and only `apps/server` can reach the hotspot. Router-backed routes therefore live in a separate app with its own exported type and are mounted on `apps/server` alone; the browser reaches them through a same-origin proxy so no CORS, cookie-domain, or `SameSite` change is needed. |
+| 2026-09-24 | WiFi plan catalogue is DB-backed with console plan management          | `packages/db/src/wifi-schema.ts`, `packages/db/drizzle/0008_wifi_plans.sql`, `packages/api/src/router/wifi.ts`, `packages/api/src/wifi/repository.ts`, `apps/server/src/wifi/{deps,bootstrap,checkout,fulfilment}.ts`, `apps/web/src/app/dashboard/wifi/plans/page.tsx`, `apps/web/src/components/dashboard/wifi/wifi-plans-table.tsx`, `apps/web/src/hooks/use-wifi.ts`, `apps/web/src/lib/wifi-plans.ts` | New RouterOS profiles become available in the shop and buy flow automatically: the server plan loader reads the `wifi_plans` table and admins create/edit plans (or point them at profiles via the profile datalist) from the `/dashboard/wifi/plans` page. Plans are hidden/published via PATCH, not deleted. |
 
 ## Known TODOs
 
@@ -598,6 +599,7 @@ tooling/
 | Animation (web)    | Motion (Framer Motion) 12.x                                              |
 | Animation (mobile) | react-native-reanimated 4.5.x + worklets 0.10.x                          |
 | Toasts (web)       | sonner (via `@turbo/ui/components/sonner`)                               |
+| QR codes           | `qrcode` 1.5.x — server receipts and web voucher print sheets            |
 
 ## State & Data
 
@@ -1326,14 +1328,17 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | GET | `/health` | `packages/api/src/index.ts` | no |
 | GET | `/tasks` | `packages/api/src/router/task.ts` | no |
 | GET | `/wifi/batches` | `packages/api/src/router/wifi.ts` | no |
+| GET | `/wifi/customers` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/orders` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/plans` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/stats` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/vouchers` | `packages/api/src/router/wifi.ts` | no |
+| PATCH | `/wifi/plans/:id` | `packages/api/src/router/wifi.ts` | no |
 | POST | `/ai/chat` | `packages/api/src/router/ai.ts` | yes |
 | POST | `/apikeys` | `packages/api/src/router/api-key.ts` | yes |
 | POST | `/support` | `packages/api/src/router/support.ts` | yes |
 | POST | `/tasks` | `packages/api/src/router/task.ts` | yes |
+| POST | `/wifi/plans` | `packages/api/src/router/wifi.ts` | no |
 
 ## Typed client source
 
@@ -1369,6 +1374,7 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | `wifiOrder` | `wifi_order` | `packages/db/src/wifi-schema.ts` |
 | `wifiVoucherBatch` | `wifi_voucher_batch` | `packages/db/src/wifi-schema.ts` |
 | `wifiVoucher` | `wifi_voucher` | `packages/db/src/wifi-schema.ts` |
+| `wifiPlan` | `wifi_plan` | `packages/db/src/wifi-schema.ts` |
 
 ## Relations
 
@@ -1500,7 +1506,7 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 
 | File | Variables |
 | --- | --- |
-| apps/server/src/env.ts | `ADMIN_EMAILS`, `APP_URL`, `BRAND_NAME`, `PAYSTACK_DISABLED`, `PAYSTACK_PUBLIC_KEY`, `PAYSTACK_SECRET_KEY`, `PORT`, `POSTGRES_URL`, `PUBLIC_BASE_URL`, `RESEND_API_KEY`, `ROUTER_API_PASSWORD`, `ROUTER_API_USER`, `ROUTER_DISABLED`, `ROUTER_HOST`, `ROUTER_PORT`, `SERVER_PORT`, `SERVER_URL`, `SUPPORT_PHONE`, `TELEGRAM_ADMIN_IDS`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `WIFI_HOTSPOT_SERVER`, `WIFI_PROFILE_DAY_1`, `WIFI_PROFILE_DAY_2`, `WIFI_PROFILE_MONTH_1`, `WIFI_PROFILE_MONTH_2`, `WIFI_PROFILE_WEEK_1`, `WIFI_PROFILE_WEEK_2` |
+| apps/server/src/env.ts | `ADMIN_EMAILS`, `APP_URL`, `BRAND_NAME`, `PAYSTACK_DISABLED`, `PAYSTACK_PUBLIC_KEY`, `PAYSTACK_SECRET_KEY`, `PORT`, `POSTGRES_URL`, `PUBLIC_BASE_URL`, `RESEND_API_KEY`, `ROUTER_API_PASSWORD`, `ROUTER_API_USER`, `ROUTER_DISABLED`, `ROUTER_HOST`, `ROUTER_PORT`, `SERVER_PORT`, `SERVER_URL`, `SUPPORT_PHONE`, `TELEGRAM_ADMIN_IDS`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `WEB_APP_URL`, `WIFI_HOTSPOT_SERVER`, `WIFI_PROFILE_DAY_1`, `WIFI_PROFILE_DAY_2`, `WIFI_PROFILE_MONTH_1`, `WIFI_PROFILE_MONTH_2`, `WIFI_PROFILE_WEEK_1`, `WIFI_PROFILE_WEEK_2` |
 | apps/web/src/env.ts | `ADMIN_EMAILS`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PORT`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NODE_ENV`, `POSTGRES_URL`, `SERVER_URL`, `WIFI_PROFILE_DAY_1`, `WIFI_PROFILE_DAY_2`, `WIFI_PROFILE_MONTH_1`, `WIFI_PROFILE_MONTH_2`, `WIFI_PROFILE_WEEK_1`, `WIFI_PROFILE_WEEK_2` |
 | packages/auth/env.ts | `ADMIN_EMAILS`, `AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `SUPABASE_JWT_SECRET` |
 | packages/shared/src/env.ts | None |
@@ -1517,7 +1523,7 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 
 ### Validated in env modules but missing from .env.example
 
-- None
+- `WEB_APP_URL`
 ````
 
 ## .ai/contracts/package-exports.generated.md
