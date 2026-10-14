@@ -98,23 +98,17 @@ const app = new Hono<AppContext>()
     });
     return c.json({ plan }, 201);
   })
-  .patch(
-    "/plans/:id",
-    zValidator("json", updatePlanSchema),
-    async (c) => {
-      const { id } = c.req.param();
-      const input = c.req.valid("json");
-      const repo = createWifiConsoleRepository(c.get("db"));
-      const plan = await repo.updatePlan(id, {
-        ...input,
-        ...(input.profile !== undefined
-          ? { rosProfile: input.profile }
-          : {}),
-      });
-      if (!plan) return c.json({ error: "Plan not found" }, 404);
-      return c.json({ plan });
-    },
-  )
+  .patch("/plans/:id", zValidator("json", updatePlanSchema), async (c) => {
+    const { id } = c.req.param();
+    const input = c.req.valid("json");
+    const repo = createWifiConsoleRepository(c.get("db"));
+    const plan = await repo.updatePlan(id, {
+      ...input,
+      ...(input.profile !== undefined ? { rosProfile: input.profile } : {}),
+    });
+    if (!plan) return c.json({ error: "Plan not found" }, 404);
+    return c.json({ plan });
+  })
   .get("/orders", zValidator("query", listOrdersSchema), async (c) => {
     const { status, limit, offset } = c.req.valid("query");
     const repo = createWifiConsoleRepository(c.get("db"));

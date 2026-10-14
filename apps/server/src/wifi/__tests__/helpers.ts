@@ -150,7 +150,7 @@ export const createFakeHotspot = () => {
       await guard();
       return [];
     },
-    createProfile: async (input) => {
+    createProfile: async () => {
       await guard();
       return { id: `*profile-${++seq}` };
     },
@@ -226,7 +226,7 @@ export const createTestDeps = (options: TestDepsOptions = {}) => {
     [];
   const fulfilment = createFulfilmentService({
     repo: memory.repo,
-    plans: async () => testPlans,
+    plans: () => Promise.resolve(testPlans),
     hotspot: options.hotspot,
     logger: noopLogger,
     now,
@@ -245,7 +245,7 @@ export const createTestDeps = (options: TestDepsOptions = {}) => {
       telegramAdminIds: options.telegramAdminIds ?? ["1"],
       timeZone: "UTC",
     },
-    plans: async () => testPlans,
+    plans: () => Promise.resolve(testPlans),
     repo: memory.repo,
     paystack: options.paystack,
     hotspot: options.hotspot,

@@ -1,7 +1,7 @@
 "use client";
 
-import { StatCard } from "@/components/dashboard/stat-card";
 import type { RevenueRange } from "@/components/dashboard/revenue-range-toggle";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { useWifiStats } from "@/hooks/use-wifi";
 import {
   Alert02Icon,

@@ -1,8 +1,8 @@
 "use client";
 
+import type { RevenueRange } from "@/components/dashboard/revenue-range-toggle";
 import { QueryError } from "@/components/dashboard/query-error";
 import { StatCard } from "@/components/dashboard/stat-card";
-import type { RevenueRange } from "@/components/dashboard/revenue-range-toggle";
 import { useWifiStats } from "@/hooks/use-wifi";
 import { useHotspotSessions } from "@/hooks/use-wifi-router";
 import {

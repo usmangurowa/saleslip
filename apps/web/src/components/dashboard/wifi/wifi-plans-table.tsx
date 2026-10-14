@@ -1,13 +1,15 @@
 "use client";
 
+import type { WifiPlanOption } from "@/hooks/use-wifi";
 import * as React from "react";
-import { useHotspotProfiles } from "@/hooks/use-wifi-router";
+import { QueryError } from "@/components/dashboard/query-error";
+import { TableCard } from "@/components/dashboard/table-card";
 import {
   useCreateWifiPlan,
   useUpdateWifiPlan,
   useWifiPlans,
-  type WifiPlanOption,
 } from "@/hooks/use-wifi";
+import { useHotspotProfiles } from "@/hooks/use-wifi-router";
 import { PencilEdit01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
@@ -45,8 +47,6 @@ import {
   TableHeader,
   TableRow,
 } from "@turbo/ui/components/table";
-import { QueryError } from "@/components/dashboard/query-error";
-import { TableCard } from "@/components/dashboard/table-card";
 
 const formatNaira = (kobo: number) =>
   new Intl.NumberFormat("en-NG", {
@@ -131,23 +131,21 @@ const PlanDialog = ({
   const updatePlan = useUpdateWifiPlan();
   const pending = isEdit ? updatePlan : createPlan;
 
-  React.useEffect(() => {
-    if (open) setForm(toForm(plan));
-  }, [open, plan]);
+  // The parent keys this dialog by open state + plan id, so each open
+  // remounts it with a fresh form — no effect needed to reset edits.
 
   const set =
-    (key: keyof PlanForm) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (key: keyof PlanForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value;
       setForm((current) => {
         // On create the slug follows the name until the user edits it by hand.
         // While the ID still matches the auto-generated slug (or is untouched),
-      // keep it in sync so users never hand-edit it.
-      if (
-        key === "name" &&
-        !isEdit &&
-        (current.id === "" || current.id === toSlug(current.name))
-      ) {
+        // keep it in sync so users never hand-edit it.
+        if (
+          key === "name" &&
+          !isEdit &&
+          (current.id === "" || current.id === toSlug(current.name))
+        ) {
           return { ...current, name: value, id: toSlug(value) };
         }
         return { ...current, [key]: value };
@@ -285,8 +283,8 @@ const PlanDialog = ({
               </SelectContent>
             </Select>
             <FieldDescription>
-              Must match a hotspot profile on the router exactly — vouchers
-              mint against it.
+              Must match a hotspot profile on the router exactly — vouchers mint
+              against it.
             </FieldDescription>
           </Field>
           <Field>
@@ -303,8 +301,7 @@ const PlanDialog = ({
             </FieldDescription>
             {validitySummary ? (
               <FieldDescription className="text-foreground">
-                You are setting the validity of this plan to{" "}
-                {validitySummary}.
+                You are setting the validity of this plan to {validitySummary}.
               </FieldDescription>
             ) : null}
           </Field>
@@ -346,7 +343,7 @@ const PlanDialog = ({
  * here show up on the buy page immediately — no deploy, no env change.
  */
 export const WifiPlansTable = () => {
-  const { data, isPending, isError, error, refetch } = useWifiPlans(true);
+  const { data, isPending, isError, refetch } = useWifiPlans(true);
   const { data: profileData } = useHotspotProfiles();
   const [editing, setEditing] = React.useState<WifiPlanOption | undefined>();
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -366,7 +363,7 @@ export const WifiPlansTable = () => {
   }
 
   const plans = data ?? [];
-  const profiles = profileData?.profiles?.map((profile) => profile.name) ?? [];
+  const profiles = profileData?.profiles.map((profile) => profile.name) ?? [];
 
   const toggleActive = (plan: WifiPlanOption) =>
     updatePlan.mutate(
@@ -480,6 +477,7 @@ export const WifiPlansTable = () => {
       </Table>
 
       <PlanDialog
+        key={dialogOpen ? (editing?.id ?? "new") : "closed"}
         plan={editing}
         profiles={profiles}
         open={dialogOpen}

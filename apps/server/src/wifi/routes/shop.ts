@@ -7,7 +7,7 @@ import {
   optionalEmailSchema,
   optionalNigerianPhoneSchema,
 } from "@turbo/validators";
-import { findPlan } from "@turbo/wifi";
+import { findPlan, sellablePlans } from "@turbo/wifi";
 
 import type { WifiDeps } from "../deps";
 import type { PortalParams } from "../pages/buy";
@@ -62,11 +62,18 @@ export const createShopRoutes = (deps: WifiDeps) => {
     supportPhone: config.supportPhone,
   };
 
+  // The buy page sells only active plans; retired ones stay off the
+  // catalogue but resolvable for fulfilment and receipts.
   const renderBuy = async (
     portal: PortalParams,
     extra: Partial<Parameters<typeof buyPage>[0]> = {},
   ) =>
-    buyPage({ ...page, plans: await deps.plans(), portal, ...extra });
+    buyPage({
+      ...page,
+      plans: sellablePlans(await deps.plans()),
+      portal,
+      ...extra,
+    });
 
   return new Hono()
     .get("/", async (c) => {

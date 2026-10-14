@@ -175,7 +175,5 @@ export const wifiPlan = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [
-    check("wifi_plan_price_check", sql`${table.priceKobo} >= 0`),
-  ],
+  (table) => [check("wifi_plan_price_check", sql`${table.priceKobo} >= 0`)],
 );

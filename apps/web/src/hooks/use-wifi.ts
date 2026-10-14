@@ -205,7 +205,9 @@ export interface WifiPlanUpdate extends Partial<Omit<WifiPlanInput, "id">> {
 }
 
 const planApiError = async (res: Response, fallback: string) => {
-  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  const body = (await res.json().catch(() => null)) as {
+    error?: string;
+  } | null;
   return new Error(body?.error ?? fallback);
 };
 

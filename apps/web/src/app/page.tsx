@@ -12,11 +12,16 @@ import {
 
 import { Badge } from "@turbo/ui/components/badge";
 import { Button } from "@turbo/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@turbo/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@turbo/ui/components/card";
 import { Icon } from "@turbo/ui/components/icon";
-import { buildPlans } from "@turbo/wifi";
+import { buildPlans, sellablePlans } from "@turbo/wifi";
 
-const plans = buildPlans();
+const plans = sellablePlans(buildPlans());
 
 interface Step {
   title: string;
@@ -27,8 +32,7 @@ interface Step {
 const steps: Step[] = [
   {
     title: "Pick a plan",
-    description:
-      "Choose how long you need and how many devices you'll connect.",
+    description: "Choose how long you need: a day, a week, or a month.",
     icon: Router01Icon,
   },
   {

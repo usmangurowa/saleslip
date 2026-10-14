@@ -1,9 +1,9 @@
 "use client";
 
+import type { RevenueRange } from "@/components/dashboard/revenue-range-toggle";
 import { useState } from "react";
 import { OverviewStatRow } from "@/components/dashboard/overview-stat-row";
 import { PageToolbar } from "@/components/dashboard/page-toolbar";
-import type { RevenueRange } from "@/components/dashboard/revenue-range-toggle";
 import { RevenueRangeToggle } from "@/components/dashboard/revenue-range-toggle";
 import { WifiBatchDialog } from "@/components/dashboard/wifi/wifi-batch-dialog";
 import { WifiSessionsTable } from "@/components/dashboard/wifi/wifi-sessions-table";

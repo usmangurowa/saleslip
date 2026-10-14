@@ -237,4 +237,22 @@ describe("fulfilment", () => {
     expect(result.outcome).toBe("failed");
     if (result.outcome === "failed") expect(result.reason).toBe("unknown plan");
   });
+
+  it("fulfils orders paid before their plan was retired", async () => {
+    // day-2 is seeded inactive (duo retirement): an order paid before the
+    // plan was deactivated must still resolve and mint its voucher, not
+    // fail as "unknown plan" and strand the customer.
+    const fake = createFakeHotspot();
+    const t = createTestDeps({ hotspot: fake.hotspot });
+    const order = await newPaidOrder(t, "day-2");
+
+    const result = await t.fulfilment.handlePayment(
+      order.paystackReference,
+      "success",
+    );
+    expect(result.outcome).toBe("fulfilled");
+    if (result.outcome !== "fulfilled") throw new Error("unreachable");
+    expect(result.order.status).toBe("fulfilled");
+    expect(result.voucher.code).toMatch(/^SL[A-Z2-9]{5}$/);
+  });
 });

@@ -70,8 +70,21 @@ describe("shop routes", () => {
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toContain("1 Day · 1 Device");
+    expect(body).not.toContain("2 Devices");
     expect(body).toContain('name="mac" value="AA:BB"');
     expect(body).toContain('name="login" value="http://10.5.50.1/login"');
+  });
+
+  it("rejects checkout for a retired plan", async () => {
+    const t = createTestDeps({ paystack: fakePaystack() });
+    const app = createWifiApp(t.deps);
+
+    const res = await app.request(jsonBody({ planId: "day-2" }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      ok: false,
+      reason: "unknown_plan",
+    });
   });
 
   it("returns 503 when Paystack is not configured", async () => {
@@ -110,7 +123,7 @@ describe("shop routes", () => {
     expect(calls[0]).toMatchObject({
       reference: order.id,
       email: "2348012345678@buyers.saleslip.app",
-      amount: 100_000,
+      amount: 50_000,
       metadata: { orderId: order.id, planId: "day-1", mac: "AA:BB" },
     });
   });
@@ -360,7 +373,9 @@ describe("shop routes", () => {
     const done = await app.request(`/orders/${order.id}`, {
       headers: { accept: "application/json" },
     });
-    expect(await done.json()).toMatchObject({ voucherCode: expect.any(String) });
+    expect(await done.json()).toMatchObject({
+      voucherCode: expect.any(String),
+    });
 
     const html = await (await app.request(`/orders/${order.id}`)).text();
     expect(html).not.toContain("Bonus code");

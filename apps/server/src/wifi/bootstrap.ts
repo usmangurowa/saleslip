@@ -1,12 +1,12 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, sql } from "drizzle-orm";
 import { webhookCallback } from "grammy";
 
-import { db } from "@turbo/db/client";
+import type { WifiPlan } from "@turbo/wifi";
 import { wifiPlan } from "@turbo/db";
+import { db } from "@turbo/db/client";
 import { createPaystackClient } from "@turbo/paystack";
 import { createHotspotService, createRouterOsClient } from "@turbo/routeros";
 import { buildPlans } from "@turbo/wifi";
-import type { WifiPlan } from "@turbo/wifi";
 
 import type { env as ServerEnv } from "../env";
 import type { WifiDeps } from "./deps";
@@ -67,7 +67,9 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
   if (!paystack) logger.warn("paystack disabled", { reason: "not configured" });
 
   // Plans are DB-managed from the web console; env overrides are the seed
-  // fallback so a fresh database still has a sellable catalogue.
+  // fallback so a fresh database still has a sellable catalogue. Retired
+  // plans stay in the list so orders already paid against them resolve —
+  // buyer-facing edges filter with `sellablePlans` instead.
   const fallbackPlans = buildPlans({
     day1: env.WIFI_PROFILE_DAY_1,
     day2: env.WIFI_PROFILE_DAY_2,
@@ -77,12 +79,15 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
     month2: env.WIFI_PROFILE_MONTH_2,
   });
 
+  // Loads every plan, including retired ones: fulfilment and receipts must
+  // still resolve orders paid against a plan before it was deactivated.
+  // Only the buyer-facing edges filter (`sellablePlans` in checkout and the
+  // buy page routes).
   const loadPlans = async (): Promise<readonly WifiPlan[]> => {
     try {
       const rows = await db
         .select()
         .from(wifiPlan)
-        .where(eq(wifiPlan.active, true))
         .orderBy(asc(wifiPlan.sortOrder), asc(wifiPlan.id));
       if (rows.length === 0) return fallbackPlans;
       return rows.map((row) => ({
@@ -91,6 +96,7 @@ export const createWifiDeps = (env: WifiEnv): WifiDeps => {
         description: row.description,
         priceKobo: row.priceKobo,
         rosProfile: row.rosProfile,
+        active: row.active,
         ...(row.dataLimitBytes !== null
           ? { dataLimitBytes: row.dataLimitBytes }
           : {}),

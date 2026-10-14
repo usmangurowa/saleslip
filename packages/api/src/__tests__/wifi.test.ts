@@ -65,7 +65,12 @@ describe("wifi console router", () => {
     const range = { paidOrders: 2, revenueKobo: 60_000 };
     state.repo = {
       revenueSummary: () =>
-        Promise.resolve({ today: range, week: range, month: range, all: range }),
+        Promise.resolve({
+          today: range,
+          week: range,
+          month: range,
+          all: range,
+        }),
       countOrdersByStatus: () =>
         Promise.resolve({
           pending: 1,
@@ -142,7 +147,7 @@ describe("wifi console router", () => {
       uptimeLimit: "1 hour",
       validityLabel: "1 hour",
     };
-    state.repo = { createPlan: (input) => Promise.resolve(created) };
+    state.repo = { createPlan: () => Promise.resolve(created) };
     const res = await build().request("/plans", {
       method: "POST",
       headers: { "content-type": "application/json" },
