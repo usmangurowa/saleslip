@@ -2,12 +2,10 @@ import type { WifiPlanOption } from "@/hooks/use-wifi";
 import type { MintedBatch } from "@/hooks/use-wifi-router";
 import QRCode from "qrcode";
 
-import { formatNaira } from "@turbo/wifi/format";
-
 /** What the venue prints on every voucher. One venue today, so constants. */
 export const VOUCHER_BRAND = {
   logoPath: "/brand/guilders-logo.png",
-  wifiName: "Guilders Wifi",
+  wifiName: "Guilders Starlink",
   /** Hotspot `dns-name`; customers type it after joining the network. */
   loginHost: "wifi.saleslip.app",
   supportPhone: "0706 926 5013",
@@ -39,7 +37,7 @@ const escape = (value: string) =>
       })[char] ?? char,
   );
 
-type SheetPlan = Pick<WifiPlanOption, "name" | "priceKobo" | "validityLabel">;
+type SheetPlan = Pick<WifiPlanOption, "name" | "validityLabel">;
 
 export interface VoucherSheetInput {
   title: string;
@@ -63,7 +61,7 @@ export const buildVoucherSheetHtml = ({
         <div class="ssid"><span>WiFi</span> ${escape(VOUCHER_BRAND.wifiName)}</div>
         <div class="code">${escape(voucher.code)}</div>
         <div class="plan">${escape(plan.name)}</div>
-        <div class="plan">Valid ${escape(plan.validityLabel)} · ${escape(formatNaira(plan.priceKobo))}</div>
+        <div class="plan">Valid ${escape(plan.validityLabel)}</div>
         <div class="help">
           Join ${escape(VOUCHER_BRAND.wifiName)}, open <b>${escape(VOUCHER_BRAND.loginHost)}</b> and enter the code.<br />
           Help: ${escape(VOUCHER_BRAND.supportPhone)}

@@ -47,9 +47,16 @@ describe("voucher print sheet", () => {
   it("prints the venue, plan, and support details on each card", () => {
     const html = sheet(1);
     expect(html).toContain(VOUCHER_BRAND.wifiName);
+    expect(html).toContain("Guilders Starlink");
     expect(html).toContain(VOUCHER_BRAND.supportPhone);
     expect(html).toContain(VOUCHER_BRAND.loginHost);
     expect(html).toContain("SLAAA00");
-    expect(html).toContain("Valid 24 hours · ₦1,000");
+    expect(html).toContain("Valid 24 hours");
+  });
+
+  it("keeps the price off the card even when the plan carries one", () => {
+    const html = sheet(1);
+    expect(html).not.toContain("₦");
+    expect(html).not.toContain("1,000");
   });
 });
