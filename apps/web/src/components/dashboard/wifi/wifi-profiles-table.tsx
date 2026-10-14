@@ -80,9 +80,8 @@ const ProfileDialog = ({
   const updateProfile = useUpdateProfile();
   const pending = isEdit ? updateProfile : createProfile;
 
-  React.useEffect(() => {
-    if (open) setForm(toForm(profile));
-  }, [open, profile]);
+  // The parent keys this dialog by open state + profile id, so each open
+  // remounts it with a fresh form — no effect needed to reset edits.
 
   const set =
     (key: keyof ProfileForm) => (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -250,7 +249,7 @@ const DeleteDialog = ({
  * stay in sync with what the router actually offers.
  */
 export const WifiProfilesTable = () => {
-  const { data, isPending, isError, error, refetch } = useHotspotProfiles();
+  const { data, isPending, isError, refetch } = useHotspotProfiles();
   const [editing, setEditing] = React.useState<HotspotProfile | undefined>();
   const [deleting, setDeleting] = React.useState<HotspotProfile | undefined>();
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -360,6 +359,7 @@ export const WifiProfilesTable = () => {
       </Table>
 
       <ProfileDialog
+        key={dialogOpen ? (editing?.id ?? "new") : "closed"}
         profile={editing}
         open={dialogOpen}
         onOpenChange={setDialogOpen}

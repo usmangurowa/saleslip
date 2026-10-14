@@ -56,7 +56,10 @@ const profileUpdateSchema = z
     name: profileFieldsSchema.name.optional(),
   })
   .refine(
-    (input) => Object.values(input).some((value) => value !== undefined),
+    (input) =>
+      Object.values(input as Record<string, unknown>).some(
+        (value) => value !== undefined,
+      ),
     { message: "At least one field is required" },
   );
 

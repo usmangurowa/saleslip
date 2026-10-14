@@ -147,7 +147,7 @@ describe("wifi console router", () => {
       uptimeLimit: "1 hour",
       validityLabel: "1 hour",
     };
-    state.repo = { createPlan: (input) => Promise.resolve(created) };
+    state.repo = { createPlan: () => Promise.resolve(created) };
     const res = await build().request("/plans", {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -339,7 +339,7 @@ describe("hotspot profiles", () => {
     expect(fake.calls).toContain("updateProfile:*1");
     const list = await app.request("/profiles");
     const body = await json(list);
-    const profiles = body.profiles as Array<Record<string, unknown>>;
+    const profiles = body.profiles as Record<string, unknown>[];
     expect(profiles[0]).toMatchObject({
       id: "*1",
       name: "Daily-1GB",
@@ -356,9 +356,9 @@ describe("hotspot profiles", () => {
     expect(fake.calls).toContain("removeProfile:*2");
     const list = await app.request("/profiles");
     const body = await json(list);
-    expect(
-      (body.profiles as Array<{ id: string }>).some((p) => p.id === "*2"),
-    ).toBe(false);
+    expect((body.profiles as { id: string }[]).some((p) => p.id === "*2")).toBe(
+      false,
+    );
   });
 });
 

@@ -131,9 +131,8 @@ const PlanDialog = ({
   const updatePlan = useUpdateWifiPlan();
   const pending = isEdit ? updatePlan : createPlan;
 
-  React.useEffect(() => {
-    if (open) setForm(toForm(plan));
-  }, [open, plan]);
+  // The parent keys this dialog by open state + plan id, so each open
+  // remounts it with a fresh form — no effect needed to reset edits.
 
   const set =
     (key: keyof PlanForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -344,7 +343,7 @@ const PlanDialog = ({
  * here show up on the buy page immediately — no deploy, no env change.
  */
 export const WifiPlansTable = () => {
-  const { data, isPending, isError, error, refetch } = useWifiPlans(true);
+  const { data, isPending, isError, refetch } = useWifiPlans(true);
   const { data: profileData } = useHotspotProfiles();
   const [editing, setEditing] = React.useState<WifiPlanOption | undefined>();
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -364,7 +363,7 @@ export const WifiPlansTable = () => {
   }
 
   const plans = data ?? [];
-  const profiles = profileData?.profiles?.map((profile) => profile.name) ?? [];
+  const profiles = profileData?.profiles.map((profile) => profile.name) ?? [];
 
   const toggleActive = (plan: WifiPlanOption) =>
     updatePlan.mutate(
@@ -478,6 +477,7 @@ export const WifiPlansTable = () => {
       </Table>
 
       <PlanDialog
+        key={dialogOpen ? (editing?.id ?? "new") : "closed"}
         plan={editing}
         profiles={profiles}
         open={dialogOpen}
