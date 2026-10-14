@@ -65,7 +65,12 @@ describe("wifi console router", () => {
     const range = { paidOrders: 2, revenueKobo: 60_000 };
     state.repo = {
       revenueSummary: () =>
-        Promise.resolve({ today: range, week: range, month: range, all: range }),
+        Promise.resolve({
+          today: range,
+          week: range,
+          month: range,
+          all: range,
+        }),
       countOrdersByStatus: () =>
         Promise.resolve({
           pending: 1,

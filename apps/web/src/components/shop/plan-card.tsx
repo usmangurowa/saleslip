@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
 import type { WifiPlan } from "@turbo/wifi";
-import { formatNaira } from "@turbo/wifi";
 import { Badge } from "@turbo/ui/components/badge";
 import { Button } from "@turbo/ui/components/button";
 import {
@@ -14,6 +13,7 @@ import {
   CardTitle,
 } from "@turbo/ui/components/card";
 import { Icon } from "@turbo/ui/components/icon";
+import { formatNaira } from "@turbo/wifi";
 
 export const PlanCard = ({ plan }: { plan: WifiPlan }) => (
   <Card className="h-full gap-4" data-slot="plan-card">

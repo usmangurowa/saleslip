@@ -12,6 +12,7 @@ import {
   UserGroupIcon,
   UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
+
 export interface DashboardNavItem {
   label: string;
   slug: string | null;

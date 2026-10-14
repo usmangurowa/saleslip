@@ -1,12 +1,12 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { webhookCallback } from "grammy";
 
-import { db } from "@turbo/db/client";
+import type { WifiPlan } from "@turbo/wifi";
 import { wifiPlan } from "@turbo/db";
+import { db } from "@turbo/db/client";
 import { createPaystackClient } from "@turbo/paystack";
 import { createHotspotService, createRouterOsClient } from "@turbo/routeros";
 import { buildPlans, sellablePlans } from "@turbo/wifi";
-import type { WifiPlan } from "@turbo/wifi";
 
 import type { env as ServerEnv } from "../env";
 import type { WifiDeps } from "./deps";

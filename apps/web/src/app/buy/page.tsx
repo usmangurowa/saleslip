@@ -3,7 +3,6 @@ import Link from "next/link";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { BuyForm } from "@/components/shop/buy-form";
 import { PlanCard } from "@/components/shop/plan-card";
-
 import { loadShopPlans } from "@/lib/wifi-plans";
 
 import { Button } from "@turbo/ui/components/button";

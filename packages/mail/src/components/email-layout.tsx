@@ -1,5 +1,5 @@
-import * as React from "react";
 import type { ReactNode } from "react";
+import * as React from "react";
 import { Body, Container, Head, Html, Preview, Tailwind } from "react-email";
 
 import { emailTheme } from "../theme";

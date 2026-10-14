@@ -2,16 +2,26 @@
 
 import type { HotspotProfile } from "@/hooks/use-wifi-router";
 import * as React from "react";
+import { QueryError } from "@/components/dashboard/query-error";
+import { TableCard } from "@/components/dashboard/table-card";
 import {
   useCreateProfile,
   useDeleteProfile,
   useHotspotProfiles,
   useUpdateProfile,
 } from "@/hooks/use-wifi-router";
-import { Delete02Icon, PencilEdit01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
+import {
+  Delete02Icon,
+  PencilEdit01Icon,
+  PlusSignIcon,
+} from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
-import { Alert, AlertDescription, AlertTitle } from "@turbo/ui/components/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@turbo/ui/components/alert";
 import { Badge } from "@turbo/ui/components/badge";
 import { Button } from "@turbo/ui/components/button";
 import {
@@ -39,8 +49,6 @@ import {
   TableHeader,
   TableRow,
 } from "@turbo/ui/components/table";
-import { QueryError } from "@/components/dashboard/query-error";
-import { TableCard } from "@/components/dashboard/table-card";
 
 interface ProfileForm {
   name: string;
@@ -77,8 +85,7 @@ const ProfileDialog = ({
   }, [open, profile]);
 
   const set =
-    (key: keyof ProfileForm) =>
-    (event: React.ChangeEvent<HTMLInputElement>) =>
+    (key: keyof ProfileForm) => (event: React.ChangeEvent<HTMLInputElement>) =>
       setForm((current) => ({ ...current, [key]: event.target.value }));
 
   const submit = () => {
@@ -94,7 +101,10 @@ const ProfileDialog = ({
       toast.success(isEdit ? "Profile updated" : "Profile created");
     };
     if (isEdit) {
-      updateProfile.mutate({ id: profile.id, ...input }, { onSuccess, onError });
+      updateProfile.mutate(
+        { id: profile.id, ...input },
+        { onSuccess, onError },
+      );
     } else {
       createProfile.mutate(input, { onSuccess, onError });
     }
@@ -157,8 +167,7 @@ const ProfileDialog = ({
               disabled={pending.isPending}
             />
             <FieldDescription>
-              RouterOS duration, e.g. `1d`, `12h`, `30m`. Blank means
-              unlimited.
+              RouterOS duration, e.g. `1d`, `12h`, `30m`. Blank means unlimited.
             </FieldDescription>
           </Field>
         </FieldGroup>

@@ -1,13 +1,15 @@
 "use client";
 
+import type { WifiPlanOption } from "@/hooks/use-wifi";
 import * as React from "react";
-import { useHotspotProfiles } from "@/hooks/use-wifi-router";
+import { QueryError } from "@/components/dashboard/query-error";
+import { TableCard } from "@/components/dashboard/table-card";
 import {
   useCreateWifiPlan,
   useUpdateWifiPlan,
   useWifiPlans,
-  type WifiPlanOption,
 } from "@/hooks/use-wifi";
+import { useHotspotProfiles } from "@/hooks/use-wifi-router";
 import { PencilEdit01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
@@ -45,8 +47,6 @@ import {
   TableHeader,
   TableRow,
 } from "@turbo/ui/components/table";
-import { QueryError } from "@/components/dashboard/query-error";
-import { TableCard } from "@/components/dashboard/table-card";
 
 const formatNaira = (kobo: number) =>
   new Intl.NumberFormat("en-NG", {
@@ -136,18 +136,17 @@ const PlanDialog = ({
   }, [open, plan]);
 
   const set =
-    (key: keyof PlanForm) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (key: keyof PlanForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value;
       setForm((current) => {
         // On create the slug follows the name until the user edits it by hand.
         // While the ID still matches the auto-generated slug (or is untouched),
-      // keep it in sync so users never hand-edit it.
-      if (
-        key === "name" &&
-        !isEdit &&
-        (current.id === "" || current.id === toSlug(current.name))
-      ) {
+        // keep it in sync so users never hand-edit it.
+        if (
+          key === "name" &&
+          !isEdit &&
+          (current.id === "" || current.id === toSlug(current.name))
+        ) {
           return { ...current, name: value, id: toSlug(value) };
         }
         return { ...current, [key]: value };
@@ -285,8 +284,8 @@ const PlanDialog = ({
               </SelectContent>
             </Select>
             <FieldDescription>
-              Must match a hotspot profile on the router exactly — vouchers
-              mint against it.
+              Must match a hotspot profile on the router exactly — vouchers mint
+              against it.
             </FieldDescription>
           </Field>
           <Field>
@@ -303,8 +302,7 @@ const PlanDialog = ({
             </FieldDescription>
             {validitySummary ? (
               <FieldDescription className="text-foreground">
-                You are setting the validity of this plan to{" "}
-                {validitySummary}.
+                You are setting the validity of this plan to {validitySummary}.
               </FieldDescription>
             ) : null}
           </Field>

@@ -1,8 +1,9 @@
 import { asc, eq } from "drizzle-orm";
 
-import { db } from "@turbo/db/client";
+import type { WifiPlan } from "@turbo/wifi";
 import { wifiPlan } from "@turbo/db";
-import { buildPlans, sellablePlans, type WifiPlan } from "@turbo/wifi";
+import { db } from "@turbo/db/client";
+import { buildPlans, sellablePlans } from "@turbo/wifi";
 
 /**
  * The purchasable plan catalogue for the shop: DB rows first, env-seeded

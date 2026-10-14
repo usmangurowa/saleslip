@@ -360,7 +360,9 @@ describe("shop routes", () => {
     const done = await app.request(`/orders/${order.id}`, {
       headers: { accept: "application/json" },
     });
-    expect(await done.json()).toMatchObject({ voucherCode: expect.any(String) });
+    expect(await done.json()).toMatchObject({
+      voucherCode: expect.any(String),
+    });
 
     const html = await (await app.request(`/orders/${order.id}`)).text();
     expect(html).not.toContain("Bonus code");

@@ -65,8 +65,7 @@ export const createShopRoutes = (deps: WifiDeps) => {
   const renderBuy = async (
     portal: PortalParams,
     extra: Partial<Parameters<typeof buyPage>[0]> = {},
-  ) =>
-    buyPage({ ...page, plans: await deps.plans(), portal, ...extra });
+  ) => buyPage({ ...page, plans: await deps.plans(), portal, ...extra });
 
   return new Hono()
     .get("/", async (c) => {

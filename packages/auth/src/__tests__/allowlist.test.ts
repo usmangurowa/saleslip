@@ -30,12 +30,12 @@ describe("shouldAllowUserCreate", () => {
   });
 
   it("admits any @saleslip.app email when an allowlist is configured", () => {
-    expect(shouldAllowUserCreate("staff@saleslip.app", ["admin@example.com"])).toBe(
-      true,
-    );
-    expect(shouldAllowUserCreate("Staff@Saleslip.APP", ["admin@example.com"])).toBe(
-      true,
-    );
+    expect(
+      shouldAllowUserCreate("staff@saleslip.app", ["admin@example.com"]),
+    ).toBe(true);
+    expect(
+      shouldAllowUserCreate("Staff@Saleslip.APP", ["admin@example.com"]),
+    ).toBe(true);
   });
 
   it("still blocks non-allowlisted, non-saleslip.app emails", () => {

@@ -167,11 +167,12 @@ export interface WifiConsoleRepository {
     offset: number;
   }) => Promise<Page<CustomerSummary>>;
   /** The DB-backed plan catalogue; inactive rows are hidden unless asked for. */
-  listPlans: (params?: {
-    includeInactive?: boolean;
-  }) => Promise<WifiPlan[]>;
+  listPlans: (params?: { includeInactive?: boolean }) => Promise<WifiPlan[]>;
   createPlan: (input: CreatePlanInput) => Promise<WifiPlan>;
-  updatePlan: (id: string, input: UpdatePlanInput) => Promise<WifiPlan | undefined>;
+  updatePlan: (
+    id: string,
+    input: UpdatePlanInput,
+  ) => Promise<WifiPlan | undefined>;
   listBatches: (limit: number) => Promise<WifiVoucherBatchRow[]>;
   countOrdersByStatus: () => Promise<Record<WifiOrderStatus, number>>;
   countVouchersByStatus: () => Promise<Record<WifiVoucherStatus, number>>;

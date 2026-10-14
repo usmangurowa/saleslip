@@ -25,7 +25,9 @@ describe("email templates render", () => {
   it("renders the OTP email HTML", async () => {
     const { OTPEmail } = await import("../templates/otp");
     const { renderEmail } = await import("../client");
-    const html = await renderEmail(OTPEmail({ otp: "246810", type: "sign-in" }));
+    const html = await renderEmail(
+      OTPEmail({ otp: "246810", type: "sign-in" }),
+    );
     expect(html).toContain("246810");
   });
 
@@ -33,7 +35,11 @@ describe("email templates render", () => {
     const { WelcomeEmail } = await import("../templates/welcome");
     const { renderEmail } = await import("../client");
     const html = await renderEmail(
-      WelcomeEmail({ name: "Ada", actionUrl: "https://saleslip.app", actionText: "Open dashboard" }),
+      WelcomeEmail({
+        name: "Ada",
+        actionUrl: "https://saleslip.app",
+        actionText: "Open dashboard",
+      }),
     );
     expect(html).toContain("Ada");
   });
@@ -42,7 +48,11 @@ describe("email templates render", () => {
     const { SupportEmail } = await import("../templates/support");
     const { renderEmail } = await import("../client");
     const html = await renderEmail(
-      SupportEmail({ userEmail: "ada@example.com", type: "issue", message: "My voucher did not work" }),
+      SupportEmail({
+        userEmail: "ada@example.com",
+        type: "issue",
+        message: "My voucher did not work",
+      }),
     );
     expect(html).toContain("My voucher did not work");
   });

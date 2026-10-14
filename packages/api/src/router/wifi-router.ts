@@ -56,8 +56,7 @@ const profileUpdateSchema = z
     name: profileFieldsSchema.name.optional(),
   })
   .refine(
-    (input) =>
-      Object.values(input).some((value) => value !== undefined),
+    (input) => Object.values(input).some((value) => value !== undefined),
     { message: "At least one field is required" },
   );
 
@@ -166,17 +165,13 @@ export const createWifiRouterApp = ({
           c.json({ profiles: await service.listProfiles() }),
         ),
       )
-      .post(
-        "/profiles",
-        zValidator("json", profileCreateSchema),
-        async (c) => {
-          const input = c.req.valid("json");
-          return withRouter(async (service, ctx) => {
-            const { id } = await service.createProfile(input);
-            return ctx.json({ profile: { id, ...input } }, 201);
-          })(c);
-        },
-      )
+      .post("/profiles", zValidator("json", profileCreateSchema), async (c) => {
+        const input = c.req.valid("json");
+        return withRouter(async (service, ctx) => {
+          const { id } = await service.createProfile(input);
+          return ctx.json({ profile: { id, ...input } }, 201);
+        })(c);
+      })
       .patch(
         "/profiles/:id",
         zValidator("json", profileUpdateSchema),
