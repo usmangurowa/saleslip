@@ -1,5 +1,5 @@
 import type { WifiPlan } from "@turbo/wifi";
-import { findPlan } from "@turbo/wifi";
+import { findPlan, sellablePlans } from "@turbo/wifi";
 
 import type { WifiDeps } from "./deps";
 import type { CreateOrderInput, WifiOrderRecord } from "./orders";
@@ -43,7 +43,10 @@ export const startCheckout = async (
   input: Omit<CreateOrderInput, "amountKobo">,
 ): Promise<CheckoutResult> => {
   const { config, repo, logger } = deps;
-  const plan = findPlan(await deps.plans(), input.planId);
+  // Only sellable plans can start a checkout; retired plans stay in
+  // `deps.plans()` so fulfilment still resolves orders paid before they
+  // were deactivated.
+  const plan = findPlan(sellablePlans(await deps.plans()), input.planId);
   if (!plan) return { ok: false, reason: "unknown_plan" };
   if (!deps.paystack || !config.publicBaseUrl) {
     return { ok: false, reason: "payments_unavailable" };
