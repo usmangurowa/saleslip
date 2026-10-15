@@ -45,7 +45,7 @@ export default async function BuyPage({
               </h1>
               <p className="text-muted-foreground text-base">
                 Pick how long you need and how many devices you want to connect.
-                Every plan is unlimited data.
+                The ₦50 day is 1 GB; every plan above it is unlimited data.
               </p>
             </div>
             <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
