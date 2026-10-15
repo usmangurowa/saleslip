@@ -11,10 +11,11 @@ import {
 } from "../plans";
 
 describe("buildPlans", () => {
-  it("seeds the seven Saleslip plans with default profiles", () => {
+  it("seeds the eight Saleslip plans with default profiles", () => {
     const plans = buildPlans({});
     expect(plans.map((p) => [p.id, p.priceKobo, p.rosProfile])).toEqual([
       ["pos-1", 5_000, "1-Day-1GB"],
+      ["day-5gb", 20_000, "1-Day-5GB"],
       ["day-1", 50_000, "Saleslip-1d-1"],
       ["day-2", 150_000, "Saleslip-1d-2"],
       ["week-1", 200_000, "Saleslip-7d-1"],
@@ -24,11 +25,12 @@ describe("buildPlans", () => {
     ]);
   });
 
-  it("caps only the POS tier at 1 GB, leaving the unlimited plans unlimited", () => {
+  it("caps only the data tiers, leaving the unlimited plans unlimited", () => {
     const plans = buildPlans({});
     expect(findPlan(plans, "pos-1")?.dataLimitBytes).toBe(1_073_741_824);
+    expect(findPlan(plans, "day-5gb")?.dataLimitBytes).toBe(5 * 1024 ** 3);
     for (const plan of plans) {
-      if (plan.id === "pos-1") continue;
+      if (plan.id === "pos-1" || plan.id === "day-5gb") continue;
       expect(plan.dataLimitBytes).toBeUndefined();
       expect(plan.uptimeLimit).toBeUndefined();
     }
@@ -37,6 +39,7 @@ describe("buildPlans", () => {
   it("keeps duo plans out of the sellable list", () => {
     expect(sellablePlans(buildPlans({})).map((p) => p.id)).toEqual([
       "pos-1",
+      "day-5gb",
       "day-1",
       "week-1",
       "month-1",

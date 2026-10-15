@@ -92,9 +92,9 @@ export default function HomePage() {
                 Choose how long you need
               </h2>
               <p className="text-muted-foreground text-base">
-                The ₦50 day is 1 GB of data for light use; every plan above it
-                is unlimited data on the Saleslip network. Pay once, connect
-                right away.
+                Day passes come with 1 GB for ₦50 or 5 GB for ₦200; every plan
+                above them is unlimited data on the Saleslip network. Pay once,
+                connect right away.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
