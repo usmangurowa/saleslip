@@ -28,12 +28,25 @@ export interface PlanProfileOverrides {
 
 /**
  * Seed catalogue, used when the `wifi_plan` table is empty or unreachable.
- * Duo plans stay listed (inactive) so vouchers already sold on their profiles
- * still resolve to a plan; buyer-facing lists filter them out.
+ * The ₦50 1 GB POS tier is the sampling product; the unlimited plans carry
+ * no byte cap so the router profile governs limits. Duo plans stay listed
+ * (inactive) so vouchers already sold on their profiles still resolve to a
+ * plan; buyer-facing lists filter them out.
  */
 export const buildPlans = (
   overrides: PlanProfileOverrides = {},
 ): readonly WifiPlan[] => [
+  {
+    id: "pos-1",
+    name: "1 Day · 1 GB",
+    description:
+      "1 GB of data for 24 hours — right-sized for POS and light use.",
+    priceKobo: 5_000,
+    rosProfile: "1-Day-1GB",
+    dataLimitBytes: 1_073_741_824,
+    validityLabel: "24 hours",
+    sortOrder: 0,
+  },
   {
     id: "day-1",
     name: "1 Day · 1 Device",
@@ -41,6 +54,7 @@ export const buildPlans = (
     priceKobo: 50_000,
     rosProfile: overrides.day1 ?? "Saleslip-1d-1",
     validityLabel: "24 hours",
+    sortOrder: 1,
   },
   {
     id: "day-2",
@@ -50,6 +64,7 @@ export const buildPlans = (
     rosProfile: overrides.day2 ?? "Saleslip-1d-2",
     validityLabel: "24 hours",
     active: false,
+    sortOrder: 4,
   },
   {
     id: "week-1",
@@ -58,6 +73,7 @@ export const buildPlans = (
     priceKobo: 200_000,
     rosProfile: overrides.week1 ?? "Saleslip-7d-1",
     validityLabel: "7 days",
+    sortOrder: 2,
   },
   {
     id: "week-2",
@@ -67,6 +83,7 @@ export const buildPlans = (
     rosProfile: overrides.week2 ?? "Saleslip-7d-2",
     validityLabel: "7 days",
     active: false,
+    sortOrder: 5,
   },
   {
     id: "month-1",
@@ -75,6 +92,7 @@ export const buildPlans = (
     priceKobo: 500_000,
     rosProfile: overrides.month1 ?? "Saleslip-30d-1",
     validityLabel: "30 days",
+    sortOrder: 3,
   },
   {
     id: "month-2",
@@ -84,6 +102,7 @@ export const buildPlans = (
     rosProfile: overrides.month2 ?? "Saleslip-30d-2",
     validityLabel: "30 days",
     active: false,
+    sortOrder: 6,
   },
 ];
 
