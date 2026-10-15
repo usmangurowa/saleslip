@@ -32,12 +32,13 @@ the plan catalogue contains three obsolete plans.
 
 ### Plans (source of truth: `packages/wifi/src/plans.ts`)
 
-- [ ] The market ladder — ₦50 entry tier plus the three unlimited plans —
-      replaces the obsolete ₦1,000–₦8,000 catalogue:
+- [ ] The market ladder — ₦50 and ₦200 data tiers plus the three unlimited
+      plans — replaces the obsolete ₦1,000–₦8,000 catalogue:
 
   | Plan | ID | Price | Data | Validity | RouterOS profile |
   |---|---|---|---|---|---|
   | 1 Day, 1 GB | `pos-1` | ₦50 | 1 GB (per-voucher byte cap) | 24 hours | `1-Day-1GB` |
+  | 1 Day, 5 GB | `day-5gb` | ₦200 | 5 GB (per-voucher byte cap) | 24 hours | `1-Day-5GB` |
   | 1 Day, 1 device | `day-1` | ₦500 | Unlimited | 24 hours | `1-Day-Unlimited` |
   | 1 Week, 1 device | `week-1` | ₦2,000 | Unlimited | 7 days | `1-Week-Unlimited` |
   | 1 Month, 1 device | `month-1` | ₦5,000 | Unlimited | 30 days | `1-Month-Unlimited` |
@@ -49,12 +50,12 @@ the plan catalogue contains three obsolete plans.
       for legacy vouchers.
 
 - [ ] Validity counts from **first login**, enforced by each profile's on-login
-      script; the device limit is the profile's `shared-users` (1). The four
+      script; the device limit is the profile's `shared-users` (1). The five
       sellable profiles above must exist on the router (one-time manual task);
-      `1-Day-1GB` carries the 24-hour expiry stamp, the 5M/3M rate limit, and
-      the ₦50 price in its on-login voucher metadata. The `pos-1` byte cap is
-      enforced per voucher at minting (`limit-bytes-total`), not by the
-      profile.
+      `1-Day-1GB` and `1-Day-5GB` carry the 24-hour expiry stamp, the 5M/3M
+      rate limit, and their price (₦50, ₦200) in the on-login voucher
+      metadata. The `pos-1` and `day-5gb` byte caps are enforced per voucher
+      at minting (`limit-bytes-total`), not by the profile.
 
 ### Checkout and payment (reusing the existing engine)
 
