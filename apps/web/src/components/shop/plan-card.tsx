@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@turbo/ui/components/card";
 import { Icon } from "@turbo/ui/components/icon";
-import { formatNaira } from "@turbo/wifi";
+import { formatData, formatNaira } from "@turbo/wifi";
 
 export const PlanCard = ({ plan }: { plan: WifiPlan }) => (
   <Card className="h-full gap-4" data-slot="plan-card">
@@ -30,7 +30,9 @@ export const PlanCard = ({ plan }: { plan: WifiPlan }) => (
       <span className="text-3xl font-semibold tracking-tight">
         {formatNaira(plan.priceKobo)}
       </span>
-      <span className="text-muted-foreground text-sm">Unlimited data</span>
+      <span className="text-muted-foreground text-sm">
+        {formatData(plan.dataLimitBytes)} data
+      </span>
     </CardContent>
     <CardFooter className="mt-auto">
       <Button className="w-full" asChild>

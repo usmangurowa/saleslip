@@ -92,7 +92,8 @@ export default function HomePage() {
                 Choose how long you need
               </h2>
               <p className="text-muted-foreground text-base">
-                Every plan is unlimited data on the Saleslip network. Pay once,
+                Day passes come with 1 GB for ₦50 or 5 GB for ₦200; every plan
+                above them is unlimited data on the Saleslip network. Pay once,
                 connect right away.
               </p>
             </div>
@@ -160,7 +161,7 @@ export default function HomePage() {
             <span className="text-sm font-medium">Saleslip</span>
           </div>
           <p className="text-muted-foreground text-sm">
-            Unlimited WiFi, paid in seconds.
+            WiFi in seconds, from ₦50 a day.
           </p>
           <div className="flex items-center gap-4">
             <Link

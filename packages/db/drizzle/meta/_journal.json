@@ -78,6 +78,13 @@
       "when": 1792064037657,
       "tag": "0010_pos_day_1gb",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792079571229,
+      "tag": "0011_day_5gb",
+      "breakpoints": true
     }
   ]
 }
