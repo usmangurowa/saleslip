@@ -70,6 +70,7 @@ describe("shop routes", () => {
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toContain("1 Day · 1 Device");
+    expect(body).toContain("1 Day · 1 GB");
     expect(body).not.toContain("2 Devices");
     expect(body).toContain('name="mac" value="AA:BB"');
     expect(body).toContain('name="login" value="http://10.5.50.1/login"');
@@ -176,7 +177,7 @@ describe("shop routes", () => {
     const t = createTestDeps({ paystack: fakePaystack() });
     const res = await createWifiApp(t.deps).request("/?planId=nope");
     expect(res.status).toBe(200);
-    expect(await res.text()).toMatch(/value="day-1"[\s\S]{0,120}checked/);
+    expect(await res.text()).toMatch(/value="pos-1"[\s\S]{0,120}checked/);
   });
 
   it("uses the buyer email for Paystack when no phone is given", async () => {

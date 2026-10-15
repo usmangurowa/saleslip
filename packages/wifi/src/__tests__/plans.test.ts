@@ -11,9 +11,10 @@ import {
 } from "../plans";
 
 describe("buildPlans", () => {
-  it("seeds the six Saleslip plans with default profiles", () => {
+  it("seeds the seven Saleslip plans with default profiles", () => {
     const plans = buildPlans({});
     expect(plans.map((p) => [p.id, p.priceKobo, p.rosProfile])).toEqual([
+      ["pos-1", 5_000, "1-Day-1GB"],
       ["day-1", 50_000, "Saleslip-1d-1"],
       ["day-2", 150_000, "Saleslip-1d-2"],
       ["week-1", 200_000, "Saleslip-7d-1"],
@@ -23,8 +24,19 @@ describe("buildPlans", () => {
     ]);
   });
 
+  it("caps only the POS tier at 1 GB, leaving the unlimited plans unlimited", () => {
+    const plans = buildPlans({});
+    expect(findPlan(plans, "pos-1")?.dataLimitBytes).toBe(1_073_741_824);
+    for (const plan of plans) {
+      if (plan.id === "pos-1") continue;
+      expect(plan.dataLimitBytes).toBeUndefined();
+      expect(plan.uptimeLimit).toBeUndefined();
+    }
+  });
+
   it("keeps duo plans out of the sellable list", () => {
     expect(sellablePlans(buildPlans({})).map((p) => p.id)).toEqual([
+      "pos-1",
       "day-1",
       "week-1",
       "month-1",
@@ -35,14 +47,6 @@ describe("buildPlans", () => {
     const plans = buildPlans({ day1: "mikhmon-1d" });
     expect(findPlan(plans, "day-1")?.rosProfile).toBe("mikhmon-1d");
     expect(findPlan(plans, "day-2")?.rosProfile).toBe("Saleslip-1d-2");
-  });
-
-  it("leaves every plan unlimited so the router profile governs limits", () => {
-    const plans = buildPlans({});
-    for (const plan of plans) {
-      expect(plan.dataLimitBytes).toBeUndefined();
-      expect(plan.uptimeLimit).toBeUndefined();
-    }
   });
 });
 
@@ -68,6 +72,15 @@ describe("toHotspotUserInput", () => {
       limitUptime: undefined,
       server: "hotspot1",
     });
+  });
+
+  it("carries the POS tier's byte cap onto the hotspot user", () => {
+    const plans = buildPlans({});
+    const plan = findPlan(plans, "pos-1");
+    if (!plan) throw new Error("missing plan");
+    const input = toHotspotUserInput(plan, { code: "SLPOS50", owner: "o" });
+    expect(input.profile).toBe("1-Day-1GB");
+    expect(input.limitBytesTotal).toBe(1_073_741_824);
   });
 
   it("leaves limits off so the router profile governs expiry", () => {
