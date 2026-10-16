@@ -53,15 +53,23 @@ the plan catalogue contains three obsolete plans.
 - [ ] Validity counts from **first login**, enforced by each profile's on-login
       script; the device limit is the profile's `shared-users` (1). The five
       sellable profiles above must exist on the router (one-time manual task);
-      `1-Day-1GB` carries the 24-hour expiry stamp, the 5M/3M rate limit,
+      `1-Day-1GB` carries the 24-hour expiry stamp, the streaming rate limit,
       and ₦50 in the on-login voucher metadata. `1-Week-5GB` carries the
       7-day expiry stamp (the silent week behind the ₦200/5 GB tier), the
-      5M/3M rate limit, and ₦200 in its metadata; the superseded
+      streaming rate limit, and ₦200 in its metadata; the superseded
       `1-Day-5GB` profile stays on the router for vouchers already sold
       on it, whose plan row is retired as-is so receipts and session
       mapping keep the historical terms. The `pos-1` and `week-5gb` byte
       caps are enforced per voucher
       at minting (`limit-bytes-total`), not by the profile.
+
+- [ ] The streaming rate limit is **5M down / 3M up per device**. RouterOS
+      `rate-limit` is `rx/tx` **from the router's point of view** (official
+      docs: "rx is client upload, tx is client download" — e.g. 512k/1M means
+      512k up, 1M down), so the profiles carry `rate-limit=3M/5M`. The earlier
+      `5M/3M` reading had the directions swapped (5 up / 3 down); check any
+      future rate edit against the MikroTik HotSpot user profile docs before
+      applying. The `trial-5m` profile stays symmetric at 2M/2M.
 
 ### Checkout and payment (reusing the existing engine)
 
