@@ -28,7 +28,6 @@ packages/
   jobs/         → Trigger.dev background tasks
   mail/         → Email templates (Resend)
   shared/       → Shared utilities and constants
-  supabase/     → Supabase client setup
   ui/           → shadcn/ui component library (50+ components)
   validators/   → Zod validation schemas
   wifi/         → WiFi domain logic (voucher codes, order state, plans, batches)
@@ -51,7 +50,7 @@ tooling/
 | React            | React       | 19.2.8 via `catalog:react19`              |
 | API framework    | Hono        | ^4.12.31 (`@hono/node-server` ^2.0.11)    |
 | ORM              | Drizzle ORM | drizzle-orm ^0.45.2; drizzle-kit ^0.31.10 |
-| Database         | PostgreSQL  | via Supabase                              |
+| Database         | PostgreSQL  | Coolify-hosted container                 |
 | Database driver  | postgres.js | ^3.4.9 (`prepare: false` for pooled URLs) |
 | Auth             | Better Auth | 1.6.23                                    |
 | Validation       | Zod         | catalog (`4.4.3`)                         |
@@ -88,7 +87,7 @@ tooling/
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Hosting         | Vercel (web), EAS (mobile), or Docker on Coolify / any container host (web + server, `apps/*/Dockerfile`; see `.ai/patterns/docker-images.md`) |
 | API runtime     | Standalone Node/Hono app (`apps/server`)                                                                                                       |
-| Database        | Supabase (Postgres)                                                                                                                            |
+| Database        | PostgreSQL (Coolify container)                                                                                                                            |
 | Email           | Resend                                                                                                                                         |
 | Payments        | Paystack via `@turbo/paystack` (initialize/verify, HMAC-SHA512 webhook check)                                                                  |
 | Hotspot router  | MikroTik RouterOS API via `@turbo/routeros` (`node-routeros` ^1.6.9), reached over WireGuard from the server container                         |
