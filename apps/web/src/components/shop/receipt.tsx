@@ -43,9 +43,11 @@ export const Receipt = ({ orderId }: { orderId: string }) => {
   if (isLoading) {
     return (
       <Card className="w-full" data-slot="receipt-loading">
-        <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+        <CardHeader>
+          <CardTitle>Loading your order…</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-3 py-6 text-center">
           <Spinner className="size-6" />
-          <p className="text-muted-foreground text-sm">Loading your order...</p>
         </CardContent>
       </Card>
     );
@@ -61,11 +63,11 @@ export const Receipt = ({ orderId }: { orderId: string }) => {
             confirmation or buy a new plan.
           </CardDescription>
         </CardHeader>
-        <CardFooter>
+        <CardContent>
           <Button asChild className="w-full" variant="outline">
             <Link href="/buy">Back to plans</Link>
           </Button>
-        </CardFooter>
+        </CardContent>
       </Card>
     );
   }
@@ -138,11 +140,7 @@ export const Receipt = ({ orderId }: { orderId: string }) => {
                   name="password"
                   value={order.voucherCode}
                 />
-                <input
-                  type="hidden"
-                  name="dst"
-                  value="http://neverssl.com"
-                />
+                <input type="hidden" name="dst" value="http://neverssl.com" />
                 <Button type="submit" size="lg" className="w-full">
                   <Icon icon={Wifi01Icon} />
                   Connect now
@@ -153,7 +151,7 @@ export const Receipt = ({ orderId }: { orderId: string }) => {
             {order.qrSvg && (
               <div className="flex flex-col items-center gap-2">
                 <div
-                  className="size-40 rounded-lg border bg-white p-2 [&>svg]:size-full"
+                  className="bg-qr-surface size-40 rounded-lg border p-2 [&>svg]:size-full"
                   dangerouslySetInnerHTML={{ __html: order.qrSvg }}
                 />
                 <span className="text-muted-foreground text-xs">
@@ -170,8 +168,8 @@ export const Receipt = ({ orderId }: { orderId: string }) => {
               <div className="flex flex-col gap-1">
                 <span className="font-medium">How to connect</span>
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Join the <strong>{brandName}</strong> WiFi network, open
-                  the login prompt, and enter this code as both username and
+                  Join the <strong>{brandName}</strong> WiFi network, open the
+                  login prompt, and enter this code as both username and
                   password.
                 </p>
               </div>
@@ -223,7 +221,9 @@ export const Receipt = ({ orderId }: { orderId: string }) => {
               <dt className="text-muted-foreground">Validity</dt>
               <dd className="text-right font-medium">
                 {order.plan.validityLabel}
-                {order.plan.dataLimitBytes ? ` · ${formatData(order.plan.dataLimitBytes)}` : ""}
+                {order.plan.dataLimitBytes
+                  ? ` · ${formatData(order.plan.dataLimitBytes)}`
+                  : ""}
               </dd>
             </>
           )}

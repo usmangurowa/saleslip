@@ -18,7 +18,6 @@
 | `@turbo/paystack` | `packages/paystack` | `.` |
 | `@turbo/routeros` | `packages/routeros` | `.` |
 | `@turbo/shared` | `packages/shared` | `.`, `./constants`, `./env` |
-| `@turbo/supabase` | `packages/supabase` | `.`, `./client` |
 | `@turbo/ui` | `packages/ui` | `./components/*`, `./lib/*`, `./hooks/*` |
 | `@turbo/validators` | `packages/validators` | `.` |
 | `@turbo/wifi` | `packages/wifi` | `.`, `./format` |

@@ -1321,12 +1321,9 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 
 | Method | Path | Source | Auth middleware |
 | --- | --- | --- | --- |
-| DELETE | `/apikeys/:id` | `packages/api/src/router/api-key.ts` | yes |
-| GET | `/apikeys` | `packages/api/src/router/api-key.ts` | yes |
 | GET | `/auth/secret` | `packages/api/src/router/auth.ts` | yes |
 | GET | `/auth/session` | `packages/api/src/router/auth.ts` | no |
 | GET | `/health` | `packages/api/src/index.ts` | no |
-| GET | `/tasks` | `packages/api/src/router/task.ts` | no |
 | GET | `/wifi/batches` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/customers` | `packages/api/src/router/wifi.ts` | no |
 | GET | `/wifi/orders` | `packages/api/src/router/wifi.ts` | no |
@@ -1335,9 +1332,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | GET | `/wifi/vouchers` | `packages/api/src/router/wifi.ts` | no |
 | PATCH | `/wifi/plans/:id` | `packages/api/src/router/wifi.ts` | no |
 | POST | `/ai/chat` | `packages/api/src/router/ai.ts` | yes |
-| POST | `/apikeys` | `packages/api/src/router/api-key.ts` | yes |
-| POST | `/support` | `packages/api/src/router/support.ts` | yes |
-| POST | `/tasks` | `packages/api/src/router/task.ts` | yes |
 | POST | `/wifi/plans` | `packages/api/src/router/wifi.ts` | no |
 
 ## Typed client source
@@ -1356,7 +1350,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 
 ## Schema files
 
-- `packages/db/src/app-schema.ts`
 - `packages/db/src/auth-schema.ts`
 - `packages/db/src/schema.ts`
 - `packages/db/src/wifi-schema.ts`
@@ -1365,12 +1358,10 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 
 | Export | DB table | Source |
 | --- | --- | --- |
-| `task` | `task` | `packages/db/src/app-schema.ts` |
 | `user` | `user` | `packages/db/src/auth-schema.ts` |
 | `session` | `session` | `packages/db/src/auth-schema.ts` |
 | `account` | `account` | `packages/db/src/auth-schema.ts` |
 | `verification` | `verification` | `packages/db/src/auth-schema.ts` |
-| `apikey` | `apikey` | `packages/db/src/auth-schema.ts` |
 | `wifiOrder` | `wifi_order` | `packages/db/src/wifi-schema.ts` |
 | `wifiVoucherBatch` | `wifi_voucher_batch` | `packages/db/src/wifi-schema.ts` |
 | `wifiVoucher` | `wifi_voucher` | `packages/db/src/wifi-schema.ts` |
@@ -1383,7 +1374,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | `userRelations` | `user` | `packages/db/src/auth-schema.ts` |
 | `sessionRelations` | `session` | `packages/db/src/auth-schema.ts` |
 | `accountRelations` | `account` | `packages/db/src/auth-schema.ts` |
-| `apikeyRelations` | `apikey` | `packages/db/src/auth-schema.ts` |
 ````
 
 ## .ai/contracts/env.generated.md
@@ -1403,10 +1393,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `EXPO_PUBLIC_API_URL`
 - `EXPO_PUBLIC_POSTHOG_KEY`
 - `EXPO_PUBLIC_SENTRY_DSN`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `GITHUB_CLIENT_ID`
-- `GITHUB_CLIENT_SECRET`
 - `GOOGLE_GENERATIVE_AI_API_KEY`
 - `GROQ_API_KEY`
 - `MAIL_FROM`
@@ -1414,8 +1400,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `NEXT_PUBLIC_PORT`
 - `NEXT_PUBLIC_POSTHOG_KEY`
 - `NEXT_PUBLIC_SENTRY_DSN`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_SUPABASE_URL`
 - `OPENROUTER_API_KEY`
 - `PAYSTACK_DISABLED`
 - `PAYSTACK_PUBLIC_KEY`
@@ -1432,7 +1416,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `SENTRY_DSN`
 - `SERVER_PORT`
 - `SERVER_URL`
-- `SUPABASE_JWT_SECRET`
 - `SUPPORT_INBOX_EMAIL`
 - `SUPPORT_PHONE`
 - `TELEGRAM_ADMIN_IDS`
@@ -1457,10 +1440,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `EXPO_PUBLIC_API_URL`
 - `EXPO_PUBLIC_POSTHOG_KEY`
 - `EXPO_PUBLIC_SENTRY_DSN`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `GITHUB_CLIENT_ID`
-- `GITHUB_CLIENT_SECRET`
 - `GOOGLE_GENERATIVE_AI_API_KEY`
 - `GROQ_API_KEY`
 - `MAIL_FROM`
@@ -1468,8 +1447,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `NEXT_PUBLIC_PORT`
 - `NEXT_PUBLIC_POSTHOG_KEY`
 - `NEXT_PUBLIC_SENTRY_DSN`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_SUPABASE_URL`
 - `OPENROUTER_API_KEY`
 - `PAYSTACK_DISABLED`
 - `PAYSTACK_PUBLIC_KEY`
@@ -1486,7 +1463,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `SENTRY_DSN`
 - `SERVER_PORT`
 - `SERVER_URL`
-- `SUPABASE_JWT_SECRET`
 - `SUPPORT_INBOX_EMAIL`
 - `SUPPORT_PHONE`
 - `TELEGRAM_ADMIN_IDS`
@@ -1507,8 +1483,8 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | File | Variables |
 | --- | --- |
 | apps/server/src/env.ts | `ADMIN_EMAILS`, `APP_URL`, `BRAND_NAME`, `PAYSTACK_DISABLED`, `PAYSTACK_PUBLIC_KEY`, `PAYSTACK_SECRET_KEY`, `PORT`, `POSTGRES_URL`, `PUBLIC_BASE_URL`, `RESEND_API_KEY`, `ROUTER_API_PASSWORD`, `ROUTER_API_USER`, `ROUTER_DISABLED`, `ROUTER_HOST`, `ROUTER_PORT`, `SERVER_PORT`, `SERVER_URL`, `SUPPORT_PHONE`, `TELEGRAM_ADMIN_IDS`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `WEB_APP_URL`, `WIFI_HOTSPOT_SERVER`, `WIFI_PROFILE_DAY_1`, `WIFI_PROFILE_DAY_2`, `WIFI_PROFILE_MONTH_1`, `WIFI_PROFILE_MONTH_2`, `WIFI_PROFILE_WEEK_1`, `WIFI_PROFILE_WEEK_2` |
-| apps/web/src/env.ts | `ADMIN_EMAILS`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PORT`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NODE_ENV`, `POSTGRES_URL`, `SERVER_URL`, `WIFI_PROFILE_DAY_1`, `WIFI_PROFILE_DAY_2`, `WIFI_PROFILE_MONTH_1`, `WIFI_PROFILE_MONTH_2`, `WIFI_PROFILE_WEEK_1`, `WIFI_PROFILE_WEEK_2` |
-| packages/auth/env.ts | `ADMIN_EMAILS`, `AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `SUPABASE_JWT_SECRET` |
+| apps/web/src/env.ts | `ADMIN_EMAILS`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PORT`, `NODE_ENV`, `POSTGRES_URL`, `SERVER_URL`, `WIFI_PROFILE_DAY_1`, `WIFI_PROFILE_DAY_2`, `WIFI_PROFILE_MONTH_1`, `WIFI_PROFILE_MONTH_2`, `WIFI_PROFILE_WEEK_1`, `WIFI_PROFILE_WEEK_2` |
+| packages/auth/env.ts | `ADMIN_EMAILS`, `AUTH_SECRET`, `NODE_ENV` |
 | packages/shared/src/env.ts | None |
 
 ## Drift Report
@@ -1549,7 +1525,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | `@turbo/paystack` | `packages/paystack` | `.` |
 | `@turbo/routeros` | `packages/routeros` | `.` |
 | `@turbo/shared` | `packages/shared` | `.`, `./constants`, `./env` |
-| `@turbo/supabase` | `packages/supabase` | `.`, `./client` |
 | `@turbo/ui` | `packages/ui` | `./components/*`, `./lib/*`, `./hooks/*` |
 | `@turbo/validators` | `packages/validators` | `.` |
 | `@turbo/wifi` | `packages/wifi` | `.`, `./format` |
@@ -1584,7 +1559,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 - `@turbo/paystack`
 - `@turbo/routeros`
 - `@turbo/shared`
-- `@turbo/supabase`
 - `@turbo/ui`
 - `@turbo/validators`
 - `@turbo/wifi`
@@ -1599,7 +1573,7 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 
 | Package | Path | Internal dependencies |
 | --- | --- | --- |
-| `@turbo/mobile` | `apps/mobile` | `@turbo/analytics`, `@turbo/api`, `@turbo/assets`, `@turbo/auth`, `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/supabase`, `@turbo/tailwind-config`, `@turbo/tsconfig`, `@turbo/validators` |
+| `@turbo/mobile` | `apps/mobile` | `@turbo/analytics`, `@turbo/api`, `@turbo/assets`, `@turbo/auth`, `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tailwind-config`, `@turbo/tsconfig`, `@turbo/validators` |
 | `@turbo/web` | `apps/web` | `@turbo/analytics`, `@turbo/api`, `@turbo/auth`, `@turbo/db`, `@turbo/eslint-config`, `@turbo/mail`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tailwind-config`, `@turbo/tsconfig`, `@turbo/ui`, `@turbo/validators`, `@turbo/wifi` |
 | `@turbo/ai` | `packages/ai` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/analytics` | `packages/analytics` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/shared`, `@turbo/tsconfig` |
@@ -1612,7 +1586,6 @@ router, or auth adapter. Use the matching `.ai/skills/*` procedure.
 | `@turbo/paystack` | `packages/paystack` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/routeros` | `packages/routeros` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/shared` | `packages/shared` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
-| `@turbo/supabase` | `packages/supabase` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/ui` | `packages/ui` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/validators` | `packages/validators` | `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/tsconfig` |
 | `@turbo/wifi` | `packages/wifi` | `@turbo/db`, `@turbo/eslint-config`, `@turbo/prettier-config`, `@turbo/routeros`, `@turbo/tsconfig` |
