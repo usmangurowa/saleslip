@@ -9,8 +9,12 @@ export const VOUCHER_BRAND = {
   supportPhone: "0706 926 5013",
 } as const;
 
-/** 3 × 8 cards fill an A4 page inside 6 mm margins, about 64 × 31 mm each,
- * with 5 mm between rows and 3 mm between columns for easy cutting. */
+/**
+ * Slips fill the full A4 sheet, ~67 × 32 mm each. The half-gap edge padding
+ * (2.5mm top/bottom, 1.5mm left/right) mirrors half the inter-slip gaps (5mm
+ * rows, 3mm columns), so every slip cut from the sheet carries the same
+ * white border on all four sides.
+ */
 export const VOUCHERS_PER_PAGE = 24;
 
 /**
@@ -95,7 +99,7 @@ export const buildVoucherSheetHtml = ({
 <meta charset="utf-8" />
 <title>${escape(title)} — voucher sheet</title>
 <style>
-  @page { size: A4; margin: 6mm; }
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body {
@@ -105,8 +109,9 @@ export const buildVoucherSheetHtml = ({
     print-color-adjust: exact;
   }
   .page {
-    width: 198mm;
-    height: 285mm;
+    width: 210mm;
+    height: 297mm;
+    padding: 2.5mm 1.5mm;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(8, 1fr);
@@ -151,7 +156,7 @@ export const buildVoucherSheetHtml = ({
   .scan { font-size: 5pt; color: #555; margin-top: 0.6mm; }
   @media screen {
     body { background: #eee; padding: 6mm 0; }
-    .page { margin: 0 auto 6mm; background: #fff; outline: 6mm solid #fff; }
+    .page { margin: 0 auto 6mm; background: #fff; }
   }
 </style>
 </head>

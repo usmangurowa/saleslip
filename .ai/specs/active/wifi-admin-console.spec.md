@@ -63,8 +63,11 @@ Three slices; all three ship in this change.
       primitives (`StatCard`, `TableCard`, `PageToolbar`, `TablePagination`,
       `QueryError`, `HintLabel`).
 - [x] Voucher batch printing renders an A4 print sheet with 24 vouchers per page
-      (3 columns × 8 rows, ~61 × 33 mm slips, 10mm margins, 2mm gaps between
-      slips, 0.2mm dashed borders around each), complete with venue branding
+      (3 columns × 8 rows, ~67 × 32 mm slips, full-bleed grid, 0.2mm dashed
+      borders around each). Inter-slip gaps are 5mm between rows and 3mm
+      between columns, with half-gap page edges (2.5mm top/bottom, 1.5mm
+      left/right) so every cut slip carries an equal white border on all four
+      sides. Complete with venue branding
       (Guilders logo, SSID, plan name, validity, support phone) and an inline
       SVG QR code (`qrcode`) that joins the phone to the open venue WiFi:
       `WIFI:S:Guilders Starlink;T:nopass;;` (double-semicolon terminator per

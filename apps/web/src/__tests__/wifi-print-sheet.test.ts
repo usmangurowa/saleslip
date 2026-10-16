@@ -38,8 +38,10 @@ describe("voucher print sheet", () => {
     expect(html).toContain("@page { size: A4");
   });
 
-  it("spaces the cards apart instead of a packed mosaic", () => {
+  it("spaces the cards apart with half-gap page edges", () => {
     const html = sheet(1);
+    expect(html).toContain("@page { size: A4; margin: 0; }");
+    expect(html).toContain("padding: 2.5mm 1.5mm");
     expect(html).toContain("gap: 5mm 3mm");
     expect(html).toContain("border: 0.2mm dashed #aaa");
     expect(html).not.toContain("border-right: 0.2mm dashed");
