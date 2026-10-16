@@ -2,6 +2,8 @@
 
 How to turn the Guilders setup into a product that a person with basic computer skills can set up alone. Snapshot of research done on 2026-10-16.
 
+The desktop app study here still holds. For how the cloud side works (RADIUS, hosted portal, desired state), [rebuild-architecture.md](rebuild-architecture.md) replaces Part 1 and the build order below.
+
 ## Part 1: Making it simple enough for anyone to set up
 
 Today the system only works because you, Copilot and I hand-ran a long list of Winbox, terminal and VPS commands. The fix is to stop treating it as "a router we configure" and treat it as **a product that configures the router**. Six ideas do most of the work.

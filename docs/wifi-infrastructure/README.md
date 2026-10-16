@@ -7,9 +7,12 @@ How the Guilders Starlink hotspot works today, what went wrong building it, and 
 | [how-it-works-plain.md](how-it-works-plain.md) | The whole system in plain words. Every step says what it does. Start here |
 | [technical-reference.md](technical-reference.md) | Exact cabling, RouterOS commands, code layout and deployment |
 | [mistakes.md](mistakes.md) | 21 things we got wrong, what each causes, and the fix |
+| [rebuild-architecture.md](rebuild-architecture.md) | **The current rebuild design**: RADIUS, hosted portal, desired state, multi-tenant, build order |
+| [radius.md](radius.md) | What RADIUS is, how saleslip would use it, failure handling, how to move Guilders over |
+| [testing-lab.md](testing-lab.md) | Testing without a spare MikroTik: CHR virtual routers on the laptop, a VPS and CI |
 | [rebuild-plan.md](rebuild-plan.md) | How to make setup simple, plus the Mac/Windows setup app study and phased roadmap |
 | [setup-without-winbox.md](setup-without-winbox.md) | Whether the setup app can control the router over Ethernet without Winbox (yes) |
-| [competitors.md](competitors.md) | HotFii and what it means for us, plus what RADIUS is and whether to use it |
+| [competitors.md](competitors.md) | HotFii and where saleslip can win |
 
 `docs/wifi-platform-plan.md` is the older multi-tenant plan. Where they disagree, these files are newer.
 
