@@ -9,7 +9,12 @@ export const VOUCHER_BRAND = {
   supportPhone: "0706 926 5013",
 } as const;
 
-/** 3 × 8 cards fill an A4 page inside 10 mm margins, about 61 × 33 mm each. */
+/**
+ * Slips fill the full A4 sheet, ~67 × 32 mm each. The half-gap edge padding
+ * (2.5mm top/bottom, 1.5mm left/right) mirrors half the inter-slip gaps (5mm
+ * rows, 3mm columns), so every slip cut from the sheet carries the same
+ * white border on all four sides.
+ */
 export const VOUCHERS_PER_PAGE = 24;
 
 /**
@@ -68,8 +73,7 @@ export const buildVoucherSheetHtml = ({
         <div class="plan">${escape(plan.name)}</div>
         <div class="plan">Valid ${escape(plan.validityLabel)}</div>
         <div class="help">
-          Scan to join ${escape(VOUCHER_BRAND.wifiName)}, then enter this code
-          on the page that opens.<br />
+          Scan to join, then enter this code.<br />
           Help: ${escape(VOUCHER_BRAND.supportPhone)}
         </div>
       </div>
@@ -95,7 +99,7 @@ export const buildVoucherSheetHtml = ({
 <meta charset="utf-8" />
 <title>${escape(title)} — voucher sheet</title>
 <style>
-  @page { size: A4; margin: 10mm; }
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body {
@@ -105,19 +109,20 @@ export const buildVoucherSheetHtml = ({
     print-color-adjust: exact;
   }
   .page {
-    width: 190mm;
-    height: 277mm;
+    width: 210mm;
+    height: 297mm;
+    padding: 2.5mm 1.5mm;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    gap: 2mm;
+    gap: 5mm 3mm;
     break-after: page;
   }
   .page:last-child { break-after: auto; }
   .card {
     display: flex;
     gap: 2mm;
-    padding: 2.2mm 2.5mm;
+    padding: 2mm;
     border: 0.2mm dashed #aaa;
     overflow: hidden;
   }
@@ -150,8 +155,8 @@ export const buildVoucherSheetHtml = ({
   .qr svg { width: 19mm; height: 19mm; display: block; }
   .scan { font-size: 5pt; color: #555; margin-top: 0.6mm; }
   @media screen {
-    body { background: #eee; padding: 10mm 0; }
-    .page { margin: 0 auto 10mm; background: #fff; outline: 10mm solid #fff; }
+    body { background: #eee; padding: 6mm 0; }
+    .page { margin: 0 auto 6mm; background: #fff; }
   }
 </style>
 </head>
