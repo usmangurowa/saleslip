@@ -39,7 +39,7 @@ export const buildPlans = (
 ): readonly WifiPlan[] => [
   {
     id: "pos-1",
-    name: "1 Day · 1 GB",
+    name: "1 GB · 1 Day",
     description:
       "1 GB of data for 24 hours — right-sized for POS and light use.",
     priceKobo: 5_000,
@@ -54,7 +54,7 @@ export const buildPlans = (
     // stating "1 week" would undercut the ₦2,000 unlimited week. Empty
     // validityLabel makes every buyer surface skip its validity line.
     id: "week-5gb",
-    name: "5 GB Data",
+    name: "5 GB",
     description: "5 GB of data on one device.",
     priceKobo: 20_000,
     rosProfile: "1-Week-5GB",
@@ -78,7 +78,7 @@ export const buildPlans = (
   },
   {
     id: "day-1",
-    name: "1 Day · 1 Device",
+    name: "1 Day Unlimited",
     description: "Unlimited data for 24 hours on one device.",
     priceKobo: 50_000,
     rosProfile: overrides.day1 ?? "Saleslip-1d-1",
@@ -97,7 +97,7 @@ export const buildPlans = (
   },
   {
     id: "week-1",
-    name: "1 Week · 1 Device",
+    name: "1 Week Unlimited",
     description: "Unlimited data for 7 days on one device.",
     priceKobo: 200_000,
     rosProfile: overrides.week1 ?? "Saleslip-7d-1",
@@ -116,7 +116,7 @@ export const buildPlans = (
   },
   {
     id: "month-1",
-    name: "1 Month · 1 Device",
+    name: "1 Month Unlimited",
     description: "Unlimited data for 30 days on one device.",
     priceKobo: 500_000,
     rosProfile: overrides.month1 ?? "Saleslip-30d-1",

@@ -9,7 +9,7 @@ describe("email templates render", () => {
     const { renderEmail } = await import("../client");
     const html = await renderEmail(
       VoucherEmail({
-        planName: "1 Day · 1 Device",
+        planName: "1 Day Unlimited",
         priceLabel: "₦1,000",
         validityLabel: "24 hours",
         deviceCount: 1,
