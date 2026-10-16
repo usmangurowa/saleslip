@@ -20,9 +20,11 @@ export const PlanCard = ({ plan }: { plan: WifiPlan }) => (
     <CardHeader>
       <CardTitle className="flex items-start justify-between gap-3">
         <h3 className="text-base font-semibold">{plan.name}</h3>
-        <Badge variant="secondary" className="shrink-0">
-          {plan.validityLabel}
-        </Badge>
+        {plan.validityLabel ? (
+          <Badge variant="secondary" className="shrink-0">
+            {plan.validityLabel}
+          </Badge>
+        ) : null}
       </CardTitle>
       <CardDescription>{plan.description}</CardDescription>
     </CardHeader>

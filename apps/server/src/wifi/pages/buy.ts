@@ -64,8 +64,9 @@ export const buyPage = (props: BuyPageProps) => {
                 <span>
                   <strong>${plan.name}</strong><br />
                   <span class="muted"
-                    >${formatData(plan.dataLimitBytes)} ·
-                    ${plan.validityLabel}</span
+                    >${formatData(plan.dataLimitBytes)}${
+                      plan.validityLabel ? ` · ${plan.validityLabel}` : ""
+                    }</span
                   >
                 </span>
               </span>

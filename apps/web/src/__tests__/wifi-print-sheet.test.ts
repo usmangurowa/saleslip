@@ -61,6 +61,17 @@ describe("voucher print sheet", () => {
     expect(html).toContain("Scan to join");
   });
 
+  it("omits the validity line when the plan carries no validity label", () => {
+    const html = buildVoucherSheetHtml({
+      title: "Counter — preview",
+      plan: { name: "5 GB Data", validityLabel: "" },
+      logoUrl: "https://saleslip.app/brand/guilders-logo.png",
+      vouchers: [{ code: "SLAAA00", qrSvg: "<svg></svg>" }],
+    });
+    expect(html).toContain("5 GB Data");
+    expect(html).not.toContain("Valid ");
+  });
+
   it("keeps the price off the card even when the plan carries one", () => {
     const html = sheet(1);
     expect(html).not.toContain("₦");

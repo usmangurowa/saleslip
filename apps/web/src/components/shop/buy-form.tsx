@@ -73,9 +73,11 @@ export const BuyForm = ({ plan }: BuyFormProps) => {
         <CardHeader>
           <CardTitle className="flex items-start justify-between gap-3">
             <h1 className="text-lg font-semibold">{plan.name}</h1>
-            <Badge variant="secondary" className="shrink-0">
-              {plan.validityLabel}
-            </Badge>
+            {plan.validityLabel ? (
+              <Badge variant="secondary" className="shrink-0">
+                {plan.validityLabel}
+              </Badge>
+            ) : null}
           </CardTitle>
           <CardDescription>{plan.description}</CardDescription>
         </CardHeader>

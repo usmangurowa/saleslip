@@ -15,7 +15,7 @@ describe("buildPlans", () => {
     const plans = buildPlans({});
     expect(plans.map((p) => [p.id, p.priceKobo, p.rosProfile])).toEqual([
       ["pos-1", 5_000, "1-Day-1GB"],
-      ["day-5gb", 20_000, "1-Day-5GB"],
+      ["day-5gb", 20_000, "1-Week-5GB"],
       ["day-1", 50_000, "Saleslip-1d-1"],
       ["day-2", 150_000, "Saleslip-1d-2"],
       ["week-1", 200_000, "Saleslip-7d-1"],
