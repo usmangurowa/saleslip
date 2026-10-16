@@ -1,12 +1,12 @@
 "use client";
 
-import type { BuyOrderFormData, BuyOrderInput } from "@turbo/validators";
-import type { WifiPlan } from "@turbo/wifi";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreditCardIcon, LockIcon } from "@hugeicons/core-free-icons";
 import { Controller, useForm } from "react-hook-form";
 
+import type { BuyOrderFormData, BuyOrderInput } from "@turbo/validators";
+import type { WifiPlan } from "@turbo/wifi";
 import { Badge } from "@turbo/ui/components/badge";
 import { Button } from "@turbo/ui/components/button";
 import {
@@ -100,7 +100,7 @@ export const BuyForm = ({
   const { isSubmitting } = form.formState;
 
   return (
-<Card className="w-full" data-slot="buy-form">
+    <Card className="w-full" data-slot="buy-form">
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1">

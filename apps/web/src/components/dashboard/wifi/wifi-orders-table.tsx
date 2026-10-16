@@ -98,7 +98,9 @@ export interface WifiOrdersTableProps {
  */
 export const WifiOrdersTable = ({ statuses = [] }: WifiOrdersTableProps) => {
   const [page, setPage] = React.useState(1);
-  const [selectedStatus, setSelectedStatus] = React.useState<OrderStatus | "all">("all");
+  const [selectedStatus, setSelectedStatus] = React.useState<
+    OrderStatus | "all"
+  >("all");
 
   const effectiveStatuses = React.useMemo(() => {
     if (selectedStatus !== "all") return [selectedStatus];

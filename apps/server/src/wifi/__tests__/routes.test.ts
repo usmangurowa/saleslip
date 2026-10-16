@@ -104,7 +104,10 @@ describe("shop routes", () => {
       }),
     });
     expect(res.status).toBe(200);
-    const json = (await res.json()) as { ok: boolean; authorizationUrl: string };
+    const json = (await res.json()) as {
+      ok: boolean;
+      authorizationUrl: string;
+    };
     expect(json.ok).toBe(true);
     expect(json.authorizationUrl).toContain("https://checkout.paystack.test/");
   });

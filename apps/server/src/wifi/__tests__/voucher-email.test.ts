@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { renderEmailText, sendEmail } from "@turbo/mail/client";
 import type * as mailClient from "@turbo/mail/client";
+import { renderEmailText, sendEmail } from "@turbo/mail/client";
 import { buildPlans } from "@turbo/wifi";
 
 import type { WifiOrderRecord, WifiVoucherRecord } from "../orders";

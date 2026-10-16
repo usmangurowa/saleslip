@@ -196,8 +196,8 @@ const PlanDialog = ({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit plan" : "New plan"}</DialogTitle>
           <DialogDescription>
-            What the buy page sells — price, validity, data quota, and the router profile
-            vouchers mint against.
+            What the buy page sells — price, validity, data quota, and the
+            router profile vouchers mint against.
           </DialogDescription>
         </DialogHeader>
         <FieldGroup>
@@ -221,7 +221,8 @@ const PlanDialog = ({
               disabled={pending.isPending || isEdit}
             />
             <FieldDescription>
-              Auto-filled from the name; stable identifier used in checkout links.
+              Auto-filled from the name; stable identifier used in checkout
+              links.
             </FieldDescription>
           </Field>
           <Field>
@@ -259,7 +260,8 @@ const PlanDialog = ({
               disabled={pending.isPending}
             />
             <FieldDescription>
-              Optional quota limit in gigabytes (e.g. 1 for 1 GB, 5 for 5 GB). Leave empty for unlimited.
+              Optional quota limit in gigabytes (e.g. 1 for 1 GB, 5 for 5 GB).
+              Leave empty for unlimited.
             </FieldDescription>
           </Field>
           <Field>
@@ -438,7 +440,9 @@ export const WifiPlansTable = () => {
                   {plan.profile}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {plan.dataLimitBytes ? formatData(plan.dataLimitBytes) : "Unlimited"}
+                  {plan.dataLimitBytes
+                    ? formatData(plan.dataLimitBytes)
+                    : "Unlimited"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {plan.validityLabel}

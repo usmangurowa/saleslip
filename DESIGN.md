@@ -17,6 +17,8 @@ colors:
   foreground: "oklch(0.281 0 0)"
   card: "oklch(1 0 0)"
   card-foreground: "oklch(0.281 0 0)"
+  qr-surface: "oklch(1 0 0)"
+  qr-surface-dark: "oklch(1 0 0)"
   popover: "oklch(1 0 0)"
   popover-foreground: "oklch(0.281 0 0)"
   primary: "oklch(0.5406 0.2549 262.56)"
@@ -187,6 +189,10 @@ variants, not one-off component color choices.
 `success` and `warning` annotate state — status dots, trend deltas, and the
 `Badge` `success` / `warning` variants — and never fill large surfaces. Keep one
 accent per view: blue acts, grayscale organizes, status colors annotate.
+
+`qr-surface` is pure white in every mode (light and dark): QR codes render dark
+modules on a white tile and stop scanning on tinted grounds, so QR mounts
+(the shop receipt, the voucher sheet preview) always use `bg-qr-surface`.
 
 ## Typography
 

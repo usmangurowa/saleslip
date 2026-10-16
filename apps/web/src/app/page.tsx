@@ -16,7 +16,7 @@ import { Badge } from "@turbo/ui/components/badge";
 import { Button } from "@turbo/ui/components/button";
 import {
   Card,
-  CardDescription,
+  CardContent,
   CardHeader,
   CardTitle,
 } from "@turbo/ui/components/card";
@@ -143,10 +143,12 @@ export default async function HomePage({
                       <Icon icon={step.icon} className="size-5" />
                     </div>
                     <CardTitle className="text-lg">{step.title}</CardTitle>
-                    <CardDescription className="text-sm leading-relaxed">
-                      {step.description}
-                    </CardDescription>
                   </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {step.description}
+                    </p>
+                  </CardContent>
                 </Card>
               ))}
             </div>

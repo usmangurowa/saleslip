@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
+import { authClient } from "@/auth/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { api } from "@/utils/api";
-import { authClient } from "@/auth/client";
 
 export default function HomeScreen() {
   const { data: session } = authClient.useSession();
@@ -30,31 +30,39 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-background p-4">
+    <ScrollView className="bg-background flex-1 p-4">
       <View className="gap-4">
         <Text className="text-2xl font-bold">Saleslip Mobile</Text>
 
-        <Card className="p-4 gap-2">
-          <Text className="text-lg font-semibold">User Session</Text>
-          {session ? (
-            <View>
-              <Text>Signed in as: {session.user.email}</Text>
-              <Text>Name: {session.user.name}</Text>
-            </View>
-          ) : (
-            <Text className="text-muted-foreground">Not signed in</Text>
-          )}
+        <Card>
+          <CardHeader>
+            <CardTitle>User Session</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {session ? (
+              <View className="gap-1">
+                <Text>Signed in as: {session.user.email}</Text>
+                <Text>Name: {session.user.name}</Text>
+              </View>
+            ) : (
+              <Text className="text-muted-foreground">Not signed in</Text>
+            )}
+          </CardContent>
         </Card>
 
-        <Card className="p-4 gap-4">
-          <Text className="text-lg font-semibold">System Health</Text>
-          <Text>
-            Status:{" "}
-            {loading ? "Checking..." : (healthStatus ?? "Not checked yet")}
-          </Text>
-          <Button onPress={checkHealth} disabled={loading}>
-            <Text className="text-primary-foreground">Check API Health</Text>
-          </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle>System Health</CardTitle>
+          </CardHeader>
+          <CardContent className="gap-3">
+            <Text>
+              Status:{" "}
+              {loading ? "Checking..." : (healthStatus ?? "Not checked yet")}
+            </Text>
+            <Button onPress={checkHealth} disabled={loading}>
+              <Text className="text-primary-foreground">Check API Health</Text>
+            </Button>
+          </CardContent>
         </Card>
       </View>
     </ScrollView>
