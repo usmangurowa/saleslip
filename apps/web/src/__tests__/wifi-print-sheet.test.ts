@@ -40,7 +40,7 @@ describe("voucher print sheet", () => {
 
   it("spaces the cards apart instead of a packed mosaic", () => {
     const html = sheet(1);
-    expect(html).toContain("gap: 2mm");
+    expect(html).toContain("gap: 5mm 3mm");
     expect(html).toContain("border: 0.2mm dashed #aaa");
     expect(html).not.toContain("border-right: 0.2mm dashed");
   });
