@@ -26,7 +26,7 @@ export const wifiJoinQrPayload = (): string => {
       (out, char) => out.split(char).join(`\\${char}`),
       value,
     );
-  return `WIFI:S:${escapeSsid(VOUCHER_BRAND.wifiName)};T:nopass;`;
+  return `WIFI:S:${escapeSsid(VOUCHER_BRAND.wifiName)};T:nopass;;`;
 };
 
 const escape = (value: string) =>

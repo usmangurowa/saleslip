@@ -67,7 +67,8 @@ Three slices; all three ship in this change.
       slips, 0.2mm dashed borders around each), complete with venue branding
       (Guilders logo, SSID, plan name, validity, support phone) and an inline
       SVG QR code (`qrcode`) that joins the phone to the open venue WiFi:
-      `WIFI:S:Guilders Starlink;T:nopass;`. The hotspot is an open network, so
+      `WIFI:S:Guilders Starlink;T:nopass;;` (double-semicolon terminator per
+      the ZXing Wi-Fi record grammar). The hotspot is an open network, so
       the login URL approach was retired — it fails when scanned off-network
       (the hotspot's `dns-name` is unset and its host is unreachable before
       joining). After the QR joins, the phone pops the captive portal login

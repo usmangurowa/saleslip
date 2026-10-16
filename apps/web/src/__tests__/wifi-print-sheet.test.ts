@@ -27,7 +27,7 @@ const sheet = (count: number) =>
 describe("voucher print sheet", () => {
   it("joins the venue WiFi from the QR, not a login URL", () => {
     expect(wifiJoinQrPayload()).toBe(
-      `WIFI:S:${VOUCHER_BRAND.wifiName};T:nopass;`,
+      `WIFI:S:${VOUCHER_BRAND.wifiName};T:nopass;;`,
     );
   });
 
