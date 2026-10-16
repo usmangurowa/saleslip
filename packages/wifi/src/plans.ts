@@ -53,7 +53,7 @@ export const buildPlans = (
     // no duration is listed buyer-facing: the data cap sells the plan, and
     // stating "1 week" would undercut the ₦2,000 unlimited week. Empty
     // validityLabel makes every buyer surface skip its validity line.
-    id: "day-5gb",
+    id: "week-5gb",
     name: "5 GB Data",
     description: "5 GB of data on one device.",
     priceKobo: 20_000,
@@ -61,6 +61,20 @@ export const buildPlans = (
     dataLimitBytes: 5_368_709_120,
     validityLabel: "",
     sortOrder: 1,
+  },
+  {
+    // Retired 24-hour predecessor, kept resolvable so vouchers already
+    // sold on the `1-Day-5GB` profile keep their historical terms — the
+    // same pattern as the duo plans. `week-5gb` carries the offer now.
+    id: "day-5gb",
+    name: "1 Day · 5 GB",
+    description: "5 GB of data for 24 hours on one device.",
+    priceKobo: 20_000,
+    rosProfile: "1-Day-5GB",
+    dataLimitBytes: 5_368_709_120,
+    validityLabel: "24 hours",
+    active: false,
+    sortOrder: 8,
   },
   {
     id: "day-1",

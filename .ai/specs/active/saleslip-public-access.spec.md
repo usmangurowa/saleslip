@@ -38,12 +38,13 @@ the plan catalogue contains three obsolete plans.
   | Plan | ID | Price | Data | Validity | RouterOS profile |
   |---|---|---|---|---|---|
   | 1 Day, 1 GB | `pos-1` | ₦50 | 1 GB (per-voucher byte cap) | 24 hours | `1-Day-1GB` |
-  | 5 GB (silent week) | `day-5gb` | ₦200 | 5 GB (per-voucher byte cap) | 7 days, **not listed anywhere buyer-facing** — empty `validityLabel` makes every buyer surface (buy page, plan cards, receipt, voucher email, Telegram, print sheet) skip its validity line | `1-Week-5GB` |
+  | 5 GB (silent week) | `week-5gb` | ₦200 | 5 GB (per-voucher byte cap) | 7 days, **not listed anywhere buyer-facing** — empty `validityLabel` makes every buyer surface (buy page, plan cards, receipt, voucher email, Telegram, print sheet) skip its validity line; blank is a deliberate plan state the admin API accepts | `1-Week-5GB` |
   | 1 Day, 1 device | `day-1` | ₦500 | Unlimited | 24 hours | `1-Day-Unlimited` |
   | 1 Week, 1 device | `week-1` | ₦2,000 | Unlimited | 7 days | `1-Week-Unlimited` |
   | 1 Month, 1 device | `month-1` | ₦5,000 | Unlimited | 30 days | `1-Month-Unlimited` |
 
-- [ ] The retired duo plans (`day-2`, `week-2`, `month-2`) stay in the seed
+- [ ] The retired duo plans (`day-2`, `week-2`, `month-2`) and the retired
+      24-hour 5 GB tier (`day-5gb`) stay in the seed
       and the table as `active = false` so vouchers already sold on their
       profiles still resolve; buyer-facing lists filter them out. Their
       profiles (`Duo-1-Day`, `Duo-1-Week`, `Duo-1-Month`) stay on the router
@@ -57,7 +58,9 @@ the plan catalogue contains three obsolete plans.
       7-day expiry stamp (the silent week behind the ₦200/5 GB tier), the
       5M/3M rate limit, and ₦200 in its metadata; the superseded
       `1-Day-5GB` profile stays on the router for vouchers already sold
-      on it. The `pos-1` and `day-5gb` byte caps are enforced per voucher
+      on it, whose plan row is retired as-is so receipts and session
+      mapping keep the historical terms. The `pos-1` and `week-5gb` byte
+      caps are enforced per voucher
       at minting (`limit-bytes-total`), not by the profile.
 
 ### Checkout and payment (reusing the existing engine)

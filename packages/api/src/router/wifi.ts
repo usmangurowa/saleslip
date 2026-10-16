@@ -49,7 +49,12 @@ const createPlanSchema = z.object({
   profile: z.string().min(1).max(120),
   dataLimitBytes: z.number().int().min(0).nullable().optional(),
   uptimeLimit: z.string().max(60).nullable().optional(),
-  validityLabel: z.string().min(1).max(60),
+  /**
+   * Buyer-facing validity line. Blank is a deliberate state — "no listed
+   * validity" (see the ₦200/5 GB tier): every buyer surface skips its
+   * validity line when the label is empty, so admins may save it blank.
+   */
+  validityLabel: z.string().max(60),
   sortOrder: z.number().int().min(0).max(9999).optional(),
 });
 
