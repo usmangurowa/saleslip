@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildVoucherSheetHtml,
-  hotspotLoginUrl,
   VOUCHER_BRAND,
   VOUCHERS_PER_PAGE,
+  wifiJoinQrPayload,
 } from "../components/dashboard/wifi/wifi-print-sheet";
 
 const plan = {
@@ -25,12 +25,10 @@ const sheet = (count: number) =>
   });
 
 describe("voucher print sheet", () => {
-  it("logs in with the code as both username and password parameter", () => {
-    const parsed = new URL(hotspotLoginUrl("SLABCDE"));
-    expect(parsed.origin).toBe(`http://${VOUCHER_BRAND.loginHost}`);
-    expect(parsed.pathname).toBe("/login");
-    expect(parsed.searchParams.get("username")).toBe("SLABCDE");
-    expect(parsed.searchParams.get("password")).toBe("SLABCDE");
+  it("joins the venue WiFi from the QR, not a login URL", () => {
+    expect(wifiJoinQrPayload()).toBe(
+      `WIFI:S:${VOUCHER_BRAND.wifiName};T:nopass;`,
+    );
   });
 
   it("fills one A4 page with 24 vouchers", () => {
@@ -38,6 +36,13 @@ describe("voucher print sheet", () => {
     expect(html.match(/class="page"/g)).toHaveLength(1);
     expect(html.match(/class="card"/g)).toHaveLength(24);
     expect(html).toContain("@page { size: A4");
+  });
+
+  it("spaces the cards apart instead of a packed mosaic", () => {
+    const html = sheet(1);
+    expect(html).toContain("gap: 2mm");
+    expect(html).toContain("border: 0.2mm dashed #aaa");
+    expect(html).not.toContain("border-right: 0.2mm dashed");
   });
 
   it("starts a new page past 24", () => {
@@ -49,9 +54,9 @@ describe("voucher print sheet", () => {
     expect(html).toContain(VOUCHER_BRAND.wifiName);
     expect(html).toContain("Guilders Starlink");
     expect(html).toContain(VOUCHER_BRAND.supportPhone);
-    expect(html).toContain(VOUCHER_BRAND.loginHost);
     expect(html).toContain("SLAAA00");
     expect(html).toContain("Valid 24 hours");
+    expect(html).toContain("Scan to join");
   });
 
   it("keeps the price off the card even when the plan carries one", () => {

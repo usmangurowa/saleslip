@@ -6,22 +6,27 @@ import QRCode from "qrcode";
 export const VOUCHER_BRAND = {
   logoPath: "/brand/guilders-logo.png",
   wifiName: "Guilders Starlink",
-  /** Hotspot `dns-name`; customers type it after joining the network. */
-  loginHost: "wifi.saleslip.app",
   supportPhone: "0706 926 5013",
 } as const;
 
-/** 3 × 8 cards fill an A4 page inside 10 mm margins, about 63 × 35 mm each. */
+/** 3 × 8 cards fill an A4 page inside 10 mm margins, about 61 × 33 mm each. */
 export const VOUCHERS_PER_PAGE = 24;
 
 /**
- * One-scan sign-in once the phone is on the WiFi. Username and password are
- * both the code, and the hotspot profile accepts `http-pap`, so a plain GET
- * logs the customer in.
+ * One scan joins the phone to the venue WiFi — an open hotspot network, so no
+ * password rides in the QR. A login URL would fail when scanned before
+ * joining (the hotspot host is unreachable off-network, and its `dns-name` is
+ * unset), so the QR joins first; the phone then pops the login page itself,
+ * where the printed voucher code (username and password) does the rest.
  */
-export const hotspotLoginUrl = (code: string): string => {
-  const params = new URLSearchParams({ username: code, password: code });
-  return `http://${VOUCHER_BRAND.loginHost}/login?${params.toString()}`;
+export const wifiJoinQrPayload = (): string => {
+  /** The WIFI: format escapes `\`, `;`, `,` and `"` with a backslash. */
+  const escapeSsid = (value: string) =>
+    ["\\", ";", ",", '"'].reduce(
+      (out, char) => out.split(char).join(`\\${char}`),
+      value,
+    );
+  return `WIFI:S:${escapeSsid(VOUCHER_BRAND.wifiName)};T:nopass;`;
 };
 
 const escape = (value: string) =>
@@ -63,13 +68,14 @@ export const buildVoucherSheetHtml = ({
         <div class="plan">${escape(plan.name)}</div>
         <div class="plan">Valid ${escape(plan.validityLabel)}</div>
         <div class="help">
-          Join ${escape(VOUCHER_BRAND.wifiName)}, open <b>${escape(VOUCHER_BRAND.loginHost)}</b> and enter the code.<br />
+          Scan to join ${escape(VOUCHER_BRAND.wifiName)}, then enter this code
+          on the page that opens.<br />
           Help: ${escape(VOUCHER_BRAND.supportPhone)}
         </div>
       </div>
       <div class="qr">
         ${voucher.qrSvg}
-        <div class="scan">Scan to log in</div>
+        <div class="scan">Scan to join</div>
       </div>
     </div>`;
 
@@ -104,8 +110,7 @@ export const buildVoucherSheetHtml = ({
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    border-top: 0.2mm dashed #aaa;
-    border-left: 0.2mm dashed #aaa;
+    gap: 2mm;
     break-after: page;
   }
   .page:last-child { break-after: auto; }
@@ -113,8 +118,7 @@ export const buildVoucherSheetHtml = ({
     display: flex;
     gap: 2mm;
     padding: 2.2mm 2.5mm;
-    border-right: 0.2mm dashed #aaa;
-    border-bottom: 0.2mm dashed #aaa;
+    border: 0.2mm dashed #aaa;
     overflow: hidden;
   }
   .info {
@@ -184,16 +188,16 @@ export const printVoucherSheet = async (
   const printWindow = window.open("", "_blank", "width=900,height=700");
   if (!printWindow) return;
 
-  const vouchers = await Promise.all(
-    batch.vouchers.map(async (voucher) => ({
-      code: voucher.code,
-      qrSvg: await QRCode.toString(hotspotLoginUrl(voucher.code), {
-        type: "svg",
-        margin: 0,
-        errorCorrectionLevel: "M",
-      }),
-    })),
-  );
+  // One join QR for the whole sheet — the payload no longer varies by code.
+  const qrSvg = await QRCode.toString(wifiJoinQrPayload(), {
+    type: "svg",
+    margin: 0,
+    errorCorrectionLevel: "M",
+  });
+  const vouchers = batch.vouchers.map((voucher) => ({
+    code: voucher.code,
+    qrSvg,
+  }));
 
   printWindow.document.write(
     buildVoucherSheetHtml({
