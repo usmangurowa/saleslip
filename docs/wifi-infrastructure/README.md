@@ -9,6 +9,7 @@ How the Guilders Starlink hotspot works today, what went wrong building it, and 
 | [mistakes.md](mistakes.md) | 21 things we got wrong, what each causes, and the fix |
 | [rebuild-plan.md](rebuild-plan.md) | How to make setup simple, plus the Mac/Windows setup app study and phased roadmap |
 | [setup-without-winbox.md](setup-without-winbox.md) | Whether the setup app can control the router over Ethernet without Winbox (yes) |
+| [competitors.md](competitors.md) | HotFii and what it means for us, plus what RADIUS is and whether to use it |
 
 `docs/wifi-platform-plan.md` is the older multi-tenant plan. Where they disagree, these files are newer.
 
