@@ -63,12 +63,18 @@ Three slices; all three ship in this change.
       primitives (`StatCard`, `TableCard`, `PageToolbar`, `TablePagination`,
       `QueryError`, `HintLabel`).
 - [x] Voucher batch printing renders an A4 print sheet with 24 vouchers per page
-      (3 columns × 8 rows, ~63 × 35 mm slips, 10mm margins, 0.2mm dashed borders),
-      complete with venue branding (Guilders Wifi logo, SSID, plan name, price,
-      support phone) and an inline SVG QR code (`qrcode`) linking to
-      `http://wifi.saleslip.app/login?username=<CODE>&password=<CODE>`.
-      Requires RouterOS hotspot profile `login-by` to include `http-pap` alongside
-      `http-chap,cookie,mac-cookie`, with hotspot DNS configured to `wifi.saleslip.app`.
+      (3 columns × 8 rows, ~61 × 33 mm slips, 10mm margins, 2mm gaps between
+      slips, 0.2mm dashed borders around each), complete with venue branding
+      (Guilders logo, SSID, plan name, validity, support phone) and an inline
+      SVG QR code (`qrcode`) that joins the phone to the open venue WiFi:
+      `WIFI:S:Guilders Starlink;T:nopass;;` (double-semicolon terminator per
+      the ZXing Wi-Fi record grammar). The hotspot is an open network, so
+      the login URL approach was retired — it fails when scanned off-network
+      (the hotspot's `dns-name` is unset and its host is unreachable before
+      joining). After the QR joins, the phone pops the captive portal login
+      page, where the printed voucher code (username and password) does the
+      rest. The hotspot profile keeps `http-chap,cookie,mac-cookie` for the
+      portal form; `http-pap` stays enabled for any URL-based login.
 - [x] `packages/wifi` unit tests cover code generation, order transitions, plan
       mapping, formatters, and batch minting.
 
