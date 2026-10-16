@@ -8,7 +8,7 @@ import {
 } from "../components/dashboard/wifi/wifi-print-sheet";
 
 const plan = {
-  name: "1 Day · 1 Device",
+  name: "1 Day Unlimited",
   priceKobo: 100_000,
   validityLabel: "24 hours",
 };
@@ -64,11 +64,11 @@ describe("voucher print sheet", () => {
   it("omits the validity line when the plan carries no validity label", () => {
     const html = buildVoucherSheetHtml({
       title: "Counter — preview",
-      plan: { name: "5 GB Data", validityLabel: "" },
+      plan: { name: "5 GB", validityLabel: "" },
       logoUrl: "https://saleslip.app/brand/guilders-logo.png",
       vouchers: [{ code: "SLAAA00", qrSvg: "<svg></svg>" }],
     });
-    expect(html).toContain("5 GB Data");
+    expect(html).toContain("5 GB");
     expect(html).not.toContain("Valid ");
   });
 

@@ -37,11 +37,11 @@ the plan catalogue contains three obsolete plans.
 
   | Plan | ID | Price | Data | Validity | RouterOS profile |
   |---|---|---|---|---|---|
-  | 1 Day, 1 GB | `pos-1` | ₦50 | 1 GB (per-voucher byte cap) | 24 hours | `1-Day-1GB` |
+  | 1 GB · 1 Day | `pos-1` | ₦50 | 1 GB (per-voucher byte cap) | 24 hours | `1-Day-1GB` |
   | 5 GB (silent week) | `week-5gb` | ₦200 | 5 GB (per-voucher byte cap) | 7 days, **not listed anywhere buyer-facing** — empty `validityLabel` makes every buyer surface (buy page, plan cards, receipt, voucher email, Telegram, print sheet) skip its validity line; blank is a deliberate plan state the admin API accepts | `1-Week-5GB` |
-  | 1 Day, 1 device | `day-1` | ₦500 | Unlimited | 24 hours | `1-Day-Unlimited` |
-  | 1 Week, 1 device | `week-1` | ₦2,000 | Unlimited | 7 days | `1-Week-Unlimited` |
-  | 1 Month, 1 device | `month-1` | ₦5,000 | Unlimited | 30 days | `1-Month-Unlimited` |
+  | 1 Day Unlimited | `day-1` | ₦500 | Unlimited | 24 hours | `1-Day-Unlimited` |
+  | 1 Week Unlimited | `week-1` | ₦2,000 | Unlimited | 7 days | `1-Week-Unlimited` |
+  | 1 Month Unlimited | `month-1` | ₦5,000 | Unlimited | 30 days | `1-Month-Unlimited` |
 
 - [ ] The retired duo plans (`day-2`, `week-2`, `month-2`) and the retired
       24-hour 5 GB tier (`day-5gb`) stay in the seed

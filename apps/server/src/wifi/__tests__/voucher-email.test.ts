@@ -46,7 +46,7 @@ describe("sendVoucherEmail", () => {
     expect(call.subject).toBe(VOUCHER_EMAIL_SUBJECT);
 
     const text = await renderEmailText(call.template);
-    expect(text).toContain("1 Day · 1 Device");
+    expect(text).toContain("1 Day Unlimited");
     expect(text).toContain("Validity: 24 hours");
     expect(text).toContain("Devices: 1");
     expect(text).toContain("₦1,000");

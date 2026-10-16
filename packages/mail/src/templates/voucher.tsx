@@ -4,7 +4,7 @@ import { Heading, Hr, Section, Text } from "react-email";
 import { EmailLayout } from "../components/email-layout";
 
 export interface VoucherEmailProps {
-  /** Human plan name, e.g. "1 Day · 1 Device" */
+  /** Human plan name, e.g. "1 Day Unlimited" */
   planName: string;
   /** Formatted price, e.g. "₦150.00" */
   priceLabel: string;

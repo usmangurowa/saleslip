@@ -410,7 +410,7 @@ describe("live sessions", () => {
         uptime: "5m",
         bytesIn: 100,
         bytesOut: 200,
-        planName: "1 Day · 1 Device",
+        planName: "1 Day Unlimited",
         phone: "+2348012345678",
         amountKobo: 300_000,
         activatedAt: "2025-01-15T09:00:00.000Z",
