@@ -16,14 +16,11 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@turbo/ui/components/field";
 import { Input } from "@turbo/ui/components/input";
 import { Spinner } from "@turbo/ui/components/spinner";
 import { cn } from "@turbo/ui/lib/utils";
 import { loginSchema } from "@turbo/validators";
-
-import { GithubIcon } from "./github-icon";
 
 export const LoginForm = ({
   className,
@@ -61,13 +58,6 @@ export const LoginForm = ({
 
     // Navigate to dashboard after login
     router.push("/dashboard");
-  };
-
-  const handleGithubAuth = async () => {
-    await authClient.signIn.social({
-      provider: "github",
-      callbackURL: "/dashboard",
-    });
   };
 
   return (
@@ -128,33 +118,8 @@ export const LoginForm = ({
               </Link>
             </FieldDescription>
           </Field>
-
-          <FieldSeparator>or</FieldSeparator>
-
-          <Field>
-            <Button
-              variant="secondary"
-              type="button"
-              className="h-11"
-              onClick={handleGithubAuth}
-            >
-              <GithubIcon />
-              Continue with GitHub
-            </Button>
-          </Field>
         </FieldGroup>
       </form>
-      <FieldDescription className="px-6 text-center">
-        You acknowledge that you read, and agree, to our{" "}
-        <Link href="/terms" className="underline underline-offset-2">
-          Terms of Service
-        </Link>{" "}
-        and our{" "}
-        <Link href="/privacy" className="underline underline-offset-2">
-          Privacy Policy
-        </Link>
-        .
-      </FieldDescription>
     </div>
   );
 };

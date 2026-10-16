@@ -87,16 +87,6 @@ export const rateLimitMiddleware = (
     limit: mergedConfig.rateLimit,
     standardHeaders: "draft-6",
     keyGenerator: (c) => {
-      // If API key is present, use it as the rate limit key
-      // This gives each authenticated user their own rate limit bucket
-      const apiKey =
-        c.req.header("x-api-key") ??
-        c.req.header("authorization")?.replace("Bearer ", "");
-      if (apiKey) {
-        return `apikey:${apiKey}`;
-      }
-
-      // For unauthenticated requests, use IP-based rate limiting
       const forwarded = c.req.header("x-forwarded-for");
       if (forwarded) {
         return `ip:${forwarded.split(",")[0]?.trim() ?? "unknown"}`;

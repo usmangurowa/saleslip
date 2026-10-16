@@ -2,12 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import {
-  platformNav,
-  settingsNavItem,
-  wifiNav,
-} from "@/components/dashboard/nav-config";
-import { PlusSignIcon } from "@hugeicons/core-free-icons";
+import { platformNav, wifiNav } from "@/components/dashboard/nav-config";
 
 import {
   Command,
@@ -18,7 +13,6 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from "@turbo/ui/components/command";
 import { Icon } from "@turbo/ui/components/icon";
 
@@ -73,23 +67,6 @@ export const SearchCommand = ({ open, onOpenChange }: SearchCommandProps) => {
               </CommandGroup>
             </React.Fragment>
           ))}
-          <CommandSeparator />
-          <CommandGroup heading="Actions">
-            <CommandItem
-              onSelect={() => run(() => router.push("/dashboard/tasks"))}
-            >
-              <Icon icon={PlusSignIcon} />
-              New Task
-              <CommandShortcut>⌘N</CommandShortcut>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => run(() => router.push(settingsNavItem.href))}
-            >
-              <Icon icon={settingsNavItem.icon} />
-              {settingsNavItem.label}
-              <CommandShortcut>⌘,</CommandShortcut>
-            </CommandItem>
-          </CommandGroup>
         </CommandList>
       </Command>
     </CommandDialog>

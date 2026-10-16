@@ -15,7 +15,32 @@ import {
 import { Icon } from "@turbo/ui/components/icon";
 import { formatData, formatNaira } from "@turbo/wifi";
 
-export const PlanCard = ({ plan }: { plan: WifiPlan }) => (
+export interface PortalContext {
+  mac?: string;
+  ip?: string;
+  login?: string;
+}
+
+export const buildBuyHref = (
+  planId: string | undefined,
+  portal?: PortalContext,
+): string => {
+  const params = new URLSearchParams();
+  if (planId) params.set("plan", planId);
+  if (portal?.mac) params.set("mac", portal.mac);
+  if (portal?.ip) params.set("ip", portal.ip);
+  if (portal?.login) params.set("login", portal.login);
+  const query = params.toString();
+  return query ? `/buy?${query}` : "/buy";
+};
+
+export const PlanCard = ({
+  plan,
+  portal,
+}: {
+  plan: WifiPlan;
+  portal?: PortalContext;
+}) => (
   <Card className="h-full gap-4" data-slot="plan-card">
     <CardHeader>
       <CardTitle className="flex items-start justify-between gap-3">
@@ -38,7 +63,7 @@ export const PlanCard = ({ plan }: { plan: WifiPlan }) => (
     </CardContent>
     <CardFooter className="mt-auto">
       <Button className="w-full" asChild>
-        <Link href={`/buy?plan=${plan.id}`}>
+        <Link href={buildBuyHref(plan.id, portal)}>
           Buy now
           <Icon icon={ArrowRight01Icon} />
         </Link>

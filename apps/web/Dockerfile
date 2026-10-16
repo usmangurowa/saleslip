@@ -81,8 +81,6 @@ COPY . /app
 # line here for every NEXT_PUBLIC_* key in apps/web/src/env.ts.
 ARG NEXT_PUBLIC_PORT
 ARG NEXT_PUBLIC_APP_URL
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 # Optional: Sentry source-map upload. The build succeeds without them.
 ARG SENTRY_ORG

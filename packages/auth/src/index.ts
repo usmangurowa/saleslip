@@ -1,5 +1,4 @@
 import type { BetterAuthOptions, BetterAuthPlugin } from "better-auth";
-import { apiKey } from "@better-auth/api-key";
 import { expo } from "@better-auth/expo";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
@@ -14,11 +13,6 @@ import { authEnv } from "../env";
 import { shouldAllowUserCreate } from "./allowlist";
 import { BASE_TRUSTED_ORIGINS, resolveTrustedOrigins } from "./trusted-origins";
 
-interface SocialProviderConfig {
-  clientId: string;
-  clientSecret: string;
-}
-
 type OTPType =
   "sign-in" | "email-verification" | "forget-password" | "change-email";
 
@@ -32,16 +26,6 @@ interface InitAuthOptions<TExtraPlugins extends BetterAuthPlugin[] = []> {
   baseUrl: string;
   productionUrl: string;
   secret: string | undefined;
-  supabaseJwtSecret: string;
-  /**
-   * Optional social providers configuration.
-   * If provided, the corresponding OAuth provider will be enabled.
-   */
-  socialProviders?: {
-    discord?: SocialProviderConfig;
-    google?: SocialProviderConfig;
-    github?: SocialProviderConfig;
-  };
   /**
    * Callback to send OTP emails for verification, password reset, etc.
    */
@@ -58,46 +42,6 @@ interface InitAuthOptions<TExtraPlugins extends BetterAuthPlugin[] = []> {
 export const initAuth = <TExtraPlugins extends BetterAuthPlugin[] = []>(
   options: InitAuthOptions<TExtraPlugins>,
 ) => {
-  // Define supported social providers - add new providers here
-  const supportedProviders = ["discord", "google", "github"] as const;
-  type SupportedProvider = (typeof supportedProviders)[number];
-
-  const socialProviders: BetterAuthOptions["socialProviders"] = {};
-
-  // Initialize configured social providers dynamically
-  for (const provider of supportedProviders) {
-    const config = options.socialProviders?.[provider];
-    if (config) {
-      const baseConfig = {
-        clientId: config.clientId,
-        clientSecret: config.clientSecret,
-        redirectURI: `${options.productionUrl}/api/auth/callback/${provider}`,
-      };
-
-      // Add GitHub-specific profile mapping
-      if (provider === "github") {
-        (socialProviders as Record<SupportedProvider, unknown>)[provider] = {
-          ...baseConfig,
-          scope: ["repo", "user"],
-          mapProfileToUser: (profile: {
-            login?: string;
-            avatar_url?: string;
-            name?: string;
-            html_url?: string;
-          }) => ({
-            githubUsername: profile.login,
-            githubProfileUrl: profile.html_url,
-            image: profile.avatar_url,
-            name: profile.name ?? profile.login,
-          }),
-        };
-      } else {
-        (socialProviders as Record<SupportedProvider, unknown>)[provider] =
-          baseConfig;
-      }
-    }
-  }
-
   const config = {
     database: drizzleAdapter(db, {
       provider: "pg",
@@ -133,14 +77,6 @@ export const initAuth = <TExtraPlugins extends BetterAuthPlugin[] = []>(
           unique: true,
           required: false,
         },
-        githubUsername: {
-          type: "string",
-          required: false,
-        },
-        githubProfileUrl: {
-          type: "string",
-          required: false,
-        },
       },
     },
     plugins: [
@@ -155,17 +91,8 @@ export const initAuth = <TExtraPlugins extends BetterAuthPlugin[] = []>(
           }
         },
       }),
-      apiKey({
-        defaultPrefix: "turbo",
-        rateLimit: {
-          enabled: true,
-          timeWindow: 60 * 1000, // 1 minute (matches Hono middleware)
-          maxRequests: 100, // 100 requests per minute
-        },
-      }),
       ...(options.extraPlugins ?? []),
     ],
-    socialProviders,
     trustedOrigins: resolveTrustedOrigins(
       ...BASE_TRUSTED_ORIGINS,
       options.baseUrl,
@@ -192,8 +119,8 @@ interface CreateAppAuthOptions<TExtraPlugins extends BetterAuthPlugin[] = []> {
 
 /**
  * App-facing auth factory. Owns everything that is identical across apps:
- * env-derived secrets, the GitHub social provider conditional, and the
- * OTP email bridge. Apps pass only their base URLs and Next-specific plugins.
+ * env-derived secrets and the OTP email bridge. Apps pass only their base URLs
+ * and Next-specific plugins.
  */
 export const createAppAuth = <TExtraPlugins extends BetterAuthPlugin[] = []>(
   options: CreateAppAuthOptions<TExtraPlugins>,
@@ -203,21 +130,10 @@ export const createAppAuth = <TExtraPlugins extends BetterAuthPlugin[] = []>(
     baseUrl: options.baseUrl,
     productionUrl: options.productionUrl,
     secret: env.AUTH_SECRET ?? "development-secret-change-in-production",
-    supabaseJwtSecret:
-      env.SUPABASE_JWT_SECRET ?? "development-secret-change-in-production",
     // The allowlist is authoritative for app instances: an unset ADMIN_EMAILS
     // yields an empty list, which closes registration rather than leaving it
     // open. initAuth (CLI/tests) omits this and stays open.
     adminEmails: resolveAllowlist(env.ADMIN_EMAILS),
-    socialProviders: {
-      github:
-        env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
-          ? {
-              clientId: env.GITHUB_CLIENT_ID,
-              clientSecret: env.GITHUB_CLIENT_SECRET,
-            }
-          : undefined,
-    },
     extraPlugins: options.extraPlugins,
     sendOTPEmail: async ({ email, otp, type }) => {
       await sendOTPEmail({ to: email, otp, type });

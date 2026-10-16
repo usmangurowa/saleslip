@@ -22,5 +22,4 @@ export const auth = initAuth({
   baseUrl: "http://localhost:3000",
   productionUrl: "http://localhost:3000",
   secret: "secret",
-  supabaseJwtSecret: "dummy-jwt-secret-for-cli",
 });

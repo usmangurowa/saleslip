@@ -12,7 +12,6 @@ import type { CreateAccountFormData } from "@turbo/validators";
 import { Button } from "@turbo/ui/components/button";
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -100,7 +99,7 @@ export const SignupForm = ({
             <Input
               id="password"
               type="password"
-              placeholder="Create a password"
+              placeholder="Your password"
               className="h-11"
               aria-invalid={!!errors.password}
               {...register("password")}
@@ -131,17 +130,6 @@ export const SignupForm = ({
           </Field>
         </FieldGroup>
       </form>
-      <FieldDescription className="px-6 text-center">
-        You acknowledge that you read, and agree, to our{" "}
-        <Link href="/terms" className="underline underline-offset-2">
-          Terms of Service
-        </Link>{" "}
-        and our{" "}
-        <Link href="/privacy" className="underline underline-offset-2">
-          Privacy Policy
-        </Link>
-        .
-      </FieldDescription>
     </div>
   );
 };

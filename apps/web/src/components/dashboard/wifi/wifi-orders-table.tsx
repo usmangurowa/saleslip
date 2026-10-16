@@ -10,6 +10,13 @@ import { UserIcon } from "@hugeicons/core-free-icons";
 
 import { Badge } from "@turbo/ui/components/badge";
 import { Icon } from "@turbo/ui/components/icon";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@turbo/ui/components/select";
 import { Skeleton } from "@turbo/ui/components/skeleton";
 import {
   Table,
@@ -91,8 +98,15 @@ export interface WifiOrdersTableProps {
  */
 export const WifiOrdersTable = ({ statuses = [] }: WifiOrdersTableProps) => {
   const [page, setPage] = React.useState(1);
-  const { data, isPending, isError, refetch, isRefetching } = useWifiOrders({
-    status: statuses,
+  const [selectedStatus, setSelectedStatus] = React.useState<OrderStatus | "all">("all");
+
+  const effectiveStatuses = React.useMemo(() => {
+    if (selectedStatus !== "all") return [selectedStatus];
+    return statuses;
+  }, [selectedStatus, statuses]);
+
+  const { data, isPending, isError, refetch } = useWifiOrders({
+    status: effectiveStatuses.length > 0 ? effectiveStatuses : undefined,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
@@ -124,9 +138,30 @@ export const WifiOrdersTable = ({ statuses = [] }: WifiOrdersTableProps) => {
       title="Hotspot orders"
       description="Every purchase, newest first — filter by state to find stuck fulfilments."
       action={
-        <Badge variant="secondary" className="rounded-full font-normal">
-          {total} {total === 1 ? "order" : "orders"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Select
+            value={selectedStatus}
+            onValueChange={(val) => {
+              setSelectedStatus(val as OrderStatus | "all");
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-8 w-38 text-xs">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="pending">Awaiting payment</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="fulfilled">Fulfilled</SelectItem>
+              <SelectItem value="pending_router">Awaiting router</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge variant="secondary" className="rounded-full font-normal">
+            {total} {total === 1 ? "order" : "orders"}
+          </Badge>
+        </div>
       }
       footer={
         <TablePagination
@@ -139,78 +174,66 @@ export const WifiOrdersTable = ({ statuses = [] }: WifiOrdersTableProps) => {
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead>
-              <HeaderLabel>Customer</HeaderLabel>
-            </TableHead>
-            <TableHead>
-              <HeaderLabel>Plan</HeaderLabel>
-            </TableHead>
-            <TableHead>
-              <HeaderLabel>Status</HeaderLabel>
-            </TableHead>
-            <TableHead className="text-right">
-              <HeaderLabel>Amount</HeaderLabel>
-            </TableHead>
-            <TableHead>
-              <HeaderLabel>Placed</HeaderLabel>
-            </TableHead>
+            <TableHead>Buyer</TableHead>
+            <TableHead>Plan</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Channel</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Attempts</TableHead>
+            <TableHead>Last error</TableHead>
+            <TableHead>Placed</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {isPending || isRefetching ? (
-            Array.from({ length: 5 }, (_, index) => (
-              <TableRow key={index} className="hover:bg-transparent">
-                <TableCell colSpan={5}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
+          {isPending ? (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={8}>
+                <Skeleton className="h-6 w-full" />
+              </TableCell>
+            </TableRow>
           ) : rows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={5} className="h-24 text-center">
+              <TableCell colSpan={8} className="h-20 text-center">
                 <span className="text-muted-foreground text-sm">
-                  No orders match this filter yet.
+                  No orders found.
                 </span>
               </TableCell>
             </TableRow>
           ) : (
             rows.map((order) => (
               <TableRow key={order.id}>
-                <TableCell>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-foreground font-medium tabular-nums">
-                      {order.phone}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {order.channel === "telegram" ? "Telegram" : "Web"}
-                      {order.email ? ` · ${order.email}` : ""}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {planNames.get(order.planId) ?? order.planId}
+                <TableCell className="font-mono text-xs">
+                  {order.phone ??
+                    order.email ??
+                    (order.telegramId ? (
+                      <HeaderLabel>Telegram {order.telegramId}</HeaderLabel>
+                    ) : (
+                      <span className="text-muted-foreground">Anonymous</span>
+                    ))}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
-                    <StatusCell status={order.status} />
-                    {order.lastError ? (
-                      <span
-                        className="text-destructive max-w-56 truncate text-xs"
-                        title={order.lastError}
-                      >
-                        {order.lastError}
-                      </span>
-                    ) : order.status === "pending_router" &&
-                      order.routerAttempts > 0 ? (
-                      <span className="text-muted-foreground text-xs">
-                        {order.routerAttempts}{" "}
-                        {order.routerAttempts === 1 ? "attempt" : "attempts"}
-                      </span>
-                    ) : null}
-                  </div>
+                  {planNames.get(order.planId) ?? (
+                    <span className="text-muted-foreground font-mono text-xs">
+                      {order.planId}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium whitespace-nowrap">
+                  {formatNaira(order.amountKobo)}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="font-normal capitalize">
+                    {order.channel}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <StatusCell status={order.status} />
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatNaira(order.amountKobo)}
+                  {order.routerAttempts}
+                </TableCell>
+                <TableCell className="text-muted-foreground max-w-xs truncate text-xs">
+                  {order.lastError ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
                   {formatWhen(order.createdAt)}

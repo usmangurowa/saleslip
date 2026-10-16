@@ -4,11 +4,7 @@ import type { DashboardNavItem } from "@/components/dashboard/nav-config";
 import type * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  platformNav,
-  settingsNavItem,
-  wifiNav,
-} from "@/components/dashboard/nav-config";
+import { platformNav, wifiNav } from "@/components/dashboard/nav-config";
 import { SaleslipLogo } from "@/components/saleslip-logo";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 
@@ -103,20 +99,6 @@ export const AppSidebar = (props: React.ComponentProps<typeof Sidebar>) => {
         <NavGroup label="WiFi" items={wifiNav} pathname={pathname} />
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip={settingsNavItem.label}
-              isActive={pathname === settingsNavItem.href}
-            >
-              <Link href={settingsNavItem.href}>
-                <Icon icon={settingsNavItem.icon} />
-                <span>{settingsNavItem.label}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <NavUser />
       </SidebarFooter>
       <SidebarRail />

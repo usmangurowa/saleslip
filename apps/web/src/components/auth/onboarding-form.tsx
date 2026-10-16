@@ -69,7 +69,7 @@ export const OnboardingForm = ({
       name: fullName,
       image: data.avatarUrl ?? undefined,
       username: data.username,
-    });
+    } as Parameters<typeof authClient.updateUser>[0]);
 
     if (error) {
       toast.error(error.message ?? "Failed to update profile");

@@ -6,7 +6,6 @@ import {
   DashboardSquare01Icon,
   Layers02Icon,
   RouterIcon,
-  Settings01Icon,
   SignalIcon,
   Ticket01Icon,
   UserGroupIcon,
@@ -90,15 +89,7 @@ export const wifiNav: DashboardNavItem[] = [
   ),
 ];
 
-export const settingsNavItem: DashboardNavItem = item(
-  "Settings",
-  "settings",
-  Settings01Icon,
-  "Workspace preferences and configuration.",
-);
-
 export const sectionNavItems: DashboardNavItem[] = [
   ...platformNav,
   ...wifiNav,
-  settingsNavItem,
 ].filter((navItem) => navItem.slug !== null);

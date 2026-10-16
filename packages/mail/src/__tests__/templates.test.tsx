@@ -43,17 +43,4 @@ describe("email templates render", () => {
     );
     expect(html).toContain("Ada");
   });
-
-  it("renders the support email HTML", async () => {
-    const { SupportEmail } = await import("../templates/support");
-    const { renderEmail } = await import("../client");
-    const html = await renderEmail(
-      SupportEmail({
-        userEmail: "ada@example.com",
-        type: "issue",
-        message: "My voucher did not work",
-      }),
-    );
-    expect(html).toContain("My voucher did not work");
-  });
 });

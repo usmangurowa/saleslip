@@ -20,9 +20,9 @@ describe("createApp", () => {
   });
 
   it("rejects unauthenticated access to protected routes", async () => {
-    // authMiddleware returns 401 when session is null (no user)
+    // adminMiddleware returns 401 when session is null (no user)
     const app = createApp(stubAuth, stubDb);
-    const res = await app.request("/apikeys");
+    const res = await app.request("/wifi/stats");
     expect(res.status).toBe(401);
   });
 });

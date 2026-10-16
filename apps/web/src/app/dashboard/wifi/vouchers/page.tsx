@@ -15,14 +15,20 @@ export const metadata: Metadata = {
  * revoke surface. Batches live on their own page to keep printed sheets
  * traceable.
  */
-export default function WifiVouchersPage() {
+export default async function WifiVouchersPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ batchId?: string }>;
+}) {
+  const { batchId } = (await searchParams) ?? {};
+
   return (
     <>
       <PageToolbar>
         <WifiBatchDialog />
       </PageToolbar>
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-        <WifiVouchersTable />
+        <WifiVouchersTable batchId={batchId} />
       </div>
     </>
   );

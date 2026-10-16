@@ -47,6 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "@turbo/ui/components/table";
+import { formatData } from "@turbo/wifi";
 
 const formatNaira = (kobo: number) =>
   new Intl.NumberFormat("en-NG", {
@@ -99,6 +100,7 @@ interface PlanForm {
   description: string;
   priceNaira: string;
   profile: string;
+  dataLimitGb: string;
   validityLabel: string;
   sortOrder: string;
 }
@@ -109,6 +111,9 @@ const toForm = (plan?: WifiPlanOption): PlanForm => ({
   description: plan?.description ?? "",
   priceNaira: plan ? (plan.priceKobo / 100).toString() : "",
   profile: plan?.profile ?? "",
+  dataLimitGb: plan?.dataLimitBytes
+    ? (plan.dataLimitBytes / (1024 * 1024 * 1024)).toString()
+    : "",
   validityLabel: plan?.validityLabel ?? "",
   sortOrder: plan?.sortOrder?.toString() ?? "0",
 });
@@ -131,21 +136,11 @@ const PlanDialog = ({
   const updatePlan = useUpdateWifiPlan();
   const pending = isEdit ? updatePlan : createPlan;
 
-  // The parent keys this dialog by open state + plan id, so each open
-  // remounts it with a fresh form — no effect needed to reset edits.
-
   const set =
     (key: keyof PlanForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value;
       setForm((current) => {
-        // On create the slug follows the name until the user edits it by hand.
-        // While the ID still matches the auto-generated slug (or is untouched),
-        // keep it in sync so users never hand-edit it.
-        if (
-          key === "name" &&
-          !isEdit &&
-          (current.id === "" || current.id === toSlug(current.name))
-        ) {
+        if (key === "name" && !isEdit && current.id === toSlug(current.name)) {
           return { ...current, name: value, id: toSlug(value) };
         }
         return { ...current, [key]: value };
@@ -154,10 +149,12 @@ const PlanDialog = ({
 
   const submit = () => {
     const priceKobo = Math.round(Number(form.priceNaira) * 100);
+    const dataLimitBytes = form.dataLimitGb.trim()
+      ? Math.round(Number(form.dataLimitGb) * 1024 * 1024 * 1024)
+      : null;
     const onError = (error: Error) => toast.error(error.message);
     const onSuccess = () => {
       onOpenChange(false);
-      // Buy page reads the same table — no redeploy needed.
       toast.success(
         isEdit ? "Plan updated" : "Plan created — live on the buy page",
       );
@@ -170,6 +167,7 @@ const PlanDialog = ({
           description: form.description.trim(),
           priceKobo,
           profile: form.profile.trim(),
+          dataLimitBytes,
           validityLabel: form.validityLabel.trim(),
           sortOrder: form.sortOrder ? Number(form.sortOrder) : 0,
         },
@@ -183,6 +181,7 @@ const PlanDialog = ({
           description: form.description.trim() || form.name.trim(),
           priceKobo,
           profile: form.profile.trim(),
+          dataLimitBytes,
           validityLabel: form.validityLabel.trim(),
           sortOrder: form.sortOrder ? Number(form.sortOrder) : 0,
         },
@@ -197,7 +196,7 @@ const PlanDialog = ({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit plan" : "New plan"}</DialogTitle>
           <DialogDescription>
-            What the buy page sells — price, validity, and the router profile
+            What the buy page sells — price, validity, data quota, and the router profile
             vouchers mint against.
           </DialogDescription>
         </DialogHeader>
@@ -222,8 +221,7 @@ const PlanDialog = ({
               disabled={pending.isPending || isEdit}
             />
             <FieldDescription>
-              Auto-filled from the name (e.g. "1 Day Unlimited" →
-              "1-day-unlimited"); stable identifier used in checkout links.
+              Auto-filled from the name; stable identifier used in checkout links.
             </FieldDescription>
           </Field>
           <Field>
@@ -249,7 +247,23 @@ const PlanDialog = ({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="plan-profile">Router profile</FieldLabel>
+            <FieldLabel htmlFor="plan-data-limit">Data limit (GB)</FieldLabel>
+            <Input
+              id="plan-data-limit"
+              type="number"
+              min={0}
+              step="any"
+              value={form.dataLimitGb}
+              onChange={set("dataLimitGb")}
+              placeholder="Leave blank for unlimited"
+              disabled={pending.isPending}
+            />
+            <FieldDescription>
+              Optional quota limit in gigabytes (e.g. 1 for 1 GB, 5 for 5 GB). Leave empty for unlimited.
+            </FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel>Router profile</FieldLabel>
             <Select
               value={form.profile}
               onValueChange={(value) =>
@@ -257,12 +271,8 @@ const PlanDialog = ({
               }
               disabled={pending.isPending}
             >
-              <SelectTrigger
-                id="plan-profile"
-                className="w-full"
-                aria-label="Router profile"
-              >
-                <SelectValue placeholder="Pick a hotspot profile" />
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a profile from the router" />
               </SelectTrigger>
               <SelectContent>
                 {profiles.map((profile) => (
@@ -270,30 +280,19 @@ const PlanDialog = ({
                     {profile}
                   </SelectItem>
                 ))}
-                {form.profile !== "" && !profiles.includes(form.profile) ? (
-                  <SelectItem value={form.profile}>
-                    {form.profile} (missing on router)
-                  </SelectItem>
-                ) : null}
-                {profiles.length === 0 && form.profile === "" ? (
-                  <SelectItem value="none" disabled>
-                    No hotspot profiles found on the router
-                  </SelectItem>
-                ) : null}
               </SelectContent>
             </Select>
             <FieldDescription>
-              Must match a hotspot profile on the router exactly — vouchers mint
-              against it.
+              Must match a hotspot user profile on the router exactly.
             </FieldDescription>
           </Field>
           <Field>
-            <FieldLabel htmlFor="plan-validity">Validity label</FieldLabel>
+            <FieldLabel htmlFor="plan-validity">Validity</FieldLabel>
             <Input
               id="plan-validity"
               value={form.validityLabel}
               onChange={set("validityLabel")}
-              placeholder="24h"
+              placeholder="24 hours or 1d"
               disabled={pending.isPending}
             />
             <FieldDescription>
@@ -398,6 +397,7 @@ export const WifiPlansTable = () => {
             <TableHead>Plan</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Router profile</TableHead>
+            <TableHead>Data limit</TableHead>
             <TableHead>Validity</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -407,14 +407,14 @@ export const WifiPlansTable = () => {
           {isPending ? (
             Array.from({ length: 3 }, (_, index) => (
               <TableRow key={index} className="hover:bg-transparent">
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <Skeleton className="h-6 w-full" />
                 </TableCell>
               </TableRow>
             ))
           ) : plans.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={6} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center">
                 <span className="text-muted-foreground text-sm">
                   No plans yet — add one to put it on the buy page.
                 </span>
@@ -436,6 +436,9 @@ export const WifiPlansTable = () => {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {plan.profile}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {plan.dataLimitBytes ? formatData(plan.dataLimitBytes) : "Unlimited"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {plan.validityLabel}

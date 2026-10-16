@@ -1,20 +1,12 @@
-import { apiKeyClient } from "@better-auth/api-key/client";
-import {
-  emailOTPClient,
-  inferAdditionalFields,
-} from "better-auth/client/plugins";
+import { env } from "@/env";
+import { emailOTPClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
+const baseURL = env.NEXT_PUBLIC_APP_URL;
+
 export const authClient = createAuthClient({
-  plugins: [
-    emailOTPClient(),
-    apiKeyClient(),
-    inferAdditionalFields({
-      user: {
-        username: { type: "string", required: false },
-        githubUsername: { type: "string", required: false },
-        githubProfileUrl: { type: "string", required: false },
-      },
-    }),
-  ],
+  baseURL,
+  plugins: [emailOTPClient()],
 });
+
+export const { useSession, signIn, signUp, signOut, emailOtp } = authClient;

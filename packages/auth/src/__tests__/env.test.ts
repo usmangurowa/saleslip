@@ -22,12 +22,10 @@ describe("authEnv", () => {
     delete process.env.SKIP_ENV_VALIDATION;
     delete process.env.CI;
     delete process.env.ADMIN_EMAILS;
-    delete process.env.SUPABASE_JWT_SECRET;
     process.env.AUTH_SECRET ??= "test-auth-secret";
 
     const auth = authEnv();
 
     expect(auth.ADMIN_EMAILS).toBeUndefined();
-    expect(auth.SUPABASE_JWT_SECRET).toBeUndefined();
   });
 });

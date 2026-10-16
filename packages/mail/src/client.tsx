@@ -3,10 +3,8 @@ import { render } from "react-email";
 import { Resend } from "resend";
 
 import type { OTPEmailProps } from "./templates/otp";
-import type { SupportEmailProps } from "./templates/support";
 import type { WelcomeEmailProps } from "./templates/welcome";
 import { OTPEmail } from "./templates/otp";
-import { SupportEmail } from "./templates/support";
 import { WelcomeEmail } from "./templates/welcome";
 
 /**
@@ -215,22 +213,4 @@ export const sendWelcomeEmail = async ({
     subject: `Welcome to Turbo, ${name}!`,
     template: WelcomeEmail({ name, actionUrl, actionText }),
     from,
-  });
-
-/**
- * Send a support/feedback email to the team.
- */
-export const sendSupportEmail = async ({
-  userEmail,
-  userId,
-  type,
-  message,
-  metadata,
-  to = "support@turbo.app", // Default support email
-}: SupportEmailProps & { to?: string }): Promise<SendEmailResult> =>
-  sendEmail({
-    to,
-    subject: `[Turbo] New ${type} from ${userEmail}`,
-    template: SupportEmail({ userEmail, userId, type, message, metadata }),
-    replyTo: userEmail,
   });

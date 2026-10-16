@@ -1,8 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { TableCard } from "@/components/dashboard/table-card";
 import { useWifiBatches } from "@/hooks/use-wifi";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
+import { Button } from "@turbo/ui/components/button";
+import { Icon } from "@turbo/ui/components/icon";
 import { Skeleton } from "@turbo/ui/components/skeleton";
 import {
   Table,
@@ -35,7 +39,7 @@ export const WifiBatchList = () => {
   return (
     <TableCard
       title="Recent batches"
-      description="Counter sheets generated from this console."
+      description="Counter sheets generated from this console — click any batch to view its vouchers."
     >
       <Table>
         <TableHeader>
@@ -44,27 +48,35 @@ export const WifiBatchList = () => {
             <TableHead>Profile</TableHead>
             <TableHead className="text-right">Codes</TableHead>
             <TableHead>Generated</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isPending ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={4}>
+              <TableCell colSpan={5}>
                 <Skeleton className="h-6 w-full" />
               </TableCell>
             </TableRow>
           ) : batches.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={4} className="h-20 text-center">
+              <TableCell colSpan={5} className="h-20 text-center">
                 <span className="text-muted-foreground text-sm">
-                  No counter sheets yet — generate one from the orders view.
+                  No counter sheets yet — generate one using New Batch above.
                 </span>
               </TableCell>
             </TableRow>
           ) : (
             batches.map((batch) => (
               <TableRow key={batch.id}>
-                <TableCell className="font-medium">{batch.label}</TableCell>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/dashboard/wifi/vouchers?batchId=${batch.id}`}
+                    className="hover:underline"
+                  >
+                    {batch.label}
+                  </Link>
+                </TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">
                   {batch.profile}
                 </TableCell>
@@ -73,6 +85,14 @@ export const WifiBatchList = () => {
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
                   {formatWhen(batch.createdAt)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/dashboard/wifi/vouchers?batchId=${batch.id}`}>
+                      View vouchers
+                      <Icon icon={ArrowRight01Icon} className="size-3.5" />
+                    </Link>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))

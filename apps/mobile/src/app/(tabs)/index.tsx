@@ -1,127 +1,62 @@
-import { View } from "react-native";
-import { Link } from "expo-router";
-import { authClient } from "@/auth/client";
+import { useState } from "react";
+import { ScrollView, View } from "react-native";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Container } from "@/components/ui/container";
+import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { api } from "@/utils/api";
-import { useQuery } from "@tanstack/react-query";
-
-const sampleTasks = [
-  {
-    id: "TSK-341",
-    title: "Review onboarding funnel drop-off",
-    status: "in-progress",
-  },
-  {
-    id: "TSK-338",
-    title: "Ship dark mode contrast fixes",
-    status: "completed",
-  },
-  {
-    id: "TSK-334",
-    title: "Escalate billing webhook retries",
-    status: "escalated",
-  },
-  {
-    id: "TSK-330",
-    title: "Draft Q1 analytics report",
-    status: "in-progress",
-  },
-];
+import { authClient } from "@/auth/client";
 
 export default function HomeScreen() {
-  const { data } = useQuery({
-    queryKey: ["session"],
-    queryFn: () => authClient.getSession(),
-  });
+  const { data: session } = authClient.useSession();
+  const [healthStatus, setHealthStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const { data: apiTasks } = useQuery({
-    queryKey: ["tasks"],
-    queryFn: async () => {
-      const res = await api.tasks.$get();
-      if (!res.ok) throw new Error("Failed to fetch tasks");
-      const { tasks } = await res.json();
-      return tasks;
-    },
-  });
+  const checkHealth = async () => {
+    setLoading(true);
+    try {
+      const response = await api.health.$get();
+      if (response.ok) {
+        const text = await response.text();
+        setHealthStatus(text);
+      } else {
+        setHealthStatus("Unhealthy");
+      }
+    } catch (error) {
+      console.error("Failed to check health:", error);
+      setHealthStatus("Unreachable");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Fall back to sample data when the API returns no rows (zero-env template).
-  const taskList = apiTasks && apiTasks.length > 0 ? apiTasks : sampleTasks;
-
-  if (!data?.data) {
-    return null;
-  }
   return (
-    <Container>
-      <View className="flex-1 p-6">
-        <View className="mb-6">
-          <Text className="text-2xl font-bold">
-            Welcome {data.data.user.name}!
+    <ScrollView className="flex-1 bg-background p-4">
+      <View className="gap-4">
+        <Text className="text-2xl font-bold">Saleslip Mobile</Text>
+
+        <Card className="p-4 gap-2">
+          <Text className="text-lg font-semibold">User Session</Text>
+          {session ? (
+            <View>
+              <Text>Signed in as: {session.user.email}</Text>
+              <Text>Name: {session.user.name}</Text>
+            </View>
+          ) : (
+            <Text className="text-muted-foreground">Not signed in</Text>
+          )}
+        </Card>
+
+        <Card className="p-4 gap-4">
+          <Text className="text-lg font-semibold">System Health</Text>
+          <Text>
+            Status:{" "}
+            {loading ? "Checking..." : (healthStatus ?? "Not checked yet")}
           </Text>
-          <Text className="text-muted-foreground mt-1">
-            You have successfully completed the onboarding flow.
-          </Text>
-        </View>
-
-        <View className="flex-row gap-4">
-          <Card className="flex-1 items-center gap-3 py-4">
-            <CardHeader className="items-center px-4">
-              <CardTitle className="text-muted-foreground text-sm">
-                Projects
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4">
-              <Text className="text-3xl font-bold">0</Text>
-            </CardContent>
-          </Card>
-          <Card className="flex-1 items-center gap-3 py-4">
-            <CardHeader className="items-center px-4">
-              <CardTitle className="text-muted-foreground text-sm">
-                Tasks
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4">
-              <Text className="text-3xl font-bold">0</Text>
-            </CardContent>
-          </Card>
-          <Card className="flex-1 items-center gap-3 py-4">
-            <CardHeader className="items-center px-4">
-              <CardTitle className="text-muted-foreground text-sm">
-                Members
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4">
-              <Text className="text-3xl font-bold">0</Text>
-            </CardContent>
-          </Card>
-        </View>
-
-        <View className="mt-8 gap-3">
-          <Text className="text-lg font-semibold">Recent tasks</Text>
-          {taskList.map((task) => (
-            <Card key={task.id} className="flex-row items-center gap-2 py-3">
-              <CardHeader className="flex-1 px-4">
-                <CardTitle className="text-sm" numberOfLines={1}>
-                  {task.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pr-4 pl-0">
-                <Text className="text-muted-foreground text-xs capitalize">
-                  {task.status}
-                </Text>
-              </CardContent>
-            </Card>
-          ))}
-        </View>
-
-        <View className="mt-8">
-          <Link href={"/(auth)/login"} asChild>
-            <Button variant="outline">Logout</Button>
-          </Link>
-        </View>
+          <Button onPress={checkHealth} disabled={loading}>
+            <Text className="text-primary-foreground">Check API Health</Text>
+          </Button>
+        </Card>
       </View>
-    </Container>
+    </ScrollView>
   );
 }

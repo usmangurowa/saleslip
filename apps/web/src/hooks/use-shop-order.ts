@@ -3,7 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 
 export type ShopOrderStatus =
-  "pending" | "paid" | "fulfilled" | "pending_router" | "failed";
+  | "pending"
+  | "paid"
+  | "fulfilled"
+  | "pending_router"
+  | "failed"
+  | "cancelled";
 
 export interface ShopOrderPlan {
   id: string;
@@ -20,6 +25,8 @@ export interface ShopOrder {
   voucherCode: string | null;
   qrSvg: string | null;
   loginUrl: string | null;
+  brandName?: string | null;
+  reference?: string | null;
   supportPhone: string | null;
   createdAt: string;
 }

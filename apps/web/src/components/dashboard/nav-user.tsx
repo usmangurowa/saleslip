@@ -5,10 +5,8 @@ import { authClient } from "@/auth/client";
 import { useSession } from "@/hooks/use-session";
 import {
   ComputerIcon,
-  CreditCardIcon,
   Logout02Icon,
   MoonIcon,
-  Notification01Icon,
   Sun03Icon,
   UnfoldMoreIcon,
   UserIcon,
@@ -132,14 +130,6 @@ export const NavUser = () => {
               <DropdownMenuItem onSelect={() => router.push("/onboarding")}>
                 <Icon icon={UserIcon} />
                 Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Icon icon={CreditCardIcon} />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Icon icon={Notification01Icon} />
-                Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

@@ -1,15 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import {
-  platformNav,
-  settingsNavItem,
-  wifiNav,
-} from "@/components/dashboard/nav-config";
+import { platformNav, wifiNav } from "@/components/dashboard/nav-config";
 
 import { Icon } from "@turbo/ui/components/icon";
 
-const allNavItems = [...platformNav, ...wifiNav, settingsNavItem];
+const allNavItems = [...platformNav, ...wifiNav];
 
 export const PageTitle = () => {
   const pathname = usePathname();
