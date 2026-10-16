@@ -198,8 +198,12 @@ export const receiptPage = (props: ReceiptPageProps) => {
           <dd>${plan?.name ?? order.planId}</dd>
           <dt>Data</dt>
           <dd>${formatData(plan?.dataLimitBytes)}</dd>
-          <dt>Validity</dt>
-          <dd>${plan?.validityLabel ?? "—"}</dd>
+          ${
+            plan?.validityLabel
+              ? html`<dt>Validity</dt>
+                  <dd>${plan.validityLabel}</dd>`
+              : ""
+          }
           <dt>Amount</dt>
           <dd>${formatNaira(order.amountKobo)}</dd>
           ${

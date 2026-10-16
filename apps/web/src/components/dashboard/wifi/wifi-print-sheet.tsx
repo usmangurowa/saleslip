@@ -71,7 +71,11 @@ export const buildVoucherSheetHtml = ({
         <div class="ssid"><span>WiFi</span> ${escape(VOUCHER_BRAND.wifiName)}</div>
         <div class="code">${escape(voucher.code)}</div>
         <div class="plan">${escape(plan.name)}</div>
-        <div class="plan">Valid ${escape(plan.validityLabel)}</div>
+        ${
+          plan.validityLabel
+            ? `<div class="plan">Valid ${escape(plan.validityLabel)}</div>`
+            : ""
+        }
         <div class="help">
           Scan to join, then enter this code.<br />
           Help: ${escape(VOUCHER_BRAND.supportPhone)}

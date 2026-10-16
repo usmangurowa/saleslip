@@ -11,10 +11,11 @@ import {
 } from "../plans";
 
 describe("buildPlans", () => {
-  it("seeds the eight Saleslip plans with default profiles", () => {
+  it("seeds the nine Saleslip plans with default profiles", () => {
     const plans = buildPlans({});
     expect(plans.map((p) => [p.id, p.priceKobo, p.rosProfile])).toEqual([
       ["pos-1", 5_000, "1-Day-1GB"],
+      ["week-5gb", 20_000, "1-Week-5GB"],
       ["day-5gb", 20_000, "1-Day-5GB"],
       ["day-1", 50_000, "Saleslip-1d-1"],
       ["day-2", 150_000, "Saleslip-1d-2"],
@@ -28,22 +29,35 @@ describe("buildPlans", () => {
   it("caps only the data tiers, leaving the unlimited plans unlimited", () => {
     const plans = buildPlans({});
     expect(findPlan(plans, "pos-1")?.dataLimitBytes).toBe(1_073_741_824);
-    expect(findPlan(plans, "day-5gb")?.dataLimitBytes).toBe(5 * 1024 ** 3);
+    expect(findPlan(plans, "week-5gb")?.dataLimitBytes).toBe(5 * 1024 ** 3);
     for (const plan of plans) {
-      if (plan.id === "pos-1" || plan.id === "day-5gb") continue;
+      if (plan.id === "pos-1" || plan.id === "week-5gb") continue;
+      if (plan.id === "day-5gb") {
+        // The retired 24-hour tier stays capped and resolvable for vouchers
+        // already sold on it.
+        expect(plan.dataLimitBytes).toBe(5 * 1024 ** 3);
+        continue;
+      }
       expect(plan.dataLimitBytes).toBeUndefined();
       expect(plan.uptimeLimit).toBeUndefined();
     }
   });
 
-  it("keeps duo plans out of the sellable list", () => {
+  it("keeps the retired tiers out of the sellable list", () => {
     expect(sellablePlans(buildPlans({})).map((p) => p.id)).toEqual([
       "pos-1",
-      "day-5gb",
+      "week-5gb",
       "day-1",
       "week-1",
       "month-1",
     ]);
+  });
+
+  it("lists no duration for the week-backed 5 GB tier", () => {
+    const plan = findPlan(buildPlans({}), "week-5gb");
+    expect(plan?.validityLabel).toBe("");
+    expect(plan?.name).not.toMatch(/day|week|month/i);
+    expect(plan?.description).not.toMatch(/hour|day|week|month/i);
   });
 
   it("lets env override the RouterOS profile names", () => {

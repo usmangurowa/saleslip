@@ -63,8 +63,12 @@ export const VoucherEmail = ({
       <Text className="text-muted-foreground m-0 mb-6 text-base">
         Plan: {planName}
         <br />
-        Validity: {validityLabel}
-        <br />
+        {validityLabel ? (
+          <>
+            Validity: {validityLabel}
+            <br />
+          </>
+        ) : null}
         Devices: {deviceCount}
         <br />
         Amount paid: {priceLabel}

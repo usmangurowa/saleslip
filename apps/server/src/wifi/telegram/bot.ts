@@ -45,7 +45,9 @@ const planMenu = (plans: readonly WifiPlan[]) => {
 };
 
 const planLine = (plan: WifiPlan) =>
-  `• ${plan.name} — ${formatNaira(plan.priceKobo)} (${formatData(plan.dataLimitBytes)}, ${plan.validityLabel})`;
+  `• ${plan.name} — ${formatNaira(plan.priceKobo)} (${formatData(plan.dataLimitBytes)}${
+    plan.validityLabel ? `, ${plan.validityLabel}` : ""
+  })`;
 
 export const connectInstructions = (brandName: string, supportPhone?: string) =>
   [
