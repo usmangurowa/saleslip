@@ -301,3 +301,30 @@ export const useRevokeVoucher = () => {
     },
   });
 };
+
+/**
+ * Delete a voucher record, state-aware.
+ *
+ * The server settles the router side first: a live code is removed from the
+ * router before its row disappears (fail-closed, same contract as revoke), a
+ * dead code is history-only. Orders still awaiting fulfilment refuse with 409.
+ */
+export const useDeleteVoucher = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      id: string,
+    ): Promise<{ deleted: true; revokedRouterUser: boolean }> => {
+      const res = await routerApi().vouchers[":id"].$delete({
+        param: { id },
+      });
+      if (!res.ok) throw await errorFrom(res, "Failed to delete voucher");
+      return res.json();
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: wifiRouterKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["wifi"] });
+    },
+  });
+};

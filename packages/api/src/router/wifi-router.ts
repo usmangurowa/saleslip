@@ -363,6 +363,46 @@ export const createWifiRouterApp = ({
           return ctx.json({ voucher: revoked ?? voucher });
         })(c);
       })
+      .delete("/vouchers/:id", async (c) => {
+        const repo = createWifiConsoleRepository(c.get("db"));
+        const found = await repo.findVoucherWithOrder(c.req.param("id"));
+        if (!found) return c.json({ error: "Voucher not found" }, 404);
+        const { voucher, orderStatus } = found;
+
+        // In-flight guard: a paid or router-pending order owns this code, and
+        // the retry sweep resumes from the row — deleting it would re-mint a
+        // different code under a sale that was already paid.
+        if (
+          voucher.status === "active" &&
+          (orderStatus === "paid" || orderStatus === "pending_router")
+        ) {
+          return c.json({ error: "Voucher is still awaiting fulfilment" }, 409);
+        }
+
+        // Revoked rows already had their router user removed by revoke, so they
+        // are pure history and need no router.
+        if (voucher.status !== "active") {
+          const deleted = await repo.deleteVoucher(voucher.id);
+          if (!deleted) return c.json({ error: "Voucher not found" }, 404);
+          return c.json({ deleted: true, revokedRouterUser: false });
+        }
+
+        return withRouter(async (service, ctx) => {
+          // The router is the source of truth for live credentials: a code can
+          // outlive its rosId (manual activation era) or die before it (Mikhmon
+          // deletes expired users), so active rows are looked up by code. The
+          // user goes first — fail-closed, same contract as revoke.
+          let revokedRouterUser = false;
+          const user = await service.findUser(voucher.code);
+          if (user) {
+            await service.removeUser(user.id);
+            revokedRouterUser = true;
+          }
+          const deleted = await repo.deleteVoucher(voucher.id);
+          if (!deleted) return ctx.json({ error: "Voucher not found" }, 404);
+          return ctx.json({ deleted: true, revokedRouterUser });
+        })(c);
+      })
   );
 };
 

@@ -6,7 +6,7 @@ import { QueryError } from "@/components/dashboard/query-error";
 import { TableCard } from "@/components/dashboard/table-card";
 import { TablePagination } from "@/components/dashboard/table-pagination";
 import { useWifiVouchers } from "@/hooks/use-wifi";
-import { useRevokeVoucher } from "@/hooks/use-wifi-router";
+import { useDeleteVoucher, useRevokeVoucher } from "@/hooks/use-wifi-router";
 import { Delete02Icon, Ticket01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
@@ -97,6 +97,49 @@ const RevokeButton = ({ voucher }: { voucher: WifiVoucher }) => {
             }
           >
             Revoke
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
+
+const DeleteButton = ({ voucher }: { voucher: WifiVoucher }) => {
+  const deleteVoucher = useDeleteVoucher();
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-destructive"
+          disabled={deleteVoucher.isPending}
+        >
+          <Icon icon={Delete02Icon} />
+          Delete
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {voucher.code}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {voucher.status === "active"
+              ? "The code is removed from the router first, then its record is deleted. This cannot be undone."
+              : "The code is already dead — this only removes its record from the dashboard. This cannot be undone."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep it</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() =>
+              deleteVoucher.mutate(voucher.id, {
+                onSuccess: () => toast.success(`${voucher.code} deleted`),
+                onError: (error) => toast.error(error.message),
+              })
+            }
+          >
+            Delete
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -259,12 +302,14 @@ export const WifiVouchersTable = ({
                   {formatWhen(voucher.createdAt)}
                 </TableCell>
                 <TableCell className="text-right">
-                  {voucher.status === "active" ? (
-                    <RevokeButton voucher={voucher} />
-                  ) : (
-                    // Revoked rows are terminal, so there is nothing to act on.
-                    <span className="text-muted-foreground">—</span>
-                  )}
+                  <span className="inline-flex items-center justify-end gap-1">
+                    {voucher.status === "active" && (
+                      <RevokeButton voucher={voucher} />
+                    )}
+                    {/* Revoked rows keep a Delete: their record is history the
+                        operator may still want to clean up. */}
+                    <DeleteButton voucher={voucher} />
+                  </span>
                 </TableCell>
               </TableRow>
             ))

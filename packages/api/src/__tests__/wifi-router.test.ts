@@ -755,3 +755,152 @@ describe("voucher activation", () => {
     expect(revoked).toBe(false);
   });
 });
+
+describe("voucher deletion", () => {
+  it("deletes a revoked voucher without touching the router", async () => {
+    const fake = createFakeHotspot();
+    fake.calls.length = 0;
+    let deleted = false;
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: {
+        findVoucherWithOrder: () =>
+          Promise.resolve({
+            voucher: voucherRow({ status: "revoked" }),
+            orderStatus: null,
+          }),
+        deleteVoucher: () => {
+          deleted = true;
+          return Promise.resolve(voucherRow({ status: "revoked" }));
+        },
+      },
+    });
+
+    const res = await app.request("/vouchers/voucher-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+    expect(await json(res)).toEqual({
+      deleted: true,
+      revokedRouterUser: false,
+    });
+    expect(deleted).toBe(true);
+    expect(fake.calls).toEqual([]);
+  });
+
+  it("removes a live router user before deleting an active voucher", async () => {
+    const fake = createFakeHotspot();
+    await fake.hotspot.createHotspotUser({
+      name: "SALE-1234",
+      password: "SALE-1234",
+      profile: "Saleslip-1d-1",
+    });
+    fake.calls.length = 0;
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: {
+        findVoucherWithOrder: () =>
+          Promise.resolve({
+            voucher: voucherRow({ rosId: "*1" }),
+            orderStatus: null,
+          }),
+        deleteVoucher: () => Promise.resolve(voucherRow()),
+      },
+    });
+
+    const res = await app.request("/vouchers/voucher-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+    expect(await json(res)).toEqual({ deleted: true, revokedRouterUser: true });
+    expect(fake.calls).toEqual(["find:SALE-1234", "remove:*1"]);
+    expect(fake.users.has("SALE-1234")).toBe(false);
+  });
+
+  it("deletes an active voucher whose router user is already gone", async () => {
+    const fake = createFakeHotspot();
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: {
+        findVoucherWithOrder: () =>
+          Promise.resolve({
+            voucher: voucherRow(),
+            orderStatus: null,
+          }),
+        deleteVoucher: () => Promise.resolve(voucherRow()),
+      },
+    });
+
+    const res = await app.request("/vouchers/voucher-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+    expect(await json(res)).toEqual({
+      deleted: true,
+      revokedRouterUser: false,
+    });
+    expect(fake.calls).toEqual(["find:SALE-1234"]);
+  });
+
+  it("refuses to delete a voucher whose order is still awaiting fulfilment", async () => {
+    let deleted = false;
+    const app = build({
+      hotspot: createFakeHotspot().hotspot,
+      repo: {
+        findVoucherWithOrder: () =>
+          Promise.resolve({
+            voucher: voucherRow({ orderId: "order-1" }),
+            orderStatus: "pending_router",
+          }),
+        deleteVoucher: () => {
+          deleted = true;
+          return Promise.resolve(voucherRow());
+        },
+      },
+    });
+
+    const res = await app.request("/vouchers/voucher-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(409);
+    expect(deleted).toBe(false);
+  });
+
+  it("leaves the row when the router is down during delete", async () => {
+    const fake = createFakeHotspot();
+    fake.state.fail = new RouterOsUnavailableError("timeout");
+    let deleted = false;
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: {
+        findVoucherWithOrder: () =>
+          Promise.resolve({
+            voucher: voucherRow({ rosId: "*1" }),
+            orderStatus: null,
+          }),
+        deleteVoucher: () => {
+          deleted = true;
+          return Promise.resolve(voucherRow());
+        },
+      },
+    });
+
+    const res = await app.request("/vouchers/voucher-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(503);
+    expect(deleted).toBe(false);
+  });
+
+  it("404s an unknown voucher", async () => {
+    const app = build({
+      hotspot: createFakeHotspot().hotspot,
+      repo: {
+        findVoucherWithOrder: () => Promise.resolve(undefined),
+      },
+    });
+
+    const res = await app.request("/vouchers/nope", { method: "DELETE" });
+    expect(res.status).toBe(404);
+  });
+});

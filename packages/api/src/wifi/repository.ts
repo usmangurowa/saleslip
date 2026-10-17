@@ -184,6 +184,12 @@ export interface WifiConsoleRepository {
     input: CreateVoucherBatchInput,
   ) => Promise<VoucherBatchResult>;
   findVoucher: (id: string) => Promise<WifiVoucherRow | undefined>;
+  /** A voucher with its owning order's status, for delete guards. */
+  findVoucherWithOrder: (
+    id: string,
+  ) => Promise<
+    { voucher: WifiVoucherRow; orderStatus: WifiOrderStatus | null } | undefined
+  >;
   /** Vouchers for the given codes, keyed by code, with their order's phone. */
   findVouchersByCodes: (
     codes: readonly string[],
@@ -200,6 +206,8 @@ export interface WifiConsoleRepository {
   /** Snapshots router usage onto the voucher rows that own the sessions. */
   recordUsage: (usage: Map<string, VoucherUsage>) => Promise<number>;
   revokeVoucher: (id: string) => Promise<WifiVoucherRow | undefined>;
+  /** Hard-deletes the row. Callers must have settled the router user first. */
+  deleteVoucher: (id: string) => Promise<WifiVoucherRow | undefined>;
 }
 
 const startOfDay = (now: Date) => {
@@ -624,6 +632,27 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
     return row;
   },
 
+  /**
+   * Delete guard data: the voucher plus the status of the order that owns it
+   * (`null` for counter sales). A `paid`/`pending_router` order means the code
+   * is still in flight — the retry sweep owns it, and deleting the row would
+   * make it re-mint a different code under a paid sale.
+   */
+  findVoucherWithOrder: async (id) => {
+    const [row] = await db
+      .select({
+        voucher: wifiVoucher,
+        orderStatus: wifiOrder.status,
+      })
+      .from(wifiVoucher)
+      .leftJoin(wifiOrder, eq(wifiVoucher.orderId, wifiOrder.id))
+      .where(eq(wifiVoucher.id, id))
+      .limit(1);
+    return row
+      ? { voucher: row.voucher, orderStatus: row.orderStatus ?? null }
+      : undefined;
+  },
+
   findVouchersByCodes: async (codes) => {
     if (codes.length === 0) return new Map();
     const rows = await db
@@ -705,6 +734,20 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
     const [row] = await db
       .update(wifiVoucher)
       .set({ status: "revoked" })
+      .where(eq(wifiVoucher.id, id))
+      .returning();
+    return row;
+  },
+
+  /**
+   * Hard delete. Unlike revoke this is not idempotent-by-row: a missing row
+   * returns `undefined` (the route maps it to 404). Callers must have removed
+   * any live router user first — after this, the row is the only record of
+   * which code to look up, and it is gone.
+   */
+  deleteVoucher: async (id) => {
+    const [row] = await db
+      .delete(wifiVoucher)
       .where(eq(wifiVoucher.id, id))
       .returning();
     return row;
