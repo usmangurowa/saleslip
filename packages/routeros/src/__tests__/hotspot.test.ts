@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { RouterOsRow, RouterOsTransport } from "../types";
 import {
   createHotspotService,
+  parseActiveSession,
   parseHotspotProfile,
   parseHotspotUser,
   parseSystemResource,
@@ -101,6 +102,33 @@ describe("row parsers", () => {
     expect(parseHotspotProfile({ ".id": "*6", name: "default" })).toMatchObject(
       { id: "*6", name: "default", rateLimit: undefined },
     );
+  });
+
+  it("parses an active session row including the time it has left", () => {
+    expect(
+      parseActiveSession({
+        ".id": "*1",
+        user: "SLJB3ZV",
+        address: "10.5.50.254",
+        "mac-address": "AA:BB:CC:DD:EE:FF",
+        uptime: "1m5s",
+        "session-time-left": "23h58m55s",
+        "bytes-in": "477",
+        "bytes-out": "223",
+      }),
+    ).toMatchObject({
+      id: "*1",
+      user: "SLJB3ZV",
+      address: "10.5.50.254",
+      macAddress: "AA:BB:CC:DD:EE:FF",
+      uptime: "1m5s",
+      sessionTimeLeft: "23h58m55s",
+      bytesIn: 477,
+      bytesOut: 223,
+    });
+    expect(
+      parseActiveSession({ ".id": "*2", user: "x" }).sessionTimeLeft,
+    ).toBeUndefined();
   });
 });
 
@@ -239,6 +267,32 @@ describe("createHotspotService", () => {
     expect(byName.write).toHaveBeenCalledWith(
       "/ip/hotspot/user/profile/remove",
       ["=.id=*2"],
+    );
+  });
+
+  it("reports WAN reachability from a ping reply", async () => {
+    const ok = makeTransport({
+      "/ping": [{ seq: "0", host: "1.1.1.1", time: "12ms", ttl: "57" }],
+    });
+    await expect(createHotspotService(ok).wanReachable()).resolves.toBe(true);
+
+    const timedOut = makeTransport({
+      "/ping": [{ seq: "0", status: "timeout", sent: "1", received: "0" }],
+    });
+    await expect(createHotspotService(timedOut).wanReachable()).resolves.toBe(
+      false,
+    );
+
+    const unreachable = makeTransport({
+      "/ping": [{ seq: "0", status: "unreachable", sent: "1", received: "0" }],
+    });
+    await expect(
+      createHotspotService(unreachable).wanReachable(),
+    ).resolves.toBe(false);
+
+    const noReply = makeTransport({});
+    await expect(createHotspotService(noReply).wanReachable()).resolves.toBe(
+      false,
     );
   });
 });

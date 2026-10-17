@@ -55,8 +55,10 @@ export const OverviewStatRow = ({ revenueRange }: OverviewStatRowProps) => {
 
   const { revenue, vouchers, generated } = stats.data;
   const current = revenue[revenueRange];
-  const routerUnreachable = sessions.isError || !sessions.data;
-  const connected = sessions.data?.live ?? 0;
+  // The board renders even when the router is down (all rows black), so
+  // "unreachable" now comes from the payload itself, not a failed query.
+  const routerUnreachable = sessions.isError || !sessions.data?.routerReachable;
+  const connected = sessions.data?.connected ?? 0;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

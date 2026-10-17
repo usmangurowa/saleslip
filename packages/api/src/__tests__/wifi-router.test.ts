@@ -80,9 +80,15 @@ const sampleSession = (overrides: Partial<HotspotActiveSession> = {}) =>
 const createFakeHotspot = () => {
   const users = new Map<string, HotspotUser>();
   const calls: string[] = [];
-  const state: { fail: Error | undefined; active: HotspotActiveSession[] } = {
+  const state: {
+    fail: Error | undefined;
+    active: HotspotActiveSession[];
+    /** Whether the fake router can reach the internet. */
+    wan: boolean;
+  } = {
     fail: undefined,
     active: [],
+    wan: true,
   };
   let seq = 0;
 
@@ -172,6 +178,11 @@ const createFakeHotspot = () => {
       await guard();
       return sampleResource;
     },
+    wanReachable: async () => {
+      calls.push("ping");
+      await guard();
+      return state.wan;
+    },
   };
 
   return { hotspot, users, calls, state };
@@ -244,7 +255,6 @@ describe("wifi router console auth", () => {
     for (const [method, path] of [
       ["GET", "/health"],
       ["GET", "/profiles"],
-      ["GET", "/sessions"],
       ["POST", "/sessions/sync"],
       ["POST", "/sessions/abc/kick"],
     ] as const) {
@@ -362,75 +372,214 @@ describe("hotspot profiles", () => {
   });
 });
 
-describe("live sessions", () => {
-  it("resolves sessions back to their voucher, plan and phone", async () => {
+describe("attendance board", () => {
+  const activatedVoucher = (
+    overrides: Partial<repositoryModule.ActivatedVoucherRow> = {},
+  ) =>
+    ({
+      ...voucherRow({
+        rosId: "*1",
+        activatedAt: new Date("2025-01-15T09:00:00Z"),
+      }),
+      phone: "+2348012345678",
+      amountKobo: 300_000,
+      ...overrides,
+    }) satisfies repositoryModule.ActivatedVoucherRow;
+
+  const boardRepo = (
+    vouchers: repositoryModule.ActivatedVoucherRow[],
+    params?: { limit?: number; offset?: number },
+  ) => ({
+    listActivatedVouchers: (input: { limit: number; offset: number }) => {
+      if (params) expect(input).toEqual(params);
+      return Promise.resolve({ rows: vouchers, total: vouchers.length });
+    },
+    todaySummary: () => Promise.resolve({ paidOrders: 2, revenueKobo: 60_000 }),
+  });
+
+  it("shows a healthy connected voucher green and a disconnected one black", async () => {
     const fake = createFakeHotspot();
     fake.state.active = [
-      sampleSession(),
-      sampleSession({ id: "*2", user: "WALK-IN" }),
+      sampleSession({
+        bytesIn: 5_000_000,
+        bytesOut: 2_000_000,
+        sessionTimeLeft: "23h",
+      }),
     ];
     const app = build({
       hotspot: fake.hotspot,
-      repo: {
-        findVouchersByCodes: (codes) =>
-          Promise.resolve(
-            new Map(
-              codes.includes("SALE-1234")
-                ? [
-                    [
-                      "SALE-1234",
-                      {
-                        voucherId: "voucher-1",
-                        profile: "Saleslip-1d-1",
-                        phone: "+2348012345678",
-                        amountKobo: 300_000,
-                        limitBytesTotal: null,
-                        activatedAt: new Date("2025-01-15T09:00:00Z"),
-                        bytesUsed: 300,
-                      },
-                    ],
-                  ]
-                : [],
-            ),
-          ),
-        todaySummary: () =>
-          Promise.resolve({ paidOrders: 2, revenueKobo: 60_000 }),
-      },
+      repo: boardRepo([
+        activatedVoucher(),
+        activatedVoucher({ id: "voucher-2", code: "OLD-999" }),
+      ]),
     });
 
     const body = await json(await app.request("/sessions"));
-    expect(body.live).toBe(2);
+    expect(body.routerReachable).toBe(true);
+    expect(body.wanReachable).toBe(true);
+    expect(body.connected).toBe(1);
+    expect(body.total).toBe(2);
     expect(body.revenueKoboToday).toBe(60_000);
-    expect(body.sessions).toEqual([
-      {
-        id: "*1",
-        user: "SALE-1234",
-        address: "10.5.50.2",
-        macAddress: null,
-        uptime: "5m",
-        bytesIn: 100,
-        bytesOut: 200,
-        planName: "1 Day Unlimited",
-        phone: "+2348012345678",
-        amountKobo: 300_000,
-        activatedAt: "2025-01-15T09:00:00.000Z",
-        known: true,
-      },
-      {
-        id: "*2",
-        user: "WALK-IN",
-        address: "10.5.50.2",
-        macAddress: null,
-        uptime: "5m",
-        bytesIn: 100,
-        bytesOut: 200,
-        planName: null,
-        phone: null,
-        amountKobo: null,
-        activatedAt: null,
-        known: false,
-      },
-    ]);
+    expect(body.rows).toHaveLength(2);
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      code: "SALE-1234",
+      known: true,
+      status: "connected",
+      indicator: "green",
+      reason: null,
+      planName: "1 Day Unlimited",
+      phone: "+2348012345678",
+      uptime: "5m",
+      sessionTimeLeft: "23h",
+      sessionBytes: 7_000_000,
+    });
+    expect((body.rows as Record<string, unknown>[])[1]).toMatchObject({
+      code: "OLD-999",
+      status: "disconnected",
+      indicator: "black",
+      reason: null,
+      uptime: null,
+    });
+  });
+
+  it("marks a session yellow when under an hour is left", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [
+      sampleSession({ bytesIn: 5_000_000, sessionTimeLeft: "42m" }),
+    ];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher()]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      status: "connected",
+      indicator: "yellow",
+      reason: "Expires in 42 min",
+    });
+  });
+
+  it("marks trial-profile vouchers yellow", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [
+      sampleSession({ bytesIn: 5_000_000, sessionTimeLeft: "4m" }),
+    ];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher({ profile: "trial-5m" })]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      indicator: "yellow",
+      reason: "Free trial",
+    });
+  });
+
+  it("marks a long session with barely any traffic red", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [
+      sampleSession({ uptime: "6m", sessionTimeLeft: "20h" }),
+    ];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher()]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      indicator: "red",
+      reason: "Connected but barely moving data",
+    });
+  });
+
+  it("marks everyone red when the WAN heartbeat fails", async () => {
+    const fake = createFakeHotspot();
+    fake.state.wan = false;
+    fake.state.active = [
+      sampleSession({ bytesIn: 5_000_000, sessionTimeLeft: "23h" }),
+    ];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher()]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect(body.wanReachable).toBe(false);
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      status: "connected",
+      indicator: "red",
+      reason: "Connected but the internet is down",
+    });
+  });
+
+  it("appends foreign hotspot users while they are connected", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [
+      sampleSession({ bytesIn: 5_000_000, sessionTimeLeft: "23h" }),
+      sampleSession({ id: "*2", user: "WALK-IN", bytesIn: 5_000_000 }),
+    ];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher()]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect(body.connected).toBe(2);
+    expect((body.rows as Record<string, unknown>[])[1]).toMatchObject({
+      code: "WALK-IN",
+      known: false,
+      status: "connected",
+      planName: null,
+      phone: null,
+    });
+  });
+
+  it("degrades to an all-black board when the router is unreachable", async () => {
+    const fake = createFakeHotspot();
+    fake.state.fail = new RouterOsUnavailableError("timeout");
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher()]),
+    });
+
+    const res = await app.request("/sessions");
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.routerReachable).toBe(false);
+    expect(body.wanReachable).toBe(null);
+    expect(body.connected).toBe(0);
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      status: "disconnected",
+      indicator: "black",
+    });
+  });
+
+  it("degrades the same way when no router is configured", async () => {
+    const app = build({
+      hotspot: undefined,
+      repo: boardRepo([activatedVoucher()]),
+    });
+
+    const res = await app.request("/sessions");
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.routerReachable).toBe(false);
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      indicator: "black",
+    });
+  });
+
+  it("pages the board by limit and offset", async () => {
+    const fake = createFakeHotspot();
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher()], { limit: 25, offset: 25 }),
+    });
+
+    const res = await app.request("/sessions?limit=25&offset=25");
+    expect(res.status).toBe(200);
   });
 
   it("kicks a session by username and reports how many went", async () => {

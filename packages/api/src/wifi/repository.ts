@@ -56,6 +56,20 @@ export interface ListVouchersParams {
   offset: number;
 }
 
+export interface ListActivatedVouchersParams {
+  limit: number;
+  offset: number;
+}
+
+/**
+ * A voucher that has connected at least once, with its order's contact info
+ * riding along — one row of the attendance board.
+ */
+export type ActivatedVoucherRow = WifiVoucherRow & {
+  phone: string | null;
+  amountKobo: number | null;
+};
+
 export interface CreatePlanInput {
   id: string;
   name: string;
@@ -161,6 +175,10 @@ export interface VoucherUsage {
 export interface WifiConsoleRepository {
   listOrders: (params: ListOrdersParams) => Promise<Page<WifiOrderRow>>;
   listVouchers: (params: ListVouchersParams) => Promise<Page<WifiVoucherRow>>;
+  /** Vouchers that have connected at least once — the attendance board. */
+  listActivatedVouchers: (
+    params: ListActivatedVouchersParams,
+  ) => Promise<Page<ActivatedVoucherRow>>;
   /** Customers rolled up from orders: one row per phone number. */
   customerSummaries: (params: {
     limit: number;
@@ -425,6 +443,38 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
       db.select({ total: count() }).from(wifiVoucher).where(where),
     ]);
     return { rows, total: Number(total?.total ?? 0) };
+  },
+
+  /**
+   * The attendance board: every voucher whose code has been live at least
+   * once, newest activation first, with the owning order's phone and amount.
+   * Counter sales have no order, hence the nullables.
+   */
+  listActivatedVouchers: async ({ limit, offset }) => {
+    const hasConnected = isNotNull(wifiVoucher.activatedAt);
+    const [rows, [total]] = await Promise.all([
+      db
+        .select({
+          voucher: wifiVoucher,
+          phone: wifiOrder.phone,
+          amountKobo: wifiOrder.amountKobo,
+        })
+        .from(wifiVoucher)
+        .leftJoin(wifiOrder, eq(wifiVoucher.orderId, wifiOrder.id))
+        .where(hasConnected)
+        .orderBy(desc(wifiVoucher.activatedAt))
+        .limit(limit)
+        .offset(offset),
+      db.select({ total: count() }).from(wifiVoucher).where(hasConnected),
+    ]);
+    return {
+      rows: rows.map((row) => ({
+        ...row.voucher,
+        phone: row.phone ?? null,
+        amountKobo: row.amountKobo ?? null,
+      })),
+      total: Number(total?.total ?? 0),
+    };
   },
 
   listBatches: (limit) =>

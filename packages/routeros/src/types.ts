@@ -42,6 +42,8 @@ export interface HotspotActiveSession {
   address?: string;
   macAddress?: string;
   uptime?: string;
+  /** Time until the profile's session-timeout ends the session, e.g. `23h59m`. */
+  sessionTimeLeft?: string;
   bytesIn?: number;
   bytesOut?: number;
 }

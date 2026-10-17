@@ -3,16 +3,18 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
 
-import type { HotspotService } from "@turbo/routeros";
+import type { HotspotActiveSession, HotspotService } from "@turbo/routeros";
 import { isRouterOsUnavailable } from "@turbo/routeros";
 import {
   findPlan,
   InvalidBatchQuantityError,
   MAX_BATCH_QUANTITY,
+  parseRosDurationMs,
   toHotspotUserInput,
 } from "@turbo/wifi";
 
 import type { AppContext, AuthWithApi, Db } from "../context";
+import type { ActivatedVoucherRow } from "../wifi/repository";
 import { adminMiddleware } from "../middleware/auth";
 import { contextMiddleware } from "../middleware/context";
 import { secureHeadersMiddleware } from "../middleware/security";
@@ -40,6 +42,63 @@ const defaultBatchLabel = (at: Date) =>
   `${at.toISOString().slice(0, 10)} ${at.toISOString().slice(11, 16)} UTC`;
 
 const activateSchema = z.object({ planId: z.string().min(1) });
+
+// --- attendance board indicators ---------------------------------------------
+
+/** Yellow once less than this is left on the voucher's session. */
+const EXPIRING_SOON_MS = 60 * 60_000;
+/** Red once a session has been up this long … */
+const STALLED_UPTIME_MS = 5 * 60_000;
+/** … and moved less than this much data. */
+const STALLED_BYTES = 1_000_000;
+/** The router's free-trial profile; its sessions are always short-lived. */
+const TRIAL_PROFILE = "trial-5m";
+
+export type AttendanceIndicator = "green" | "yellow" | "red" | "black";
+
+export interface AttendanceIndicatorResult {
+  indicator: AttendanceIndicator;
+  /** Operator-facing explanation for anything not green. */
+  reason: string | null;
+}
+
+/**
+ * Colour for a *connected* session. Red (no internet) outranks yellow
+ * (trial/expiring) outranks green — a stalled or WAN-less session is the
+ * thing staff should act on first.
+ */
+export const connectedIndicator = (
+  session: Pick<
+    HotspotActiveSession,
+    "uptime" | "sessionTimeLeft" | "bytesIn" | "bytesOut"
+  >,
+  profile: string | undefined,
+  wanReachable: boolean,
+): AttendanceIndicatorResult => {
+  if (!wanReachable) {
+    return { indicator: "red", reason: "Connected but the internet is down" };
+  }
+  const uptimeMs = parseRosDurationMs(session.uptime);
+  const bytes = (session.bytesIn ?? 0) + (session.bytesOut ?? 0);
+  if (
+    uptimeMs !== undefined &&
+    uptimeMs >= STALLED_UPTIME_MS &&
+    bytes < STALLED_BYTES
+  ) {
+    return { indicator: "red", reason: "Connected but barely moving data" };
+  }
+  if (profile === TRIAL_PROFILE) {
+    return { indicator: "yellow", reason: "Free trial" };
+  }
+  const leftMs = parseRosDurationMs(session.sessionTimeLeft);
+  if (leftMs !== undefined && leftMs <= EXPIRING_SOON_MS) {
+    return {
+      indicator: "yellow",
+      reason: `Expires in ${Math.max(1, Math.round(leftMs / 60_000))} min`,
+    };
+  }
+  return { indicator: "green", reason: null };
+};
 
 // Profile writes stay on the safe subset: no on-login script, no server-wide
 // knobs. `name` is the identity plans reference, so it is required on create.
@@ -194,45 +253,129 @@ export const createWifiRouterApp = ({
           return ctx.json({ ok: true });
         })(c);
       })
-      .get(
-        "/sessions",
-        withRouter(async (service, c) => {
-          const repo = createWifiConsoleRepository(c.get("db"));
-          const plans = resolvePlans();
-          const sessions = await service.listActive();
-          const vouchers = await repo.findVouchersByCodes(
-            sessions.map((session) => session.user),
-          );
-          const today = await repo.todaySummary();
+      .get("/sessions", async (c) => {
+        const repo = createWifiConsoleRepository(c.get("db"));
+        const plans = resolvePlans();
+        const limit = Math.min(
+          Math.max(Number(c.req.query("limit") ?? 50) || 50, 1),
+          200,
+        );
+        const offset = Math.max(Number(c.req.query("offset") ?? 0) || 0, 0);
 
-          return c.json({
-            sessions: sessions.map((session) => {
-              const voucher = vouchers.get(session.user);
-              const plan = voucher
-                ? plans.find(
-                    (candidate) => candidate.rosProfile === voucher.profile,
-                  )
-                : undefined;
-              return {
-                id: session.id,
-                user: session.user,
-                address: session.address ?? null,
-                macAddress: session.macAddress ?? null,
-                uptime: session.uptime ?? null,
-                bytesIn: session.bytesIn ?? 0,
-                bytesOut: session.bytesOut ?? 0,
-                planName: plan?.name ?? null,
-                phone: voucher?.phone ?? null,
-                amountKobo: voucher?.amountKobo ?? null,
-                activatedAt: voucher?.activatedAt?.toISOString() ?? null,
-                known: voucher !== undefined,
-              };
-            }),
-            live: sessions.length,
-            revenueKoboToday: today.revenueKobo,
+        const [page, today] = await Promise.all([
+          repo.listActivatedVouchers({ limit, offset }),
+          repo.todaySummary(),
+        ]);
+
+        // Board rows start disconnected (black); a reachable router overlays
+        // live state. This is also the entire response when the router is
+        // down — the board degrades instead of erroring.
+        const baseRow = (voucher: ActivatedVoucherRow) => ({
+          code: voucher.code,
+          known: true,
+          planName:
+            plans.find((p) => p.rosProfile === voucher.profile)?.name ?? null,
+          phone: voucher.phone,
+          amountKobo: voucher.amountKobo,
+          profile: voucher.profile,
+          activatedAt: voucher.activatedAt?.toISOString() ?? null,
+          lastSyncedAt: voucher.syncedAt?.toISOString() ?? null,
+          bytesUsed: voucher.bytesUsed,
+          status: "disconnected" as const,
+          indicator: "black" as const,
+          reason: null,
+          address: null,
+          macAddress: null,
+          uptime: null,
+          sessionTimeLeft: null,
+          sessionBytes: null,
+        });
+
+        const board = {
+          routerReachable: false,
+          wanReachable: null as boolean | null,
+          connected: 0,
+          revenueKoboToday: today.revenueKobo,
+          total: page.total,
+          rows: page.rows.map(baseRow),
+        };
+        if (!hotspot) return c.json(board);
+
+        let sessions: HotspotActiveSession[];
+        try {
+          sessions = await hotspot.listActive();
+        } catch (error) {
+          // Router down: keep the board, every row black. Anything else is a
+          // real error and still 500s.
+          if (isRouterOsUnavailable(error)) return c.json(board);
+          throw error;
+        }
+        // A failed heartbeat means "assume no internet", not "fail the board".
+        const wanReachable = await hotspot.wanReachable().catch(() => false);
+
+        const byCode = new Map(sessions.map((s) => [s.user, s]));
+        const rows = page.rows.map((voucher) => {
+          const session = byCode.get(voucher.code);
+          if (!session) return baseRow(voucher);
+          const { indicator, reason } = connectedIndicator(
+            session,
+            voucher.profile,
+            wanReachable,
+          );
+          return {
+            ...baseRow(voucher),
+            status: "connected" as const,
+            indicator,
+            reason,
+            address: session.address ?? null,
+            macAddress: session.macAddress ?? null,
+            uptime: session.uptime ?? null,
+            sessionTimeLeft: session.sessionTimeLeft ?? null,
+            sessionBytes: (session.bytesIn ?? 0) + (session.bytesOut ?? 0),
+          };
+        });
+
+        // Foreign hotspot users (Mikhmon-minted, manually created) have no
+        // voucher to anchor a row, so they appear only while connected —
+        // hiding them would make the board lie about the load on the router.
+        const known = new Set(page.rows.map((voucher) => voucher.code));
+        const foreign = sessions
+          .filter((session) => !known.has(session.user))
+          .map((session) => {
+            const { indicator, reason } = connectedIndicator(
+              session,
+              undefined,
+              wanReachable,
+            );
+            return {
+              code: session.user,
+              known: false,
+              planName: null,
+              phone: null,
+              amountKobo: null,
+              profile: null,
+              activatedAt: null,
+              lastSyncedAt: null,
+              bytesUsed: 0,
+              status: "connected" as const,
+              indicator,
+              reason,
+              address: session.address ?? null,
+              macAddress: session.macAddress ?? null,
+              uptime: session.uptime ?? null,
+              sessionTimeLeft: session.sessionTimeLeft ?? null,
+              sessionBytes: (session.bytesIn ?? 0) + (session.bytesOut ?? 0),
+            };
           });
-        }),
-      )
+
+        return c.json({
+          ...board,
+          routerReachable: true,
+          wanReachable,
+          connected: sessions.length,
+          rows: [...rows, ...foreign],
+        });
+      })
       .post(
         "/sessions/sync",
         withRouter(async (service, c) => {

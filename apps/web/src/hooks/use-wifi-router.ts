@@ -24,11 +24,11 @@ const routerApi = () => {
 
 type RouterApi = ReturnType<typeof createWifiRouterClient>;
 
-/** One live hotspot session, resolved back to its voucher and plan. */
+/** One row of the attendance board: a voucher and its connection state. */
 export type HotspotSession = InferResponseType<
   RouterApi["sessions"]["$get"],
   200
->["sessions"][number];
+>["rows"][number];
 
 /** A hotspot user profile as configured on the router. */
 export type HotspotProfile = InferResponseType<
@@ -99,16 +99,24 @@ export const useRouterHealth = () =>
   });
 
 /**
- * Who is online right now.
+ * The attendance board: every voucher that has ever connected, coloured by
+ * its current state. Rows survive disconnects (black) and a dead router (the
+ * whole board goes black) — the router only ever *adds* what it knows.
  *
- * Read straight off the router, so it is polled rather than cached: a session
- * that ended thirty seconds ago is not useful to an operator looking at it.
+ * Read straight off the join of Postgres and the router, so it is polled
+ * rather than cached: a state that changed thirty seconds ago is not useful
+ * to an operator looking at it.
  */
-export const useHotspotSessions = () =>
+export const useHotspotSessions = ({
+  limit = 50,
+  offset = 0,
+}: { limit?: number; offset?: number } = {}) =>
   useQuery({
-    queryKey: wifiRouterKeys.sessions(),
+    queryKey: [...wifiRouterKeys.sessions(), { limit, offset }],
     queryFn: async () => {
-      const res = await routerApi().sessions.$get();
+      const res = await routerApi().sessions.$get({
+        query: { limit: String(limit), offset: String(offset) },
+      });
       if (res.status === 401) return null;
       if (!res.ok) throw await errorFrom(res, "Failed to load live sessions");
       return res.json();

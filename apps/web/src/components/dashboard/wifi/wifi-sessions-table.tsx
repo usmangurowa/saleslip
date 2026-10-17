@@ -1,8 +1,10 @@
 "use client";
 
 import type { HotspotSession } from "@/hooks/use-wifi-router";
+import * as React from "react";
 import { QueryError } from "@/components/dashboard/query-error";
 import { TableCard } from "@/components/dashboard/table-card";
+import { TablePagination } from "@/components/dashboard/table-pagination";
 import { useHotspotSessions, useKickSession } from "@/hooks/use-wifi-router";
 import { UserIcon, WifiOffIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
@@ -19,9 +21,23 @@ import {
   TableHeader,
   TableRow,
 } from "@turbo/ui/components/table";
+import { cn } from "@turbo/ui/lib/utils";
 import { formatBytes, formatNaira } from "@turbo/wifi/format";
 
-const KickButton = ({ session }: { session: HotspotSession }) => {
+const PAGE_SIZE = 25;
+
+/** Dot colour per board state; `black` reads as "off" in both themes. */
+const indicatorDot: Record<HotspotSession["indicator"], string> = {
+  green: "bg-success",
+  yellow: "bg-warning",
+  red: "bg-destructive",
+  black: "bg-muted-foreground",
+};
+
+const statusLabel = (row: HotspotSession) =>
+  row.status === "connected" ? "Connected" : "Disconnected";
+
+const KickButton = ({ row }: { row: HotspotSession }) => {
   const kick = useKickSession();
 
   return (
@@ -31,11 +47,11 @@ const KickButton = ({ session }: { session: HotspotSession }) => {
       className="text-muted-foreground hover:text-destructive"
       disabled={kick.isPending}
       onClick={() =>
-        kick.mutate(session.user, {
+        kick.mutate(row.code, {
           onSuccess: ({ kicked }) =>
             kicked > 0
-              ? toast.success(`${session.user} disconnected`)
-              : toast.info(`${session.user} was already offline`),
+              ? toast.success(`${row.code} disconnected`)
+              : toast.info(`${row.code} was already offline`),
           onError: (error) => toast.error(error.message),
         })
       }
@@ -47,29 +63,28 @@ const KickButton = ({ session }: { session: HotspotSession }) => {
 };
 
 /**
- * Who is on the hotspot right now, straight from the router.
+ * The attendance board: everyone who has connected, live or not.
  *
- * Refreshed on an interval rather than cached: a row is only interesting while
- * the client is still connected. Sessions the console cannot trace back to a
- * voucher are shown too — they are someone else's hotspot users, and hiding
- * them would make the list quietly lie about the load on the router.
+ * Green is healthy, yellow is trial or under an hour left, red is connected
+ * without internet (WAN down, or barely any traffic), black is disconnected.
+ * A dead router degrades the whole board to black instead of erroring — the
+ * rows are anchored in Postgres, the router only overlays what it knows.
+ * Foreign hotspot users the console cannot trace to a voucher appear while
+ * they are connected; hiding them would understate the load on the router.
  */
 export const WifiSessionsTable = () => {
-  const { data, isPending, isError, error, refetch } = useHotspotSessions();
+  const [page, setPage] = React.useState(1);
+  const { data, isPending, isError, refetch } = useHotspotSessions({
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+  });
 
   if (isError) {
-    const routerDown = (error as Error & { status?: number }).status === 503;
-
     return (
       <TableCard title="Live sessions" padding="sm">
         <QueryError
           title="Could not load live sessions"
-          description={
-            routerDown
-              ? "The hotspot is offline. Sessions appear once it is reachable."
-              : undefined
-          }
-          showSignIn={!routerDown}
+          showSignIn
           framed={false}
           onRetry={() => void refetch()}
         />
@@ -77,22 +92,44 @@ export const WifiSessionsTable = () => {
     );
   }
 
-  const sessions = data?.sessions ?? [];
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const routerDown = data?.routerReachable === false;
 
   return (
     <TableCard
       title="Live sessions"
-      description="Clients connected to the hotspot right now. Updates every 15 seconds."
+      description={
+        routerDown
+          ? "Router unreachable — showing everyone as disconnected. The board recovers on its own."
+          : "Everyone who has connected, live or not. Green healthy · yellow trial or expiring · red connected without internet · black disconnected. Updates every 15 seconds."
+      }
       action={
-        <Badge variant="secondary" className="rounded-full font-normal">
-          {data?.live ?? 0} online
-        </Badge>
+        <div className="flex items-center gap-2">
+          {routerDown ? (
+            <Badge variant="warning" className="rounded-full font-normal">
+              Router offline
+            </Badge>
+          ) : null}
+          <Badge variant="secondary" className="rounded-full font-normal">
+            {data?.connected ?? 0} online
+          </Badge>
+        </div>
+      }
+      footer={
+        <TablePagination
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+        />
       }
     >
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead>Code</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Plan</TableHead>
             <TableHead>Customer</TableHead>
             <TableHead>Paid</TableHead>
@@ -104,39 +141,59 @@ export const WifiSessionsTable = () => {
         </TableHeader>
         <TableBody>
           {isPending ? (
-            Array.from({ length: 3 }, (_, index) => (
+            Array.from({ length: 5 }, (_, index) => (
               <TableRow key={index} className="hover:bg-transparent">
-                <TableCell colSpan={8}>
+                <TableCell colSpan={9}>
                   <Skeleton className="h-6 w-full" />
                 </TableCell>
               </TableRow>
             ))
-          ) : sessions.length === 0 ? (
+          ) : rows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={8} className="h-24 text-center">
+              <TableCell colSpan={9} className="h-24 text-center">
                 <span className="text-muted-foreground text-sm">
-                  Nobody is connected right now.
+                  Nobody has connected yet.
                 </span>
               </TableCell>
             </TableRow>
           ) : (
-            sessions.map((session) => (
-              <TableRow key={session.id}>
+            rows.map((row) => (
+              <TableRow key={row.code}>
                 <TableCell>
                   <span className="flex items-center gap-2 font-mono font-semibold tracking-wider">
                     <Icon
                       icon={UserIcon}
                       className="text-muted-foreground size-3.5"
                     />
-                    {session.user}
+                    {row.code}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="flex items-center gap-2 text-sm">
+                    <span
+                      role="img"
+                      aria-label={statusLabel(row)}
+                      className={cn(
+                        "size-2 shrink-0 rounded-full",
+                        indicatorDot[row.indicator],
+                      )}
+                    />
+                    <span className="whitespace-nowrap">
+                      {statusLabel(row)}
+                    </span>
+                    {row.reason ? (
+                      <span className="text-muted-foreground text-xs">
+                        {row.reason}
+                      </span>
+                    ) : null}
                   </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {session.planName ?? "—"}
+                  {row.planName ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {session.phone ??
-                    (session.known ? (
+                  {row.phone ??
+                    (row.known ? (
                       "Counter sale"
                     ) : (
                       <span className="text-muted-foreground/70">
@@ -145,26 +202,30 @@ export const WifiSessionsTable = () => {
                     ))}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {session.amountKobo != null
-                    ? formatNaira(session.amountKobo)
-                    : "—"}
+                  {row.amountKobo != null ? formatNaira(row.amountKobo) : "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">
-                  {session.address ?? "—"}
-                  {session.macAddress ? (
+                  {row.address ?? "—"}
+                  {row.macAddress ? (
                     <span className="text-muted-foreground/70 block">
-                      {session.macAddress}
+                      {row.macAddress}
                     </span>
                   ) : null}
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
-                  {session.uptime ?? "—"}
+                  {row.uptime ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
-                  {formatBytes(session.bytesIn + session.bytesOut)}
+                  {row.status === "connected"
+                    ? formatBytes(row.sessionBytes)
+                    : formatBytes(row.bytesUsed)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <KickButton session={session} />
+                  {row.status === "connected" ? (
+                    <KickButton row={row} />
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
               </TableRow>
             ))

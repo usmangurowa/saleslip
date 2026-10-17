@@ -5,7 +5,13 @@ export {
   mintVoucherBatch,
 } from "./batch";
 export type { MintedVoucher, MintVoucherBatchOptions } from "./batch";
-export { formatBytes, formatData, formatExpiry, formatNaira } from "./format";
+export {
+  formatBytes,
+  formatData,
+  formatExpiry,
+  formatNaira,
+  parseRosDurationMs,
+} from "./format";
 export {
   assertTransition,
   canTransition,

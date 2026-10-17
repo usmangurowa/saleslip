@@ -80,6 +80,7 @@ export const parseActiveSession = (row: RouterOsRow): HotspotActiveSession => ({
   address: row.address,
   macAddress: row["mac-address"],
   uptime: row.uptime,
+  sessionTimeLeft: row["session-time-left"],
   bytesIn: toInt(row["bytes-in"]),
   bytesOut: toInt(row["bytes-out"]),
 });
@@ -115,6 +116,12 @@ export interface HotspotService {
   /** Drops every active session for the given username. */
   kick: (username: string) => Promise<number>;
   systemResource: () => Promise<SystemResource>;
+  /**
+   * Whether the router itself can reach the internet (one ICMP probe to
+   * 1.1.1.1). Distinguishes "hotspot up, Starlink down" — every client
+   * connected but nobody browsing — from a router the server cannot reach.
+   */
+  wanReachable: () => Promise<boolean>;
 }
 
 export const createHotspotService = (
@@ -213,5 +220,21 @@ export const createHotspotService = (
   async systemResource() {
     const rows = await transport.write("/system/resource/print");
     return parseSystemResource(rows[0] ?? {});
+  },
+
+  /**
+   * `/ping` answers one `!re` row per attempt: a reply carries the target
+   * `host` (and no `status`), a loss carries `status` (`timeout`,
+   * `unreachable`). A single reply is enough — this is a heartbeat, not a
+   * measurement.
+   */
+  async wanReachable() {
+    const rows = await transport.write("/ping", [
+      "=address=1.1.1.1",
+      "=count=1",
+    ]);
+    return rows.some(
+      (row) => row.host !== undefined && row.status === undefined,
+    );
   },
 });

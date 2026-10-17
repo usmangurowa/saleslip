@@ -200,6 +200,10 @@ export const createFakeHotspot = () => {
       await guard();
       return sampleResource;
     },
+    wanReachable: async () => {
+      await guard();
+      return true;
+    },
   };
 
   return { hotspot, users, calls, state };
