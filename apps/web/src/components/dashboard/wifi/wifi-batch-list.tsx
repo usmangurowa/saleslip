@@ -1,10 +1,24 @@
 "use client";
 
+import type { WifiBatch } from "@/hooks/use-wifi";
 import Link from "next/link";
 import { TableCard } from "@/components/dashboard/table-card";
 import { useWifiBatches } from "@/hooks/use-wifi";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { useDeleteVoucherBatch } from "@/hooks/use-wifi-router";
+import { ArrowRight01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@turbo/ui/components/alert-dialog";
 import { Button } from "@turbo/ui/components/button";
 import { Icon } from "@turbo/ui/components/icon";
 import { Skeleton } from "@turbo/ui/components/skeleton";
@@ -24,6 +38,52 @@ const formatWhen = (value: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
+
+const DeleteBatchButton = ({ batch }: { batch: WifiBatch }) => {
+  const deleteBatch = useDeleteVoucherBatch();
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-destructive"
+          disabled={deleteBatch.isPending}
+        >
+          <Icon icon={Delete02Icon} />
+          Delete
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete “{batch.label}”?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The batch and every voucher still in it are deleted — live codes are
+            removed from the router first, all-or-nothing. This cannot be
+            undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep it</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() =>
+              deleteBatch.mutate(batch.id, {
+                onSuccess: (body) =>
+                  toast.success(
+                    `${body.label} deleted — ${body.vouchers} ${body.vouchers === 1 ? "voucher" : "vouchers"} removed`,
+                  ),
+                onError: (error) => toast.error(error.message),
+              })
+            }
+          >
+            Delete batch
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
 
 /**
  * Recent counter minting runs.
@@ -87,12 +147,17 @@ export const WifiBatchList = () => {
                   {formatWhen(batch.createdAt)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/dashboard/wifi/vouchers?batchId=${batch.id}`}>
-                      View vouchers
-                      <Icon icon={ArrowRight01Icon} className="size-3.5" />
-                    </Link>
-                  </Button>
+                  <span className="inline-flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link
+                        href={`/dashboard/wifi/vouchers?batchId=${batch.id}`}
+                      >
+                        View vouchers
+                        <Icon icon={ArrowRight01Icon} className="size-3.5" />
+                      </Link>
+                    </Button>
+                    <DeleteBatchButton batch={batch} />
+                  </span>
                 </TableCell>
               </TableRow>
             ))

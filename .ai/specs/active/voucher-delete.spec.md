@@ -14,6 +14,16 @@ vouchers table gained checkbox selection (page select-all, cleared on page and
 filter changes) and a confirmed "Delete N selected" action whose toast reports
 the summary.
 
+## Batch deletion (added 2026-10-17)
+
+`DELETE /api/wifi-router/vouchers/batch/:id` removes a minting run and every
+voucher still in it. All-or-nothing — the inverse of minting: every live code
+is removed from the router *before* any row disappears, and any router failure
+aborts with **nothing** deleted (revoked-only batches delete with no router
+call). Batch vouchers carry no order (counter channel), so the
+awaiting-fulfilment guard cannot apply. The Batches tab gains a confirmed
+Delete action reporting how many vouchers went.
+
 ## UI simplification (same day)
 
 The separate Revoke button is gone — the single state-aware Delete covers both

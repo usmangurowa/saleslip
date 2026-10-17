@@ -666,6 +666,46 @@ export const createWifiRouterApp = ({
           });
         },
       )
+      .delete("/vouchers/batch/:id", async (c) => {
+        const repo = createWifiConsoleRepository(c.get("db"));
+        const batch = await repo.findVoucherBatch(c.req.param("id"));
+        if (!batch) return c.json({ error: "Batch not found" }, 404);
+        const vouchers = await repo.listVouchersByBatch(batch.id);
+
+        // All-or-nothing, the inverse of minting: every live code is removed
+        // from the router *before* any row disappears, and any router failure
+        // aborts with nothing deleted. Batch vouchers carry no order (counter
+        // channel), so the awaiting-fulfilment guard cannot apply here.
+        let revokedRouterUsers = 0;
+        for (const voucher of vouchers) {
+          if (voucher.status !== "active") continue;
+          if (!hotspot) {
+            return c.json({ error: "Router unreachable" }, 503);
+          }
+          try {
+            const user = await hotspot.findUser(voucher.code);
+            if (user) {
+              await hotspot.removeUser(user.id);
+              revokedRouterUsers += 1;
+            }
+          } catch (error) {
+            if (isRouterOsUnavailable(error)) {
+              return c.json({ error: "Router unreachable" }, 503);
+            }
+            throw error;
+          }
+        }
+
+        const deletedVouchers = await repo.deleteVouchersByBatch(batch.id);
+        const deleted = await repo.deleteVoucherBatch(batch.id);
+        if (!deleted) return c.json({ error: "Batch not found" }, 404);
+        return c.json({
+          deleted: true,
+          label: batch.label,
+          vouchers: deletedVouchers,
+          revokedRouterUsers,
+        });
+      })
   );
 };
 

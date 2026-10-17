@@ -1207,3 +1207,170 @@ describe("voucher bulk deletion", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("voucher batch deletion", () => {
+  const activatedVoucherLike = (
+    overrides: Partial<repositoryModule.WifiVoucherRow> = {},
+  ) =>
+    ({
+      ...voucherRow({
+        rosId: "*1",
+        activatedAt: new Date("2025-01-15T09:00:00Z"),
+      }),
+      ...overrides,
+    }) satisfies repositoryModule.WifiVoucherRow;
+
+  const batchRow = (): repositoryModule.WifiVoucherBatchRow => ({
+    id: "batch-1",
+    label: "Counter sheet — 2025-01-15 08:00 UTC",
+    planId: "day-1",
+    profile: "Saleslip-1d-1",
+    quantity: 2,
+    createdBy: null,
+    createdAt: new Date("2025-01-15T08:00:00Z"),
+  });
+
+  const batchRepo = (
+    vouchers: repositoryModule.WifiVoucherRow[],
+    overrides: {
+      deleteVouchersByBatch?: () => Promise<number>;
+      deleteVoucherBatch?: () => Promise<
+        repositoryModule.WifiVoucherBatchRow | undefined
+      >;
+    } = {},
+  ) => ({
+    findVoucherBatch: () => Promise.resolve(batchRow()),
+    listVouchersByBatch: () => Promise.resolve(vouchers),
+    deleteVouchersByBatch:
+      overrides.deleteVouchersByBatch ??
+      (() => Promise.resolve(vouchers.length)),
+    deleteVoucherBatch:
+      overrides.deleteVoucherBatch ?? (() => Promise.resolve(batchRow())),
+  });
+
+  it("deletes a revoked-only batch without touching the router", async () => {
+    const fake = createFakeHotspot();
+    fake.calls.length = 0;
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: batchRepo([
+        activatedVoucherLike({ status: "revoked" }),
+        activatedVoucherLike({ id: "voucher-2", status: "revoked" }),
+      ]),
+    });
+
+    const res = await app.request("/vouchers/batch/batch-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+    expect(await json(res)).toEqual({
+      deleted: true,
+      label: "Counter sheet — 2025-01-15 08:00 UTC",
+      vouchers: 2,
+      revokedRouterUsers: 0,
+    });
+    expect(fake.calls).toEqual([]);
+  });
+
+  it("removes every live code from the router before deleting the batch", async () => {
+    const fake = createFakeHotspot();
+    await fake.hotspot.createHotspotUser({
+      name: "LIVE-1",
+      password: "LIVE-1",
+      profile: "Saleslip-1d-1",
+    });
+    await fake.hotspot.createHotspotUser({
+      name: "LIVE-2",
+      password: "LIVE-2",
+      profile: "Saleslip-1d-1",
+    });
+    fake.calls.length = 0;
+    let batchDeleted = false;
+    let rowsDeleted = -1;
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: batchRepo(
+        [
+          activatedVoucherLike({ id: "v1", code: "LIVE-1" }),
+          activatedVoucherLike({ id: "v2", code: "LIVE-2" }),
+          activatedVoucherLike({ id: "v3", status: "revoked" }),
+        ],
+        {
+          deleteVouchersByBatch: () => {
+            rowsDeleted = fake.users.size;
+            return Promise.resolve(3);
+          },
+          deleteVoucherBatch: () => {
+            batchDeleted = true;
+            return Promise.resolve(batchRow());
+          },
+        },
+      ),
+    });
+
+    const res = await app.request("/vouchers/batch/batch-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body).toMatchObject({
+      deleted: true,
+      vouchers: 3,
+      revokedRouterUsers: 2,
+    });
+    // The router users were gone before any row was deleted.
+    expect(rowsDeleted).toBe(0);
+    expect(batchDeleted).toBe(true);
+    expect(fake.calls).toEqual([
+      "find:LIVE-1",
+      "remove:*1",
+      "find:LIVE-2",
+      "remove:*2",
+    ]);
+  });
+
+  it("aborts with nothing deleted when the router is down and codes are live", async () => {
+    const fake = createFakeHotspot();
+    fake.state.fail = new RouterOsUnavailableError("timeout");
+    let batchDeleted = false;
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: batchRepo([activatedVoucherLike()], {
+        deleteVoucherBatch: () => {
+          batchDeleted = true;
+          return Promise.resolve(batchRow());
+        },
+      }),
+    });
+
+    const res = await app.request("/vouchers/batch/batch-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(503);
+    expect(batchDeleted).toBe(false);
+  });
+
+  it("refuses live codes when no router is configured", async () => {
+    const app = build({
+      hotspot: undefined,
+      repo: batchRepo([activatedVoucherLike()]),
+    });
+
+    const res = await app.request("/vouchers/batch/batch-1", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(503);
+  });
+
+  it("404s an unknown batch", async () => {
+    const app = build({
+      hotspot: createFakeHotspot().hotspot,
+      repo: { findVoucherBatch: () => Promise.resolve(undefined) },
+    });
+
+    const res = await app.request("/vouchers/batch/nope", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(404);
+  });
+});

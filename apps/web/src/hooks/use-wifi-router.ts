@@ -327,6 +327,37 @@ export const useBulkDeleteVoucher = () => {
 };
 
 /**
+ * Delete a whole minting batch, vouchers and all.
+ *
+ * All-or-nothing, the inverse of minting: every live code is removed from
+ * the router first, and a router outage aborts with nothing deleted.
+ */
+export const useDeleteVoucherBatch = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      id: string,
+    ): Promise<{
+      deleted: true;
+      label: string;
+      vouchers: number;
+      revokedRouterUsers: number;
+    }> => {
+      const res = await routerApi().vouchers.batch[":id"].$delete({
+        param: { id },
+      });
+      if (!res.ok) throw await errorFrom(res, "Failed to delete batch");
+      return res.json();
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: wifiRouterKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["wifi"] });
+    },
+  });
+};
+
+/**
  * Delete a voucher record, state-aware.
  *
  * The server settles the router side first: a live code is removed from the

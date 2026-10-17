@@ -194,6 +194,13 @@ export interface WifiConsoleRepository {
     input: UpdatePlanInput,
   ) => Promise<WifiPlan | undefined>;
   listBatches: (limit: number) => Promise<WifiVoucherBatchRow[]>;
+  findVoucherBatch: (id: string) => Promise<WifiVoucherBatchRow | undefined>;
+  /** Every remaining voucher row of a batch (batches cap at MAX_BATCH_QUANTITY). */
+  listVouchersByBatch: (batchId: string) => Promise<WifiVoucherRow[]>;
+  /** Deletes all of a batch's voucher rows; returns how many went. */
+  deleteVouchersByBatch: (batchId: string) => Promise<number>;
+  /** Deletes the batch row. Callers must have settled the vouchers first. */
+  deleteVoucherBatch: (id: string) => Promise<WifiVoucherBatchRow | undefined>;
   countOrdersByStatus: () => Promise<Record<WifiOrderStatus, number>>;
   countVouchersByStatus: () => Promise<Record<WifiVoucherStatus, number>>;
   voucherGenerationSummary: (now?: Date) => Promise<VoucherGenerationSummary>;
@@ -492,6 +499,34 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
       .from(wifiVoucherBatch)
       .orderBy(desc(wifiVoucherBatch.createdAt))
       .limit(limit),
+
+  findVoucherBatch: async (id) => {
+    const [row] = await db
+      .select()
+      .from(wifiVoucherBatch)
+      .where(eq(wifiVoucherBatch.id, id))
+      .limit(1);
+    return row;
+  },
+
+  listVouchersByBatch: (batchId) =>
+    db.select().from(wifiVoucher).where(eq(wifiVoucher.batchId, batchId)),
+
+  deleteVouchersByBatch: async (batchId) => {
+    const rows = await db
+      .delete(wifiVoucher)
+      .where(eq(wifiVoucher.batchId, batchId))
+      .returning({ id: wifiVoucher.id });
+    return rows.length;
+  },
+
+  deleteVoucherBatch: async (id) => {
+    const [row] = await db
+      .delete(wifiVoucherBatch)
+      .where(eq(wifiVoucherBatch.id, id))
+      .returning();
+    return row;
+  },
 
   countOrdersByStatus: async () => {
     const rows = await db
