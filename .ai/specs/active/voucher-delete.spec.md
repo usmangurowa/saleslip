@@ -2,6 +2,25 @@
 
 State: implemented
 
+## Bulk deletion (added 2026-10-17)
+
+`POST /api/wifi-router/vouchers/bulk-delete` `{ ids: string[] }` (1–200) settles
+every voucher independently through the same rulebook (`settleVoucherDeletion`,
+shared with the single route so they cannot drift) and reports per-item
+outcomes: `deleted` (with `revokedRouterUser`), `blocked-awaiting-fulfilment`,
+`skipped-router-unreachable`, `not-found`. Partial success by design — a dead
+router skips active vouchers but still deletes revoked history. The dashboard
+vouchers table gained checkbox selection (page select-all, cleared on page and
+filter changes) and a confirmed "Delete N selected" action whose toast reports
+the summary.
+
+## UI simplification (same day)
+
+The separate Revoke button is gone — the single state-aware Delete covers both
+cases (live → revoke+delete, dead → delete-only), so the Action column carries
+one button. The `/revoke` endpoint remains part of the API surface for
+programmatic use.
+
 ## Problem
 
 The console can mint and revoke vouchers but never remove rows: the

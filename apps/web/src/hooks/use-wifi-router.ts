@@ -287,20 +287,36 @@ export const useActivateVoucher = () => {
 };
 
 /**
- * Revoke a voucher and remove its hotspot user.
+ * Delete many vouchers at once.
  *
- * The router call happens first, so a router outage leaves the code active and
- * surfaces an error rather than reporting a revoke that did not happen.
+ * Every voucher settles independently with the same rulebook as the single
+ * delete — live codes are removed from the router first, in-flight orders
+ * refuse, history deletes — and the summary reports exactly what happened.
  */
-export const useRevokeVoucher = () => {
+export const useBulkDeleteVoucher = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await routerApi().vouchers[":id"].revoke.$post({
-        param: { id },
+    mutationFn: async (
+      ids: string[],
+    ): Promise<{
+      summary: {
+        deleted: number;
+        revokedRouterUsers: number;
+        blocked: number;
+        skippedRouter: number;
+        notFound: number;
+      };
+      results: {
+        id: string;
+        code: string | null;
+        outcome: string;
+      }[];
+    }> => {
+      const res = await routerApi().vouchers["bulk-delete"].$post({
+        json: { ids },
       });
-      if (!res.ok) throw await errorFrom(res, "Failed to revoke voucher");
+      if (!res.ok) throw await errorFrom(res, "Failed to delete vouchers");
       return res.json();
     },
     onSuccess: () => {

@@ -6,7 +6,10 @@ import { QueryError } from "@/components/dashboard/query-error";
 import { TableCard } from "@/components/dashboard/table-card";
 import { TablePagination } from "@/components/dashboard/table-pagination";
 import { useWifiVouchers } from "@/hooks/use-wifi";
-import { useDeleteVoucher, useRevokeVoucher } from "@/hooks/use-wifi-router";
+import {
+  useBulkDeleteVoucher,
+  useDeleteVoucher,
+} from "@/hooks/use-wifi-router";
 import { Delete02Icon, Ticket01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
@@ -23,6 +26,7 @@ import {
 } from "@turbo/ui/components/alert-dialog";
 import { Badge } from "@turbo/ui/components/badge";
 import { Button } from "@turbo/ui/components/button";
+import { Checkbox } from "@turbo/ui/components/checkbox";
 import { Icon } from "@turbo/ui/components/icon";
 import {
   Select,
@@ -61,49 +65,11 @@ const formatWhen = (value: string) =>
     minute: "2-digit",
   });
 
-const RevokeButton = ({ voucher }: { voucher: WifiVoucher }) => {
-  const revokeVoucher = useRevokeVoucher();
-
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-destructive"
-          disabled={revokeVoucher.isPending}
-        >
-          <Icon icon={Delete02Icon} />
-          Revoke
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Revoke {voucher.code}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {voucher.activatedAt
-              ? "The code is removed from the router, so it stops working and disconnects anyone using it."
-              : "The code is marked revoked. It was never live on the router, so nobody is disconnected."}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep it</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() =>
-              revokeVoucher.mutate(voucher.id, {
-                onSuccess: () => toast.success(`${voucher.code} revoked`),
-                onError: (error) => toast.error(error.message),
-              })
-            }
-          >
-            Revoke
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-};
-
+/**
+ * The single destructive action. Live codes are removed from the router
+ * first (fail-closed); dead codes are history-only. One button, the server
+ * picks the right settlement per voucher.
+ */
 const DeleteButton = ({ voucher }: { voucher: WifiVoucher }) => {
   const deleteVoucher = useDeleteVoucher();
 
@@ -158,7 +124,10 @@ export interface WifiVouchersTableProps {
  * Issued voucher codes across every channel, with a status filter.
  *
  * Codes are the unit of support here — a customer reads one out and the
- * operator needs to find it, see where it came from, and disable it.
+ * operator needs to find it, see where it came from, and remove it. Rows can
+ * be selected for bulk deletion; each settles independently (live codes are
+ * revoked from the router first, in-flight orders refuse) and the toast
+ * reports exactly what happened.
  */
 export const WifiVouchersTable = ({
   batchId,
@@ -167,6 +136,7 @@ export const WifiVouchersTable = ({
 }: WifiVouchersTableProps) => {
   const [status, setStatus] = React.useState<VoucherStatus | "all">("all");
   const [page, setPage] = React.useState(1);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   const { data, isPending, isError, refetch } = useWifiVouchers({
     ...(status === "all" ? {} : { status }),
@@ -189,6 +159,29 @@ export const WifiVouchersTable = ({
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageIds = rows.map((voucher) => voucher.id);
+  const allOnPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const selectedRows = rows.filter((voucher) => selected.has(voucher.id));
+  const selectedLive = selectedRows.filter(
+    (voucher) => voucher.status === "active",
+  ).length;
+
+  const clearSelection = () => setSelected(new Set());
+  const toggleRow = (id: string) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const togglePage = () =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (allOnPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
 
   return (
     <TableCard
@@ -201,6 +194,7 @@ export const WifiVouchersTable = ({
             onValueChange={(value) => {
               setStatus(value as VoucherStatus | "all");
               setPage(1);
+              clearSelection();
             }}
           >
             <SelectTrigger size="sm" aria-label="Filter vouchers by status">
@@ -215,19 +209,38 @@ export const WifiVouchersTable = ({
           <Badge variant="secondary" className="rounded-full font-normal">
             {total}
           </Badge>
+          {selected.size > 0 ? (
+            <BulkDeleteBar
+              count={selected.size}
+              live={selectedLive}
+              onDone={clearSelection}
+              ids={[...selected]}
+            />
+          ) : null}
         </div>
       }
       footer={
         <TablePagination
           page={page}
           pageCount={pageCount}
-          onPageChange={setPage}
+          onPageChange={(next) => {
+            setPage(next);
+            clearSelection();
+          }}
         />
       }
     >
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            <TableHead className="w-10">
+              <Checkbox
+                aria-label="Select all vouchers on this page"
+                checked={allOnPageSelected}
+                onCheckedChange={togglePage}
+                disabled={rows.length === 0}
+              />
+            </TableHead>
             <TableHead>Code</TableHead>
             <TableHead>Profile</TableHead>
             <TableHead>Origin</TableHead>
@@ -241,14 +254,14 @@ export const WifiVouchersTable = ({
           {isPending ? (
             Array.from({ length: 5 }, (_, index) => (
               <TableRow key={index} className="hover:bg-transparent">
-                <TableCell colSpan={7}>
+                <TableCell colSpan={8}>
                   <Skeleton className="h-6 w-full" />
                 </TableCell>
               </TableRow>
             ))
           ) : rows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={7} className="h-24 text-center">
+              <TableCell colSpan={8} className="h-24 text-center">
                 <span className="text-muted-foreground text-sm">
                   No vouchers here yet.
                 </span>
@@ -257,6 +270,13 @@ export const WifiVouchersTable = ({
           ) : (
             rows.map((voucher) => (
               <TableRow key={voucher.id}>
+                <TableCell>
+                  <Checkbox
+                    aria-label={`Select ${voucher.code}`}
+                    checked={selected.has(voucher.id)}
+                    onCheckedChange={() => toggleRow(voucher.id)}
+                  />
+                </TableCell>
                 <TableCell>
                   <span className="flex items-center gap-2 font-mono font-semibold tracking-wider">
                     <Icon
@@ -302,14 +322,7 @@ export const WifiVouchersTable = ({
                   {formatWhen(voucher.createdAt)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <span className="inline-flex items-center justify-end gap-1">
-                    {voucher.status === "active" && (
-                      <RevokeButton voucher={voucher} />
-                    )}
-                    {/* Revoked rows keep a Delete: their record is history the
-                        operator may still want to clean up. */}
-                    <DeleteButton voucher={voucher} />
-                  </span>
+                  <DeleteButton voucher={voucher} />
                 </TableCell>
               </TableRow>
             ))
@@ -317,5 +330,72 @@ export const WifiVouchersTable = ({
         </TableBody>
       </Table>
     </TableCard>
+  );
+};
+
+/** Appears in the card action row once rows are selected. */
+const BulkDeleteBar = ({
+  ids,
+  count,
+  live,
+  onDone,
+}: {
+  ids: string[];
+  count: number;
+  live: number;
+  onDone: () => void;
+}) => {
+  const bulkDelete = useBulkDeleteVoucher();
+
+  const summaryToast = (summary: {
+    deleted: number;
+    blocked: number;
+    skippedRouter: number;
+    notFound: number;
+  }) => {
+    const parts = [
+      `${summary.deleted} deleted`,
+      summary.blocked > 0 ? `${summary.blocked} awaiting fulfilment` : null,
+      summary.skippedRouter > 0 ? `${summary.skippedRouter} skipped` : null,
+      summary.notFound > 0 ? `${summary.notFound} not found` : null,
+    ].filter((part): part is string => part !== null);
+    toast.success(parts.join(" · "));
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="destructive" size="sm" disabled={bulkDelete.isPending}>
+          <Icon icon={Delete02Icon} />
+          Delete {count} selected
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {count} vouchers?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {live > 0
+              ? `${live} live ${live === 1 ? "code is" : "codes are"} removed from the router first, then every record is deleted. Codes still awaiting fulfilment are skipped. This cannot be undone.`
+              : "Every selected code is already dead — their records are deleted. This cannot be undone."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep them</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() =>
+              bulkDelete.mutate(ids, {
+                onSuccess: (body) => {
+                  summaryToast(body.summary);
+                  onDone();
+                },
+                onError: (error) => toast.error(error.message),
+              })
+            }
+          >
+            Delete {count}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };

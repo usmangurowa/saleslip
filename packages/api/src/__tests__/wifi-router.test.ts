@@ -1056,3 +1056,154 @@ describe("voucher deletion", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("voucher bulk deletion", () => {
+  const activatedVoucherLike = (
+    overrides: Partial<repositoryModule.ActivatedVoucherRow> = {},
+  ) =>
+    ({
+      ...voucherRow({
+        rosId: "*1",
+        activatedAt: new Date("2025-01-15T09:00:00Z"),
+      }),
+      phone: "+2348012345678",
+      amountKobo: 300_000,
+      batchLabel: null,
+      ...overrides,
+    }) satisfies repositoryModule.ActivatedVoucherRow;
+
+  it("settles each voucher independently and reports per-item outcomes", async () => {
+    const fake = createFakeHotspot();
+    await fake.hotspot.createHotspotUser({
+      name: "LIVE-1",
+      password: "LIVE-1",
+      profile: "Saleslip-1d-1",
+    });
+    fake.calls.length = 0;
+
+    const rows = new Map<string, repositoryModule.ActivatedVoucherRow>([
+      [
+        "revoked-1",
+        activatedVoucherLike({ id: "revoked-1", status: "revoked" }),
+      ],
+      ["live-1", activatedVoucherLike({ id: "live-1", code: "LIVE-1" })],
+      [
+        "inflight-1",
+        activatedVoucherLike({ id: "inflight-1", orderId: "order-1" }),
+      ],
+    ]);
+    const deletedIds: string[] = [];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: {
+        findVoucherWithOrder: (id: string) => {
+          const row = rows.get(id);
+          return Promise.resolve(
+            row
+              ? {
+                  voucher: row,
+                  orderStatus: id === "inflight-1" ? "pending_router" : null,
+                }
+              : undefined,
+          );
+        },
+        deleteVoucher: (id: string) => {
+          deletedIds.push(id);
+          return Promise.resolve(rows.get(id));
+        },
+      },
+    });
+
+    const res = await app.request("/vouchers/bulk-delete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ids: ["revoked-1", "live-1", "inflight-1", "ghost-1"],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.summary).toEqual({
+      deleted: 2,
+      revokedRouterUsers: 1,
+      blocked: 1,
+      skippedRouter: 0,
+      notFound: 1,
+    });
+    expect(body.results).toEqual([
+      {
+        id: "revoked-1",
+        code: "SALE-1234",
+        outcome: "deleted",
+        revokedRouterUser: false,
+      },
+      {
+        id: "live-1",
+        code: "LIVE-1",
+        outcome: "deleted",
+        revokedRouterUser: true,
+      },
+      {
+        id: "inflight-1",
+        code: "SALE-1234",
+        outcome: "blocked-awaiting-fulfilment",
+      },
+      { id: "ghost-1", code: null, outcome: "not-found" },
+    ]);
+    expect(deletedIds).toEqual(["revoked-1", "live-1"]);
+    expect(fake.calls).toEqual(["find:LIVE-1", "remove:*1"]);
+  });
+
+  it("skips active vouchers but still deletes revoked ones when the router is down", async () => {
+    const fake = createFakeHotspot();
+    fake.state.fail = new RouterOsUnavailableError("timeout");
+    const rows = new Map<string, repositoryModule.ActivatedVoucherRow>([
+      [
+        "revoked-1",
+        activatedVoucherLike({ id: "revoked-1", status: "revoked" }),
+      ],
+      ["live-1", activatedVoucherLike({ id: "live-1" })],
+    ]);
+    const deletedIds: string[] = [];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: {
+        findVoucherWithOrder: (id: string) => {
+          const row = rows.get(id);
+          return Promise.resolve(
+            row ? { voucher: row, orderStatus: null } : undefined,
+          );
+        },
+        deleteVoucher: (id: string) => {
+          deletedIds.push(id);
+          return Promise.resolve(rows.get(id));
+        },
+      },
+    });
+
+    const res = await app.request("/vouchers/bulk-delete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ids: ["revoked-1", "live-1"] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.summary).toMatchObject({
+      deleted: 1,
+      skippedRouter: 1,
+    });
+    expect(deletedIds).toEqual(["revoked-1"]);
+  });
+
+  it("rejects more than 200 ids in one request", async () => {
+    const app = build({ hotspot: createFakeHotspot().hotspot });
+    const res = await app.request("/vouchers/bulk-delete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ids: Array.from({ length: 201 }, (_, i) => `v${i}`),
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
