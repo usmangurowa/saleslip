@@ -383,6 +383,7 @@ describe("attendance board", () => {
       }),
       phone: "+2348012345678",
       amountKobo: 300_000,
+      batchLabel: "Counter sheet — 2025-01-15 08:00 UTC",
       ...overrides,
     }) satisfies repositoryModule.ActivatedVoucherRow;
 
@@ -429,6 +430,8 @@ describe("attendance board", () => {
       reason: null,
       planName: "1 Day Unlimited",
       phone: "+2348012345678",
+      batchLabel: "Counter sheet — 2025-01-15 08:00 UTC",
+      channel: "manual",
       uptime: "5m",
       sessionTimeLeft: "23h",
       sessionBytes: 7_000_000,

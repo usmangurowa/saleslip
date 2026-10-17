@@ -26,6 +26,13 @@ import { formatBytes, formatNaira } from "@turbo/wifi/format";
 
 const PAGE_SIZE = 25;
 
+/** Where a code came from, when it was not a counter batch. */
+const channelLabels: Record<string, string> = {
+  web: "Web checkout",
+  telegram: "Telegram",
+  manual: "Counter sale",
+};
+
 /** Dot colour per board state; `black` reads as "off" in both themes. */
 const indicatorDot: Record<HotspotSession["indicator"], string> = {
   green: "bg-success",
@@ -133,6 +140,7 @@ export const WifiSessionsTable = () => {
             <TableHead>Plan</TableHead>
             <TableHead>Customer</TableHead>
             <TableHead>Paid</TableHead>
+            <TableHead>Batch</TableHead>
             <TableHead>Address</TableHead>
             <TableHead>Connected</TableHead>
             <TableHead>Data</TableHead>
@@ -143,7 +151,7 @@ export const WifiSessionsTable = () => {
           {isPending ? (
             Array.from({ length: 5 }, (_, index) => (
               <TableRow key={index} className="hover:bg-transparent">
-                <TableCell colSpan={9}>
+                <TableCell colSpan={10}>
                   <Skeleton className="h-6 w-full" />
                 </TableCell>
               </TableRow>
@@ -203,6 +211,10 @@ export const WifiSessionsTable = () => {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {row.amountKobo != null ? formatNaira(row.amountKobo) : "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.batchLabel ??
+                    (row.channel ? channelLabels[row.channel] : "—")}
                 </TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">
                   {row.address ?? "—"}

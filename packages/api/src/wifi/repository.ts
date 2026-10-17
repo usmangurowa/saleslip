@@ -63,11 +63,13 @@ export interface ListActivatedVouchersParams {
 
 /**
  * A voucher that has connected at least once, with its order's contact info
- * riding along — one row of the attendance board.
+ * and its batch's label riding along — one row of the attendance board.
  */
 export type ActivatedVoucherRow = WifiVoucherRow & {
   phone: string | null;
   amountKobo: number | null;
+  /** Label of the minting run; null for shop/Telegram orders. */
+  batchLabel: string | null;
 };
 
 export interface CreatePlanInput {
@@ -447,8 +449,9 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
 
   /**
    * The attendance board: every voucher whose code has been live at least
-   * once, newest activation first, with the owning order's phone and amount.
-   * Counter sales have no order, hence the nullables.
+   * once, newest activation first, with the owning order's phone and amount
+   * plus the batch label for counter minting runs. Counter sales have no
+   * order; shop orders have no batch — hence the nullables.
    */
   listActivatedVouchers: async ({ limit, offset }) => {
     const hasConnected = isNotNull(wifiVoucher.activatedAt);
@@ -458,9 +461,14 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
           voucher: wifiVoucher,
           phone: wifiOrder.phone,
           amountKobo: wifiOrder.amountKobo,
+          batchLabel: wifiVoucherBatch.label,
         })
         .from(wifiVoucher)
         .leftJoin(wifiOrder, eq(wifiVoucher.orderId, wifiOrder.id))
+        .leftJoin(
+          wifiVoucherBatch,
+          eq(wifiVoucher.batchId, wifiVoucherBatch.id),
+        )
         .where(hasConnected)
         .orderBy(desc(wifiVoucher.activatedAt))
         .limit(limit)
@@ -472,6 +480,7 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
         ...row.voucher,
         phone: row.phone ?? null,
         amountKobo: row.amountKobo ?? null,
+        batchLabel: row.batchLabel ?? null,
       })),
       total: Number(total?.total ?? 0),
     };
