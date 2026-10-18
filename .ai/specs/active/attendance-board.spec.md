@@ -50,6 +50,26 @@ first), overlaid with live router state. Decisions confirmed with the owner:
 - `packages/api/src/router/wifi-router.ts` — board endpoint + `connectedIndicator`
 - `apps/web/src/hooks/use-wifi-router.ts`, `overview-stat-row.tsx`, `wifi/wifi-sessions-table.tsx`
 
+## Correction (2026-10-18): the board shows *used* vouchers only
+
+The first cut anchored rows on `activated_at` — but saleslip stamps that at
+minting, so every unused counter code cluttered the board as a black row. Per
+owner decision, the board now lists only vouchers a customer has actually
+**used**, detected as `bytes_used > 0 OR last_connected_at IS NOT NULL`:
+
+- `wifi_voucher.last_connected_at` (migration 0014) is stamped whenever a code
+  appears in an active session — by the board poll (write-behind) and by a new
+  always-on **connection recorder** in `apps/server` (every minute: stamps
+  connected codes + snapshots every hotspot user's byte counters, so "data
+  used" stays fresh and used codes are never mistaken for unused, even when
+  nobody has the dashboard open).
+- Rows are ordered by last activity (last connected, falling back to
+  activation); the table's Connected column becomes **Online / Last seen**
+  (uptime while connected, "3h ago" when disconnected).
+
+Historical vouchers whose router users Mikhmon already deleted can't be
+reconstructed — they appear from now on as usage records accumulate.
+
 ## Validation
 
 ```bash

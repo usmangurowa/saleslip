@@ -4,9 +4,11 @@ import {
   countDistinct,
   desc,
   eq,
+  gt,
   gte,
   inArray,
   isNotNull,
+  or,
   sql,
 } from "drizzle-orm";
 
@@ -34,6 +36,11 @@ import {
   VoucherActivationUnavailableError,
 } from "./activation-errors";
 
+// The repository module is also a package subpath (`@turbo/api/wifi-repository`)
+// so runtimes that need its functions without mounting the whole router app —
+// the server's connection recorder — can import it directly.
+export type { Db } from "../context";
+
 export type WifiOrderRow = typeof wifiOrder.$inferSelect;
 export type WifiVoucherRow = typeof wifiVoucher.$inferSelect;
 export type WifiVoucherBatchRow = typeof wifiVoucherBatch.$inferSelect;
@@ -56,16 +63,16 @@ export interface ListVouchersParams {
   offset: number;
 }
 
-export interface ListActivatedVouchersParams {
+export interface ListUsedVouchersParams {
   limit: number;
   offset: number;
 }
 
 /**
- * A voucher that has connected at least once, with its order's contact info
- * and its batch's label riding along — one row of the attendance board.
+ * A voucher a customer has actually used, with its order's contact info and
+ * its batch's label riding along — one row of the attendance board.
  */
-export type ActivatedVoucherRow = WifiVoucherRow & {
+export type UsedVoucherRow = WifiVoucherRow & {
   phone: string | null;
   amountKobo: number | null;
   /** Label of the minting run; null for shop/Telegram orders. */
@@ -177,10 +184,15 @@ export interface VoucherUsage {
 export interface WifiConsoleRepository {
   listOrders: (params: ListOrdersParams) => Promise<Page<WifiOrderRow>>;
   listVouchers: (params: ListVouchersParams) => Promise<Page<WifiVoucherRow>>;
-  /** Vouchers that have connected at least once — the attendance board. */
-  listActivatedVouchers: (
-    params: ListActivatedVouchersParams,
-  ) => Promise<Page<ActivatedVoucherRow>>;
+  /** Vouchers a customer has actually used — the attendance board. */
+  listUsedVouchers: (
+    params: ListUsedVouchersParams,
+  ) => Promise<Page<UsedVoucherRow>>;
+  /** Stamps `last_connected_at` on the given codes; returns rows touched. */
+  markVouchersConnected: (
+    codes: readonly string[],
+    at: Date,
+  ) => Promise<number>;
   /** Customers rolled up from orders: one row per phone number. */
   customerSummaries: (params: {
     limit: number;
@@ -455,13 +467,20 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
   },
 
   /**
-   * The attendance board: every voucher whose code has been live at least
-   * once, newest activation first, with the owning order's phone and amount
-   * plus the batch label for counter minting runs. Counter sales have no
-   * order; shop orders have no batch — hence the nullables.
+   * The attendance board: vouchers a customer has actually *used* — data
+   * moved, or seen in an active session — newest activity first, with the
+   * owning order's phone and amount plus the batch label for counter minting
+   * runs. Codes that were only minted (never logged in with) stay off the
+   * board. Counter sales have no order; shop orders have no batch.
    */
-  listActivatedVouchers: async ({ limit, offset }) => {
-    const hasConnected = isNotNull(wifiVoucher.activatedAt);
+  listUsedVouchers: async ({ limit, offset }) => {
+    // "Used": moved bytes (sticky — the router's counters survive the user)
+    // or seen connected at least once. Minting alone sets neither.
+    const hasBeenUsed = or(
+      gt(wifiVoucher.bytesUsed, 0),
+      isNotNull(wifiVoucher.lastConnectedAt),
+    );
+    const lastActivity = sql`coalesce(${wifiVoucher.lastConnectedAt}, ${wifiVoucher.activatedAt})`;
     const [rows, [total]] = await Promise.all([
       db
         .select({
@@ -476,11 +495,11 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
           wifiVoucherBatch,
           eq(wifiVoucher.batchId, wifiVoucherBatch.id),
         )
-        .where(hasConnected)
-        .orderBy(desc(wifiVoucher.activatedAt))
+        .where(hasBeenUsed)
+        .orderBy(desc(lastActivity))
         .limit(limit)
         .offset(offset),
-      db.select({ total: count() }).from(wifiVoucher).where(hasConnected),
+      db.select({ total: count() }).from(wifiVoucher).where(hasBeenUsed),
     ]);
     return {
       rows: rows.map((row) => ({
@@ -491,6 +510,21 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
       })),
       total: Number(total?.total ?? 0),
     };
+  },
+
+  /**
+   * Write-behind from the board poll and the connection recorder: codes seen
+   * in an active hotspot session get their `last_connected_at` stamped. This
+   * is what makes "used before" observable even after the session ends.
+   */
+  markVouchersConnected: async (codes, at) => {
+    if (codes.length === 0) return 0;
+    const rows = await db
+      .update(wifiVoucher)
+      .set({ lastConnectedAt: at })
+      .where(inArray(wifiVoucher.code, [...codes]))
+      .returning({ id: wifiVoucher.id });
+    return rows.length;
   },
 
   listBatches: (limit) =>

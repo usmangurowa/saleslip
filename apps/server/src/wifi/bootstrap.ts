@@ -10,6 +10,7 @@ import { buildPlans } from "@turbo/wifi";
 
 import type { env as ServerEnv } from "../env";
 import type { WifiDeps } from "./deps";
+import { createConnectionRecorder } from "./connection-recorder";
 import { createFulfilmentService } from "./fulfilment";
 import { createLogger } from "./logger";
 import { createOrderRepository } from "./orders";
@@ -207,6 +208,21 @@ export const createWifiRuntime = (env: WifiEnv): WifiRuntime => {
 
   if (deps.hotspot) {
     const { hotspot } = deps;
+    // Records voucher usage off the router every minute whether or not the
+    // dashboard is open — this is what keeps the attendance board truthful
+    // about "used before" and "last connected". Independent of the watchdog
+    // (which only runs when Telegram is configured).
+    const recorder = createConnectionRecorder({
+      hotspot,
+      db,
+      logger: logger.child({ component: "recorder" }),
+    });
+    boot.push(() => {
+      recorder.start();
+      return Promise.resolve();
+    });
+    stops.push(() => recorder.stop());
+
     boot.push(async () => {
       const plans = await deps.plans();
       logger.info("plan profile mapping", {

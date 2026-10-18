@@ -33,6 +33,23 @@ const channelLabels: Record<string, string> = {
   manual: "Counter sale",
 };
 
+/** "3h ago"-style last-seen; coarse on purpose — the board polls every 15s. */
+const formatLastSeen = (iso: string | null): string => {
+  if (!iso) return "—";
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60_000) return "just now";
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString("en-NG", {
+    day: "2-digit",
+    month: "short",
+  });
+};
+
 /** Dot colour per board state; `black` reads as "off" in both themes. */
 const indicatorDot: Record<HotspotSession["indicator"], string> = {
   green: "bg-success",
@@ -110,7 +127,7 @@ export const WifiSessionsTable = () => {
       description={
         routerDown
           ? "Router unreachable — showing everyone as disconnected. The board recovers on its own."
-          : "Everyone who has connected, live or not. Green healthy · yellow trial or expiring · red connected without internet · black disconnected. Updates every 15 seconds."
+          : "Codes customers have actually used, live or not. Green healthy · yellow trial or expiring · red connected without internet · black disconnected. Updates every 15 seconds."
       }
       action={
         <div className="flex items-center gap-2">
@@ -142,7 +159,7 @@ export const WifiSessionsTable = () => {
             <TableHead>Paid</TableHead>
             <TableHead>Batch</TableHead>
             <TableHead>Address</TableHead>
-            <TableHead>Connected</TableHead>
+            <TableHead>Online / Last seen</TableHead>
             <TableHead>Data</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
@@ -225,7 +242,9 @@ export const WifiSessionsTable = () => {
                   ) : null}
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
-                  {row.uptime ?? "—"}
+                  {row.status === "connected"
+                    ? row.uptime
+                    : formatLastSeen(row.lastConnectedAt)}
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
                   {row.status === "connected"

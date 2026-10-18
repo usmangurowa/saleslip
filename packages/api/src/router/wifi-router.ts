@@ -15,7 +15,7 @@ import {
 
 import type { AppContext, AuthWithApi, Db } from "../context";
 import type {
-  ActivatedVoucherRow,
+  UsedVoucherRow,
   WifiConsoleRepository,
   WifiVoucherRow,
 } from "../wifi/repository";
@@ -334,14 +334,14 @@ export const createWifiRouterApp = ({
         const offset = Math.max(Number(c.req.query("offset") ?? 0) || 0, 0);
 
         const [page, today] = await Promise.all([
-          repo.listActivatedVouchers({ limit, offset }),
+          repo.listUsedVouchers({ limit, offset }),
           repo.todaySummary(),
         ]);
 
         // Board rows start disconnected (black); a reachable router overlays
         // live state. This is also the entire response when the router is
         // down — the board degrades instead of erroring.
-        const baseRow = (voucher: ActivatedVoucherRow) => ({
+        const baseRow = (voucher: UsedVoucherRow) => ({
           code: voucher.code,
           known: true,
           planName:
@@ -352,6 +352,7 @@ export const createWifiRouterApp = ({
           channel: voucher.channel,
           profile: voucher.profile,
           activatedAt: voucher.activatedAt?.toISOString() ?? null,
+          lastConnectedAt: voucher.lastConnectedAt?.toISOString() ?? null,
           lastSyncedAt: voucher.syncedAt?.toISOString() ?? null,
           bytesUsed: voucher.bytesUsed,
           status: "disconnected" as const,
@@ -383,6 +384,15 @@ export const createWifiRouterApp = ({
           if (isRouterOsUnavailable(error)) return c.json(board);
           throw error;
         }
+        // Write-behind: codes seen connected right now get their
+        // last-connected stamp so they stay on the board after they log off.
+        // Best-effort — a failed stamp must not blank the board.
+        await repo
+          .markVouchersConnected(
+            sessions.map((session) => session.user),
+            clock(),
+          )
+          .catch(() => undefined);
         // A failed heartbeat means "assume no internet", not "fail the board".
         const wanReachable = await hotspot.wanReachable().catch(() => false);
 
@@ -430,6 +440,7 @@ export const createWifiRouterApp = ({
               channel: null,
               profile: null,
               activatedAt: null,
+              lastConnectedAt: null,
               lastSyncedAt: null,
               bytesUsed: 0,
               status: "connected" as const,

@@ -204,6 +204,7 @@ const voucherRow = (overrides: Partial<repositoryModule.WifiVoucherRow> = {}) =>
     bytesUsed: 0,
     syncedAt: null,
     lastError: null,
+    lastConnectedAt: null,
     createdAt: new Date("2025-01-15T10:00:00Z"),
     ...overrides,
   }) satisfies repositoryModule.WifiVoucherRow;
@@ -374,7 +375,7 @@ describe("hotspot profiles", () => {
 
 describe("attendance board", () => {
   const activatedVoucher = (
-    overrides: Partial<repositoryModule.ActivatedVoucherRow> = {},
+    overrides: Partial<repositoryModule.UsedVoucherRow> = {},
   ) =>
     ({
       ...voucherRow({
@@ -384,17 +385,19 @@ describe("attendance board", () => {
       phone: "+2348012345678",
       amountKobo: 300_000,
       batchLabel: "Counter sheet — 2025-01-15 08:00 UTC",
+      lastConnectedAt: new Date("2025-01-15T09:30:00Z"),
       ...overrides,
-    }) satisfies repositoryModule.ActivatedVoucherRow;
+    }) satisfies repositoryModule.UsedVoucherRow;
 
   const boardRepo = (
-    vouchers: repositoryModule.ActivatedVoucherRow[],
+    vouchers: repositoryModule.UsedVoucherRow[],
     params?: { limit?: number; offset?: number },
   ) => ({
-    listActivatedVouchers: (input: { limit: number; offset: number }) => {
+    listUsedVouchers: (input: { limit: number; offset: number }) => {
       if (params) expect(input).toEqual(params);
       return Promise.resolve({ rows: vouchers, total: vouchers.length });
     },
+    markVouchersConnected: vi.fn(async () => vouchers.length),
     todaySummary: () => Promise.resolve({ paidOrders: 2, revenueKobo: 60_000 }),
   });
 
@@ -432,6 +435,7 @@ describe("attendance board", () => {
       phone: "+2348012345678",
       batchLabel: "Counter sheet — 2025-01-15 08:00 UTC",
       channel: "manual",
+      lastConnectedAt: "2025-01-15T09:30:00.000Z",
       uptime: "5m",
       sessionTimeLeft: "23h",
       sessionBytes: 7_000_000,
@@ -443,6 +447,21 @@ describe("attendance board", () => {
       reason: null,
       uptime: null,
     });
+  });
+
+  it("stamps currently-connected codes as last connected (write-behind)", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [
+      sampleSession({ bytesIn: 5_000_000, sessionTimeLeft: "23h" }),
+    ];
+    const repo = boardRepo([activatedVoucher()]);
+    const app = build({ hotspot: fake.hotspot, repo });
+
+    await app.request("/sessions");
+    expect(repo.markVouchersConnected).toHaveBeenCalledWith(
+      ["SALE-1234"],
+      new Date("2025-01-15T10:00:00Z"),
+    );
   });
 
   it("marks a session yellow when under an hour is left", async () => {
@@ -542,10 +561,8 @@ describe("attendance board", () => {
   it("degrades to an all-black board when the router is unreachable", async () => {
     const fake = createFakeHotspot();
     fake.state.fail = new RouterOsUnavailableError("timeout");
-    const app = build({
-      hotspot: fake.hotspot,
-      repo: boardRepo([activatedVoucher()]),
-    });
+    const repo = boardRepo([activatedVoucher()]);
+    const app = build({ hotspot: fake.hotspot, repo });
 
     const res = await app.request("/sessions");
     expect(res.status).toBe(200);
@@ -557,6 +574,8 @@ describe("attendance board", () => {
       status: "disconnected",
       indicator: "black",
     });
+    // Nobody was seen connected, so nothing was stamped.
+    expect(repo.markVouchersConnected).not.toHaveBeenCalled();
   });
 
   it("degrades the same way when no router is configured", async () => {
@@ -1059,7 +1078,7 @@ describe("voucher deletion", () => {
 
 describe("voucher bulk deletion", () => {
   const activatedVoucherLike = (
-    overrides: Partial<repositoryModule.ActivatedVoucherRow> = {},
+    overrides: Partial<repositoryModule.UsedVoucherRow> = {},
   ) =>
     ({
       ...voucherRow({
@@ -1069,8 +1088,9 @@ describe("voucher bulk deletion", () => {
       phone: "+2348012345678",
       amountKobo: 300_000,
       batchLabel: null,
+      lastConnectedAt: null,
       ...overrides,
-    }) satisfies repositoryModule.ActivatedVoucherRow;
+    }) satisfies repositoryModule.UsedVoucherRow;
 
   it("settles each voucher independently and reports per-item outcomes", async () => {
     const fake = createFakeHotspot();
@@ -1081,7 +1101,7 @@ describe("voucher bulk deletion", () => {
     });
     fake.calls.length = 0;
 
-    const rows = new Map<string, repositoryModule.ActivatedVoucherRow>([
+    const rows = new Map<string, repositoryModule.UsedVoucherRow>([
       [
         "revoked-1",
         activatedVoucherLike({ id: "revoked-1", status: "revoked" }),
@@ -1157,7 +1177,7 @@ describe("voucher bulk deletion", () => {
   it("skips active vouchers but still deletes revoked ones when the router is down", async () => {
     const fake = createFakeHotspot();
     fake.state.fail = new RouterOsUnavailableError("timeout");
-    const rows = new Map<string, repositoryModule.ActivatedVoucherRow>([
+    const rows = new Map<string, repositoryModule.UsedVoucherRow>([
       [
         "revoked-1",
         activatedVoucherLike({ id: "revoked-1", status: "revoked" }),

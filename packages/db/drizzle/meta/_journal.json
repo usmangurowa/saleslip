@@ -99,6 +99,13 @@
       "when": 1792179925851,
       "tag": "0013_plan_label_rename",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792338000000,
+      "tag": "0014_voucher_last_connected",
+      "breakpoints": true
     }
   ]
 }

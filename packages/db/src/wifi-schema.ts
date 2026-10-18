@@ -124,6 +124,12 @@ export const wifiVoucher = pgTable(
     /** Set when the router accepted the hotspot user. Null means not live. */
     activatedAt: timestamp("activated_at"),
     /**
+     * Last time this code appeared in an active hotspot session, recorded by
+     * the board poll and the server-side connection recorder. Null plus zero
+     * bytes means the code has never been used by a customer.
+     */
+    lastConnectedAt: timestamp("last_connected_at"),
+    /**
      * Bytes-in + bytes-out as last read from the router. Snapshotted by
      * `/sessions/sync`, never streamed.
      */

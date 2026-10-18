@@ -14,6 +14,10 @@
     "./wifi-router-client": {
       "types": "./dist/wifi/router-client.d.ts",
       "default": "./src/wifi/router-client.ts"
+    },
+    "./wifi-repository": {
+      "types": "./dist/wifi/repository.d.ts",
+      "default": "./src/wifi/repository.ts"
     }
   },
   "license": "MIT",
