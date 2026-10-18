@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm";
 
 import type {
+  RevocationReason,
   WifiOrderStatus,
   WifiVoucherChannel,
   WifiVoucherStatus,
@@ -24,6 +25,7 @@ import {
   WIFI_VOUCHER_STATUSES,
   wifiOrder,
   wifiPlan,
+  wifiRevocationQueue,
   wifiVoucher,
   wifiVoucherBatch,
 } from "@turbo/db/schema";
@@ -44,6 +46,7 @@ export type { Db } from "../context";
 export type WifiOrderRow = typeof wifiOrder.$inferSelect;
 export type WifiVoucherRow = typeof wifiVoucher.$inferSelect;
 export type WifiVoucherBatchRow = typeof wifiVoucherBatch.$inferSelect;
+export type RevocationQueueRow = typeof wifiRevocationQueue.$inferSelect;
 
 export interface Page<T> {
   rows: T[];
@@ -247,6 +250,16 @@ export interface WifiConsoleRepository {
   revokeVoucher: (id: string) => Promise<WifiVoucherRow | undefined>;
   /** Hard-deletes the row. Callers must have settled the router user first. */
   deleteVoucher: (id: string) => Promise<WifiVoucherRow | undefined>;
+  /** Parks a router removal for the sweeper — used when the router is down. */
+  queueRouterRevocation: (entry: {
+    code: string;
+    rosId?: string | null;
+    reason: RevocationReason;
+  }) => Promise<void>;
+  /** Every revocation still waiting for the router to come back. */
+  listPendingRevocations: () => Promise<RevocationQueueRow[]>;
+  /** Removes queue rows once the router work has landed. */
+  completeRevocations: (ids: string[]) => Promise<number>;
 }
 
 const startOfDay = (now: Date) => {
@@ -879,5 +892,29 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
       .where(eq(wifiVoucher.id, id))
       .returning();
     return row;
+  },
+
+  /**
+   * The deferred-revocation queue. Entries are written *before* the voucher
+   * row disappears — the queue row is then the only memory that this code
+   * still lives on the router.
+   */
+  queueRouterRevocation: async (entry) => {
+    await db.insert(wifiRevocationQueue).values({
+      code: entry.code,
+      rosId: entry.rosId ?? null,
+      reason: entry.reason,
+    });
+  },
+
+  listPendingRevocations: () => db.select().from(wifiRevocationQueue),
+
+  completeRevocations: async (ids) => {
+    if (ids.length === 0) return 0;
+    const rows = await db
+      .delete(wifiRevocationQueue)
+      .where(inArray(wifiRevocationQueue.id, ids))
+      .returning({ id: wifiRevocationQueue.id });
+    return rows.length;
   },
 });

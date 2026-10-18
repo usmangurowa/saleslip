@@ -24,6 +24,22 @@ call). Batch vouchers carry no order (counter channel), so the
 awaiting-fulfilment guard cannot apply. The Batches tab gains a confirmed
 Delete action reporting how many vouchers went.
 
+## Deferred revocations (added 2026-10-18)
+
+Deleting no longer blocks on the router. When the router is unreachable (or
+not configured), the voucher/batch rows are deleted immediately and the
+hotspot-user removal is parked in a new `wifi_revocation_queue` table
+(migration 0015; entries carry code, `rosId`, and reason
+`single`/`bulk`/`batch`). A **revocation sweeper** in `apps/server` checks the
+queue every minute (a single cheap query while empty) and, when the router
+answers, removes each queued code's user by exact lookup and completes the
+entries — landing whatever succeeded even if the router drops mid-drain.
+
+Trade-off, accepted by the owner: a deleted live code may keep working on the
+router until the router returns and the sweep lands (bounded by recovery + one
+minute). Never after. The awaiting-fulfilment (409) guard is unchanged — that
+one protects money, not the router.
+
 ## UI simplification (same day)
 
 The separate Revoke button is gone — the single state-aware Delete covers both

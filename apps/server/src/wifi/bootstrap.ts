@@ -14,6 +14,7 @@ import { createConnectionRecorder } from "./connection-recorder";
 import { createFulfilmentService } from "./fulfilment";
 import { createLogger } from "./logger";
 import { createOrderRepository } from "./orders";
+import { createRevocationSweeper } from "./revocation-sweeper";
 import { createRouterWatchdog } from "./router-watchdog";
 import {
   createTelegramBot,
@@ -222,6 +223,19 @@ export const createWifiRuntime = (env: WifiEnv): WifiRuntime => {
       return Promise.resolve();
     });
     stops.push(() => recorder.stop());
+
+    // Drains the deferred-revocation queue — vouchers deleted while the
+    // router was offline — within a minute of the router answering again.
+    const sweeper = createRevocationSweeper({
+      hotspot,
+      db,
+      logger: logger.child({ component: "revocation-sweeper" }),
+    });
+    boot.push(() => {
+      sweeper.start();
+      return Promise.resolve();
+    });
+    stops.push(() => sweeper.stop());
 
     boot.push(async () => {
       const plans = await deps.plans();

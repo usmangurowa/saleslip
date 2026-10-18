@@ -91,7 +91,7 @@ const DeleteButton = ({ voucher }: { voucher: WifiVoucher }) => {
           <AlertDialogTitle>Delete {voucher.code}?</AlertDialogTitle>
           <AlertDialogDescription>
             {voucher.status === "active"
-              ? "The code is removed from the router first, then its record is deleted. This cannot be undone."
+              ? "The code is removed from the router — now if it is reachable, or automatically once it is back online — then its record is deleted. This cannot be undone."
               : "The code is already dead — this only removes its record from the dashboard. This cannot be undone."}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -100,7 +100,12 @@ const DeleteButton = ({ voucher }: { voucher: WifiVoucher }) => {
           <AlertDialogAction
             onClick={() =>
               deleteVoucher.mutate(voucher.id, {
-                onSuccess: () => toast.success(`${voucher.code} deleted`),
+                onSuccess: (body) =>
+                  body.revocationQueued
+                    ? toast.success(
+                        `${voucher.code} deleted — revokes on the router when it is back online`,
+                      )
+                    : toast.success(`${voucher.code} deleted`),
                 onError: (error) => toast.error(error.message),
               })
             }
@@ -349,14 +354,16 @@ const BulkDeleteBar = ({
 
   const summaryToast = (summary: {
     deleted: number;
+    revocationsQueued: number;
     blocked: number;
-    skippedRouter: number;
     notFound: number;
   }) => {
     const parts = [
       `${summary.deleted} deleted`,
+      summary.revocationsQueued > 0
+        ? `${summary.revocationsQueued} revoking when the router is back`
+        : null,
       summary.blocked > 0 ? `${summary.blocked} awaiting fulfilment` : null,
-      summary.skippedRouter > 0 ? `${summary.skippedRouter} skipped` : null,
       summary.notFound > 0 ? `${summary.notFound} not found` : null,
     ].filter((part): part is string => part !== null);
     toast.success(parts.join(" · "));

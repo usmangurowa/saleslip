@@ -303,8 +303,8 @@ export const useBulkDeleteVoucher = () => {
       summary: {
         deleted: number;
         revokedRouterUsers: number;
+        revocationsQueued: number;
         blocked: number;
-        skippedRouter: number;
         notFound: number;
       };
       results: {
@@ -343,6 +343,7 @@ export const useDeleteVoucherBatch = () => {
       label: string;
       vouchers: number;
       revokedRouterUsers: number;
+      revocationsQueued: number;
     }> => {
       const res = await routerApi().vouchers.batch[":id"].$delete({
         param: { id },
@@ -361,8 +362,9 @@ export const useDeleteVoucherBatch = () => {
  * Delete a voucher record, state-aware.
  *
  * The server settles the router side first: a live code is removed from the
- * router before its row disappears (fail-closed, same contract as revoke), a
- * dead code is history-only. Orders still awaiting fulfilment refuse with 409.
+ * router before its row disappears — or, when the router is down, the removal
+ * is queued and lands automatically once it is back. Orders still awaiting
+ * fulfilment refuse with 409.
  */
 export const useDeleteVoucher = () => {
   const queryClient = useQueryClient();
@@ -370,7 +372,11 @@ export const useDeleteVoucher = () => {
   return useMutation({
     mutationFn: async (
       id: string,
-    ): Promise<{ deleted: true; revokedRouterUser: boolean }> => {
+    ): Promise<{
+      deleted: true;
+      revokedRouterUser: boolean;
+      revocationQueued: boolean;
+    }> => {
       const res = await routerApi().vouchers[":id"].$delete({
         param: { id },
       });

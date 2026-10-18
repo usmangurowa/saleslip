@@ -60,8 +60,8 @@ const DeleteBatchButton = ({ batch }: { batch: WifiBatch }) => {
           <AlertDialogTitle>Delete “{batch.label}”?</AlertDialogTitle>
           <AlertDialogDescription>
             The batch and every voucher still in it are deleted — live codes are
-            removed from the router first, all-or-nothing. This cannot be
-            undone.
+            removed from the router, now or automatically once it is back
+            online. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -71,7 +71,7 @@ const DeleteBatchButton = ({ batch }: { batch: WifiBatch }) => {
               deleteBatch.mutate(batch.id, {
                 onSuccess: (body) =>
                   toast.success(
-                    `${body.label} deleted — ${body.vouchers} ${body.vouchers === 1 ? "voucher" : "vouchers"} removed`,
+                    `${body.label} deleted — ${body.vouchers} ${body.vouchers === 1 ? "voucher" : "vouchers"} removed${body.revocationsQueued > 0 ? ` · ${body.revocationsQueued} revoking when the router is back` : ""}`,
                   ),
                 onError: (error) => toast.error(error.message),
               })

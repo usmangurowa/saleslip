@@ -21,6 +21,7 @@
 | `wifiVoucherBatch` | `wifi_voucher_batch` | `packages/db/src/wifi-schema.ts` |
 | `wifiVoucher` | `wifi_voucher` | `packages/db/src/wifi-schema.ts` |
 | `wifiPlan` | `wifi_plan` | `packages/db/src/wifi-schema.ts` |
+| `wifiRevocationQueue` | `wifi_revocation_queue` | `packages/db/src/wifi-schema.ts` |
 
 ## Relations
 

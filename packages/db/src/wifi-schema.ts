@@ -41,6 +41,10 @@ export type WifiVoucherChannel = (typeof WIFI_VOUCHER_CHANNELS)[number];
 export const WIFI_VOUCHER_KINDS = ["primary", "bonus"] as const;
 export type WifiVoucherKind = (typeof WIFI_VOUCHER_KINDS)[number];
 
+/** Which console action queued a deferred revocation. */
+export const REVOCATION_REASONS = ["single", "bulk", "batch"] as const;
+export type RevocationReason = (typeof REVOCATION_REASONS)[number];
+
 export const wifiOrder = pgTable(
   "wifi_order",
   {
@@ -182,4 +186,26 @@ export const wifiPlan = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [check("wifi_plan_price_check", sql`${table.priceKobo} >= 0`)],
+);
+
+/**
+ * Router work parked while the router was unreachable: vouchers deleted from
+ * the console whose hotspot users still need removing. The server's
+ * revocation sweeper drains the queue once the router answers again — a code
+ * may keep working on the router until then, and never after.
+ */
+export const wifiRevocationQueue = pgTable(
+  "wifi_revocation_queue",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    /** The voucher code whose hotspot user must be removed. */
+    code: text("code").notNull(),
+    /** RouterOS `.id` when known — kept for audit; removal looks up by code. */
+    rosId: text("ros_id"),
+    reason: text("reason", { enum: REVOCATION_REASONS }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("wifi_revocation_queue_createdAt_idx").on(table.createdAt)],
 );

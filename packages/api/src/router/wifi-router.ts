@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
 
+import type { RevocationReason } from "@turbo/db/schema";
 import type { HotspotActiveSession, HotspotService } from "@turbo/routeros";
 import { isRouterOsUnavailable } from "@turbo/routeros";
 import {
@@ -76,12 +77,18 @@ export interface AttendanceIndicatorResult {
 // --- voucher deletion settlement ----------------------------------------------
 
 export type VoucherDeletionOutcome =
-  /** Row gone; `revokedRouterUser` says whether a live code was removed too. */
-  | { outcome: "deleted"; revokedRouterUser: boolean }
+  /**
+   * Row gone. `revokedRouterUser` says whether a live code was removed from
+   * the router on the spot; `revocationQueued` says the removal was parked
+   * for the sweeper because the router was unreachable.
+   */
+  | {
+      outcome: "deleted";
+      revokedRouterUser: boolean;
+      revocationQueued: boolean;
+    }
   /** A paid/pending_router order still owns the code — the sweep must finish. */
   | { outcome: "blocked-awaiting-fulfilment" }
-  /** Active voucher, but the router could not be asked — nothing was deleted. */
-  | { outcome: "skipped-router-unreachable" }
   /** The id resolved once but the row vanished before settlement. */
   | { outcome: "not-found" };
 
@@ -93,13 +100,16 @@ export type VoucherDeletionOutcome =
  *    retry sweep resumes from the row and would re-mint a different code.
  * 2. Revoked rows are history-only: no router call.
  * 3. Active rows ask the router by code (codes can outlive their `rosId`) and
- *    remove a live user first — fail-closed, never orphan a working code.
+ *    remove a live user first. If the router cannot be asked, the row still
+ *    goes — the removal is queued and the sweeper lands it when the router
+ *    returns, so the code keeps working only until then, never after.
  */
 export const settleVoucherDeletion = async (
   repo: WifiConsoleRepository,
   hotspot: HotspotService | undefined,
   voucher: WifiVoucherRow,
   orderStatus: string | null,
+  reason: RevocationReason,
 ): Promise<VoucherDeletionOutcome> => {
   if (
     voucher.status === "active" &&
@@ -110,27 +120,42 @@ export const settleVoucherDeletion = async (
   if (voucher.status !== "active") {
     const deleted = await repo.deleteVoucher(voucher.id);
     return deleted
-      ? { outcome: "deleted", revokedRouterUser: false }
+      ? {
+          outcome: "deleted",
+          revokedRouterUser: false,
+          revocationQueued: false,
+        }
       : { outcome: "not-found" };
   }
-  if (!hotspot) return { outcome: "skipped-router-unreachable" };
+
+  let revokedRouterUser = false;
+  let revocationQueued = false;
   try {
-    let revokedRouterUser = false;
-    const user = await hotspot.findUser(voucher.code);
-    if (user) {
-      await hotspot.removeUser(user.id);
-      revokedRouterUser = true;
+    if (hotspot) {
+      const user = await hotspot.findUser(voucher.code);
+      if (user) {
+        await hotspot.removeUser(user.id);
+        revokedRouterUser = true;
+      }
     }
-    const deleted = await repo.deleteVoucher(voucher.id);
-    return deleted
-      ? { outcome: "deleted", revokedRouterUser }
-      : { outcome: "not-found" };
   } catch (error) {
-    if (isRouterOsUnavailable(error)) {
-      return { outcome: "skipped-router-unreachable" };
-    }
-    throw error;
+    if (!isRouterOsUnavailable(error)) throw error;
+    revocationQueued = true;
   }
+  if (!hotspot) revocationQueued = true;
+  if (revocationQueued) {
+    // Park the removal before the row disappears — the queue entry becomes
+    // the only memory that this code still lives on the router.
+    await repo.queueRouterRevocation({
+      code: voucher.code,
+      rosId: voucher.rosId,
+      reason,
+    });
+  }
+  const deleted = await repo.deleteVoucher(voucher.id);
+  return deleted
+    ? { outcome: "deleted", revokedRouterUser, revocationQueued }
+    : { outcome: "not-found" };
 };
 
 /**
@@ -602,6 +627,7 @@ export const createWifiRouterApp = ({
           hotspot,
           found.voucher,
           found.orderStatus,
+          "single",
         );
         switch (settlement.outcome) {
           case "blocked-awaiting-fulfilment":
@@ -609,14 +635,13 @@ export const createWifiRouterApp = ({
               { error: "Voucher is still awaiting fulfilment" },
               409,
             );
-          case "skipped-router-unreachable":
-            return c.json({ error: "Router unreachable" }, 503);
           case "not-found":
             return c.json({ error: "Voucher not found" }, 404);
           case "deleted":
             return c.json({
               deleted: true,
               revokedRouterUser: settlement.revokedRouterUser,
+              revocationQueued: settlement.revocationQueued,
             });
         }
       })
@@ -629,12 +654,14 @@ export const createWifiRouterApp = ({
 
           // Partial success by design: every voucher settles independently
           // with the same rulebook as the single delete, and the response
-          // reports exactly what happened to each. Nothing is ever orphaned.
+          // reports exactly what happened to each. A down router queues the
+          // revocation instead of blocking — nothing is ever orphaned.
           const results: {
             id: string;
             code: string | null;
             outcome: VoucherDeletionOutcome["outcome"];
             revokedRouterUser?: boolean;
+            revocationQueued?: boolean;
           }[] = [];
           for (const id of ids) {
             const found = await repo.findVoucherWithOrder(id);
@@ -647,13 +674,17 @@ export const createWifiRouterApp = ({
               hotspot,
               found.voucher,
               found.orderStatus,
+              "bulk",
             );
             results.push({
               id,
               code: found.voucher.code,
               outcome: settlement.outcome,
               ...(settlement.outcome === "deleted"
-                ? { revokedRouterUser: settlement.revokedRouterUser }
+                ? {
+                    revokedRouterUser: settlement.revokedRouterUser,
+                    revocationQueued: settlement.revocationQueued,
+                  }
                 : {}),
             });
           }
@@ -665,11 +696,11 @@ export const createWifiRouterApp = ({
               revokedRouterUsers: deleted.filter(
                 (r) => r.revokedRouterUser === true,
               ).length,
+              revocationsQueued: deleted.filter(
+                (r) => r.revocationQueued === true,
+              ).length,
               blocked: results.filter(
                 (r) => r.outcome === "blocked-awaiting-fulfilment",
-              ).length,
-              skippedRouter: results.filter(
-                (r) => r.outcome === "skipped-router-unreachable",
               ).length,
               notFound: results.filter((r) => r.outcome === "not-found").length,
             },
@@ -683,28 +714,35 @@ export const createWifiRouterApp = ({
         if (!batch) return c.json({ error: "Batch not found" }, 404);
         const vouchers = await repo.listVouchersByBatch(batch.id);
 
-        // All-or-nothing, the inverse of minting: every live code is removed
-        // from the router *before* any row disappears, and any router failure
-        // aborts with nothing deleted. Batch vouchers carry no order (counter
-        // channel), so the awaiting-fulfilment guard cannot apply here.
+        // The inverse of minting, all-or-nothing on the rows: every live code
+        // is settled *before* any row disappears. A router that cannot be
+        // asked queues the removal for the sweeper instead of aborting — the
+        // batch still goes, and the codes keep working only until the router
+        // returns. Batch vouchers carry no order (counter channel), so the
+        // awaiting-fulfilment guard cannot apply here.
         let revokedRouterUsers = 0;
+        let revocationsQueued = 0;
+        const queue: { code: string; rosId: string | null }[] = [];
         for (const voucher of vouchers) {
           if (voucher.status !== "active") continue;
-          if (!hotspot) {
-            return c.json({ error: "Router unreachable" }, 503);
-          }
           try {
-            const user = await hotspot.findUser(voucher.code);
-            if (user) {
-              await hotspot.removeUser(user.id);
-              revokedRouterUsers += 1;
+            if (hotspot) {
+              const user = await hotspot.findUser(voucher.code);
+              if (user) {
+                await hotspot.removeUser(user.id);
+                revokedRouterUsers += 1;
+              }
+              continue;
             }
           } catch (error) {
-            if (isRouterOsUnavailable(error)) {
-              return c.json({ error: "Router unreachable" }, 503);
-            }
-            throw error;
+            if (!isRouterOsUnavailable(error)) throw error;
           }
+          // No router, or router down: park this code for the sweeper.
+          queue.push({ code: voucher.code, rosId: voucher.rosId });
+        }
+        for (const entry of queue) {
+          await repo.queueRouterRevocation({ ...entry, reason: "batch" });
+          revocationsQueued += 1;
         }
 
         const deletedVouchers = await repo.deleteVouchersByBatch(batch.id);
@@ -715,6 +753,7 @@ export const createWifiRouterApp = ({
           label: batch.label,
           vouchers: deletedVouchers,
           revokedRouterUsers,
+          revocationsQueued,
         });
       })
   );

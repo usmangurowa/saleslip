@@ -954,6 +954,7 @@ describe("voucher deletion", () => {
     expect(await json(res)).toEqual({
       deleted: true,
       revokedRouterUser: false,
+      revocationQueued: false,
     });
     expect(deleted).toBe(true);
     expect(fake.calls).toEqual([]);
@@ -983,7 +984,11 @@ describe("voucher deletion", () => {
       method: "DELETE",
     });
     expect(res.status).toBe(200);
-    expect(await json(res)).toEqual({ deleted: true, revokedRouterUser: true });
+    expect(await json(res)).toEqual({
+      deleted: true,
+      revokedRouterUser: true,
+      revocationQueued: false,
+    });
     expect(fake.calls).toEqual(["find:SALE-1234", "remove:*1"]);
     expect(fake.users.has("SALE-1234")).toBe(false);
   });
@@ -1009,6 +1014,7 @@ describe("voucher deletion", () => {
     expect(await json(res)).toEqual({
       deleted: true,
       revokedRouterUser: false,
+      revocationQueued: false,
     });
     expect(fake.calls).toEqual(["find:SALE-1234"]);
   });
@@ -1037,10 +1043,11 @@ describe("voucher deletion", () => {
     expect(deleted).toBe(false);
   });
 
-  it("leaves the row when the router is down during delete", async () => {
+  it("deletes the row and queues the revocation when the router is down", async () => {
     const fake = createFakeHotspot();
     fake.state.fail = new RouterOsUnavailableError("timeout");
     let deleted = false;
+    const queued: unknown[] = [];
     const app = build({
       hotspot: fake.hotspot,
       repo: {
@@ -1049,6 +1056,10 @@ describe("voucher deletion", () => {
             voucher: voucherRow({ rosId: "*1" }),
             orderStatus: null,
           }),
+        queueRouterRevocation: (entry: unknown) => {
+          queued.push(entry);
+          return Promise.resolve();
+        },
         deleteVoucher: () => {
           deleted = true;
           return Promise.resolve(voucherRow());
@@ -1059,8 +1070,17 @@ describe("voucher deletion", () => {
     const res = await app.request("/vouchers/voucher-1", {
       method: "DELETE",
     });
-    expect(res.status).toBe(503);
-    expect(deleted).toBe(false);
+    expect(res.status).toBe(200);
+    expect(await json(res)).toEqual({
+      deleted: true,
+      revokedRouterUser: false,
+      revocationQueued: true,
+    });
+    // The queue entry is written before the row disappears.
+    expect(queued).toEqual([
+      { code: "SALE-1234", rosId: "*1", reason: "single" },
+    ]);
+    expect(deleted).toBe(true);
   });
 
   it("404s an unknown voucher", async () => {
@@ -1146,8 +1166,8 @@ describe("voucher bulk deletion", () => {
     expect(body.summary).toEqual({
       deleted: 2,
       revokedRouterUsers: 1,
+      revocationsQueued: 0,
       blocked: 1,
-      skippedRouter: 0,
       notFound: 1,
     });
     expect(body.results).toEqual([
@@ -1156,12 +1176,14 @@ describe("voucher bulk deletion", () => {
         code: "SALE-1234",
         outcome: "deleted",
         revokedRouterUser: false,
+        revocationQueued: false,
       },
       {
         id: "live-1",
         code: "LIVE-1",
         outcome: "deleted",
         revokedRouterUser: true,
+        revocationQueued: false,
       },
       {
         id: "inflight-1",
@@ -1174,7 +1196,7 @@ describe("voucher bulk deletion", () => {
     expect(fake.calls).toEqual(["find:LIVE-1", "remove:*1"]);
   });
 
-  it("skips active vouchers but still deletes revoked ones when the router is down", async () => {
+  it("deletes everything and queues live codes when the router is down", async () => {
     const fake = createFakeHotspot();
     fake.state.fail = new RouterOsUnavailableError("timeout");
     const rows = new Map<string, repositoryModule.UsedVoucherRow>([
@@ -1185,6 +1207,7 @@ describe("voucher bulk deletion", () => {
       ["live-1", activatedVoucherLike({ id: "live-1" })],
     ]);
     const deletedIds: string[] = [];
+    const queued: unknown[] = [];
     const app = build({
       hotspot: fake.hotspot,
       repo: {
@@ -1193,6 +1216,10 @@ describe("voucher bulk deletion", () => {
           return Promise.resolve(
             row ? { voucher: row, orderStatus: null } : undefined,
           );
+        },
+        queueRouterRevocation: (entry: unknown) => {
+          queued.push(entry);
+          return Promise.resolve();
         },
         deleteVoucher: (id: string) => {
           deletedIds.push(id);
@@ -1209,10 +1236,14 @@ describe("voucher bulk deletion", () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.summary).toMatchObject({
-      deleted: 1,
-      skippedRouter: 1,
+      deleted: 2,
+      revokedRouterUsers: 0,
+      revocationsQueued: 1,
     });
-    expect(deletedIds).toEqual(["revoked-1"]);
+    expect(deletedIds).toEqual(["revoked-1", "live-1"]);
+    expect(queued).toEqual([
+      { code: "SALE-1234", rosId: "*1", reason: "bulk" },
+    ]);
   });
 
   it("rejects more than 200 ids in one request", async () => {
@@ -1288,6 +1319,7 @@ describe("voucher batch deletion", () => {
       label: "Counter sheet — 2025-01-15 08:00 UTC",
       vouchers: 2,
       revokedRouterUsers: 0,
+      revocationsQueued: 0,
     });
     expect(fake.calls).toEqual([]);
   });
@@ -1349,37 +1381,70 @@ describe("voucher batch deletion", () => {
     ]);
   });
 
-  it("aborts with nothing deleted when the router is down and codes are live", async () => {
+  it("deletes the batch and queues live codes when the router is down", async () => {
     const fake = createFakeHotspot();
     fake.state.fail = new RouterOsUnavailableError("timeout");
     let batchDeleted = false;
+    const queued: unknown[] = [];
     const app = build({
       hotspot: fake.hotspot,
-      repo: batchRepo([activatedVoucherLike()], {
+      repo: {
+        findVoucherBatch: () => Promise.resolve(batchRow()),
+        listVouchersByBatch: () => Promise.resolve([activatedVoucherLike()]),
+        queueRouterRevocation: (entry: unknown) => {
+          queued.push(entry);
+          return Promise.resolve();
+        },
+        deleteVouchersByBatch: () => Promise.resolve(1),
         deleteVoucherBatch: () => {
           batchDeleted = true;
           return Promise.resolve(batchRow());
         },
-      }),
+      },
     });
 
     const res = await app.request("/vouchers/batch/batch-1", {
       method: "DELETE",
     });
-    expect(res.status).toBe(503);
-    expect(batchDeleted).toBe(false);
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body).toMatchObject({
+      deleted: true,
+      vouchers: 1,
+      revokedRouterUsers: 0,
+      revocationsQueued: 1,
+    });
+    expect(queued).toEqual([
+      { code: "SALE-1234", rosId: "*1", reason: "batch" },
+    ]);
+    expect(batchDeleted).toBe(true);
   });
 
-  it("refuses live codes when no router is configured", async () => {
+  it("deletes and queues live codes when no router is configured", async () => {
+    const queued: unknown[] = [];
     const app = build({
       hotspot: undefined,
-      repo: batchRepo([activatedVoucherLike()]),
+      repo: {
+        findVoucherBatch: () => Promise.resolve(batchRow()),
+        listVouchersByBatch: () => Promise.resolve([activatedVoucherLike()]),
+        queueRouterRevocation: (entry: unknown) => {
+          queued.push(entry);
+          return Promise.resolve();
+        },
+        deleteVouchersByBatch: () => Promise.resolve(1),
+        deleteVoucherBatch: () => Promise.resolve(batchRow()),
+      },
     });
 
     const res = await app.request("/vouchers/batch/batch-1", {
       method: "DELETE",
     });
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(200);
+    expect(await json(res)).toMatchObject({
+      deleted: true,
+      revocationsQueued: 1,
+    });
+    expect(queued).toHaveLength(1);
   });
 
   it("404s an unknown batch", async () => {
