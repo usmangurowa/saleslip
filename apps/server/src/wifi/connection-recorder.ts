@@ -77,7 +77,7 @@ export const createConnectionRecorder = ({
     start: () => {
       void tick();
       timer = setInterval(() => void tick(), intervalMs);
-      timer.unref?.();
+      timer.unref();
     },
     stop: () => {
       if (timer) clearInterval(timer);

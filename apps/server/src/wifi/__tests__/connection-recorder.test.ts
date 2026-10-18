@@ -6,8 +6,10 @@ import type { HotspotService, HotspotUser } from "@turbo/routeros";
 // above imports anyway — the module under test never sees the real package.
 import { createConnectionRecorder } from "../connection-recorder";
 
-const markVouchersConnected = vi.fn(async () => 1);
-const recordUsage = vi.fn(async () => 2);
+const markVouchersConnected = vi.fn((_codes: readonly string[], _at: Date) =>
+  Promise.resolve(1),
+);
+const recordUsage = vi.fn((_usage: Map<string, unknown>) => Promise.resolve(2));
 const warn = vi.fn();
 
 vi.mock("@turbo/api/wifi-repository", () => ({

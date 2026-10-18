@@ -397,7 +397,7 @@ describe("attendance board", () => {
       if (params) expect(input).toEqual(params);
       return Promise.resolve({ rows: vouchers, total: vouchers.length });
     },
-    markVouchersConnected: vi.fn(async () => vouchers.length),
+    markVouchersConnected: vi.fn(() => Promise.resolve(vouchers.length)),
     todaySummary: () => Promise.resolve({ paidOrders: 2, revenueKobo: 60_000 }),
   });
 
