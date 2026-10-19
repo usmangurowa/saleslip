@@ -50,6 +50,7 @@
     }
   },
   "globalEnv": [
+    "MIGRATIONS_FOLDER",
     "SENTRY_DSN",
     "NEXT_PUBLIC_SENTRY_DSN",
     "EXPO_PUBLIC_SENTRY_DSN",
