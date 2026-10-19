@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "bundle": "node ./build.mjs",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "pnpm with-env tsx watch src/index.ts",
     "format": "prettier --check . --ignore-path ../../.gitignore",
@@ -44,6 +45,7 @@
     "@types/node": "catalog:",
     "@types/qrcode": "^1.5.6",
     "dotenv-cli": "^11.0.0",
+    "esbuild": "0.28.1",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",

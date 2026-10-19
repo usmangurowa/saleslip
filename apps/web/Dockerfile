@@ -61,14 +61,22 @@ RUN set -eu; \
 # (and stripped: the unstripped Go binary is 120 MB, stripped ~85 MB).
 # ---------------------------------------------------------------------------
 FROM base AS deps
+# INSTALL_INFISICAL_CLI=0 leaves the Infisical CLI binary (~90 MB) out of the
+# image. scripts/infisical-run.sh then runs the command on platform env vars
+# alone, exactly as it does today when no INFISICAL_* credentials are set; with
+# credentials but no binary it fails fast at boot.
+ARG INSTALL_INFISICAL_CLI=1
 COPY --from=manifests /manifests /app
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm config set store-dir /pnpm/store \
   && pnpm install --frozen-lockfile --ignore-scripts --filter "@turbo/web..." \
-  && pnpm rebuild @infisical/cli \
-  && test -x node_modules/@infisical/cli/bin/infisical \
-  && apk add --no-cache binutils \
-  && strip node_modules/@infisical/cli/bin/infisical
+  && mkdir -p /infisical \
+  && if [ "$INSTALL_INFISICAL_CLI" = "1" ]; then \
+    pnpm rebuild @infisical/cli \
+    && test -x node_modules/@infisical/cli/bin/infisical \
+    && apk add --no-cache binutils \
+    && strip -o /infisical/infisical node_modules/@infisical/cli/bin/infisical; \
+  fi
 
 # ---------------------------------------------------------------------------
 # build: compile workspace packages and the Next.js app.
@@ -78,9 +86,12 @@ COPY . /app
 
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time, so they
 # must arrive as build args (Coolify: mark them "build time" in the UI). Add a
-# line here for every NEXT_PUBLIC_* key in apps/web/src/env.ts.
+# line here for every NEXT_PUBLIC_* key in apps/web/src/env.ts and every one
+# read directly in apps/web/instrumentation-client.ts (both optional).
 ARG NEXT_PUBLIC_PORT
 ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_POSTHOG_KEY
 
 # Optional: Sentry source-map upload. The build succeeds without them.
 ARG SENTRY_ORG
@@ -127,7 +138,7 @@ COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public
 # platform-injected env vars alone.
 COPY --from=build --chown=node:node /app/scripts/infisical-run.sh ./scripts/infisical-run.sh
 COPY --from=build --chown=node:node /app/.infisical.json ./.infisical.json
-COPY --from=build /app/node_modules/@infisical/cli/bin/infisical /usr/local/bin/infisical
+COPY --from=build /infisical/ /usr/local/bin/
 
 USER node
 EXPOSE 3000
