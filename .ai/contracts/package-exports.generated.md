@@ -12,7 +12,7 @@
 | `@turbo/api` | `packages/api` | `.`, `./wifi-router`, `./wifi-router-client`, `./wifi-repository` |
 | `@turbo/assets` | `packages/assets` | `./fonts/*` |
 | `@turbo/auth` | `packages/auth` | `.`, `./middleware`, `./client`, `./env`, `./trusted-origins` |
-| `@turbo/db` | `packages/db` | `.`, `./client`, `./schema` |
+| `@turbo/db` | `packages/db` | `.`, `./client`, `./schema`, `./migrate` |
 | `@turbo/jobs` | `packages/jobs` | `.`, `./tasks/*` |
 | `@turbo/mail` | `packages/mail` | `.`, `./client`, `./templates/*` |
 | `@turbo/paystack` | `packages/paystack` | `.` |

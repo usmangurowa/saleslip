@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 #
-# @turbo/server: Hono API image (run with tsx, migrations applied on boot).
+# @turbo/server: Hono API image (esbuild bundle, migrations applied on boot).
 #
 # Build from the repo root (the context must be the monorepo, not apps/server):
 #   docker build -f apps/server/Dockerfile -t turbo-server .
@@ -8,9 +8,11 @@
 # Run:
 #   docker run --rm -p 3001:3001 -e POSTGRES_URL=... -e AUTH_SECRET=... turbo-server
 #
-# Boot sequence mirrors root `pnpm start:server`:
-#   TURBO_DB_SKIP_DOTENV=1 pnpm db:migrate && pnpm -F @turbo/server start:prod
-# i.e. drizzle-kit migrate (via packages/db/scripts/drizzle.mjs) → tsx src/index.ts.
+# Boot sequence mirrors root `pnpm start:server` (migrate, then start), but
+# from a bundle: dist/migrate.mjs applies packages/db/drizzle with
+# drizzle-orm's migrator (same `drizzle.__drizzle_migrations` table that
+# drizzle-kit migrate uses), then dist/index.mjs starts the server. The runner
+# ships no node_modules, pnpm, tsx, TypeScript, or drizzle-kit.
 #
 # Coolify: build pack "dockerfile", dockerfile location "/apps/server/Dockerfile",
 # base directory "/", port 3001, health check GET /health, and no custom
@@ -67,24 +69,31 @@ RUN set -eu; \
 # binary is 120 MB, stripped ~85 MB).
 # ---------------------------------------------------------------------------
 FROM base AS deps
+# INSTALL_INFISICAL_CLI=0 leaves the Infisical CLI binary (~90 MB) out of the
+# image. scripts/infisical-run.sh then runs the command on platform env vars
+# alone, exactly as it does today when no INFISICAL_* credentials are set; with
+# credentials but no binary it fails fast at boot.
+ARG INSTALL_INFISICAL_CLI=1
 COPY --from=manifests /manifests /app
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm config set store-dir /pnpm/store \
   && pnpm install --frozen-lockfile --ignore-scripts --filter "@turbo/server..." \
-  && pnpm rebuild @infisical/cli \
-  && test -x node_modules/@infisical/cli/bin/infisical \
-  && apk add --no-cache binutils \
-  && strip node_modules/@infisical/cli/bin/infisical
+  && mkdir -p /infisical \
+  && if [ "$INSTALL_INFISICAL_CLI" = "1" ]; then \
+    pnpm rebuild @infisical/cli \
+    && test -x node_modules/@infisical/cli/bin/infisical \
+    && apk add --no-cache binutils \
+    && strip -o /infisical/infisical node_modules/@infisical/cli/bin/infisical; \
+  fi
 
 # ---------------------------------------------------------------------------
-# build: tsc for the server and the workspace packages it depends on. The
-# emitted dist/ is only used for type declarations; the runtime is tsx over
-# src/ because workspace packages export raw .ts sources.
+# build: esbuild bundles src/index.ts and src/migrate.ts (with every workspace
+# package and npm dependency inlined) into dist/*.mjs. See apps/server/build.mjs.
 # ---------------------------------------------------------------------------
 FROM deps AS build
 COPY . /app
 ENV SKIP_ENV_VALIDATION=1
-RUN pnpm turbo build -F @turbo/server --concurrency=1
+RUN pnpm -F @turbo/server bundle
 
 # .infisical.json (written by `pnpm exec infisical init`) is optional for the
 # template: forks can set INFISICAL_PROJECT_ID instead. Guarantee the file
@@ -92,41 +101,19 @@ RUN pnpm turbo build -F @turbo/server --concurrency=1
 RUN [ -f .infisical.json ] || echo '{}' > .infisical.json
 
 # ---------------------------------------------------------------------------
-# prune: the server package plus a self-contained production node_modules.
-# `pnpm deploy` copies workspace packages in (not symlinked), including
-# packages/db's drizzle/ migrations and scripts/drizzle.mjs, and drops
-# devDependencies — which is why tsx (apps/server) and drizzle-kit (packages/db)
-# are declared as dependencies. `--legacy` is required by pnpm ≥ 10 when
-# inject-workspace-packages is not set.
-# ---------------------------------------------------------------------------
-FROM build AS prune
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm deploy --filter @turbo/server --prod --legacy --ignore-scripts /out \
-  && rm -rf /out/dist /out/.cache /out/.turbo /out/node_modules/@turbo/*/dist
-
-# The hoisted layout nests a full copy of every conflicting package version
-# (mostly @opentelemetry/*) under each consumer. Hardlinking byte-identical
-# files keeps every path intact for Node while storing each file once; Docker
-# preserves hardlinks across COPY --from.
-RUN apk add --no-cache rdfind \
-  && rdfind -makehardlinks true -makeresultsfile false /out/node_modules >/dev/null
-
-# ---------------------------------------------------------------------------
-# runner
+# runner: the bundle, the SQL migrations, the secrets wrapper and the
+# Infisical CLI binary. No node_modules.
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine AS runner
-ARG PNPM_VERSION
-# pnpm stays because packages/db/scripts/drizzle.mjs spawns `pnpm drizzle-kit`.
 # iproute2 adds the WireGuard route at boot; su-exec drops root afterwards.
-RUN apk add --no-cache libc6-compat iproute2 su-exec \
-  && npm install -g pnpm@${PNPM_VERSION} \
-  && npm cache clean --force
+# tini is PID 1 so SIGTERM reaches node (node as PID 1 ignores it).
+RUN apk add --no-cache iproute2 su-exec tini
 ENV NODE_ENV=production \
-  PORT=3001 \
-  PATH=/app/node_modules/.bin:$PATH
+  PORT=3001
 WORKDIR /app
 
-COPY --from=prune --chown=node:node /out ./
+COPY --from=build --chown=node:node /app/apps/server/dist ./dist
+COPY --from=build --chown=node:node /app/packages/db/drizzle ./drizzle
 
 # Secrets wrapper (the same script `pnpm with-secrets` runs locally) and the
 # Infisical CLI it falls back to on PATH. With INFISICAL_CLIENT_ID +
@@ -135,16 +122,17 @@ COPY --from=prune --chown=node:node /out ./
 # platform-injected env vars alone.
 COPY --from=build --chown=node:node /app/scripts/infisical-run.sh ./scripts/infisical-run.sh
 COPY --from=build --chown=node:node /app/.infisical.json ./.infisical.json
-COPY --from=build /app/node_modules/@infisical/cli/bin/infisical /usr/local/bin/infisical
+COPY --from=build /infisical/ /usr/local/bin/
 COPY --from=build /app/apps/server/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # The entrypoint starts as root only to add the route, then `su-exec node`.
+# Coolify's own health check (GET /health on 3001) stays in charge; a
+# Dockerfile HEALTHCHECK would replace it.
 EXPOSE 3001
-ENTRYPOINT ["sh", "/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/sbin/tini", "--", "sh", "/usr/local/bin/docker-entrypoint.sh"]
 
-# Equivalent to `pnpm with-secrets pnpm start:server`. `pnpm deploy` flattens
-# the workspace, so packages/db lives at node_modules/@turbo/db. There is no
-# .env in the image: the wrapper injects Infisical secrets (or passes platform
-# env vars through), and the dotenv wrappers are skipped.
+# Equivalent to `pnpm with-secrets pnpm start:server`: migrate, then exec the
+# server so node receives SIGTERM directly. There is no .env in the image: the
+# wrapper injects Infisical secrets (or passes platform env vars through).
 CMD ["sh", "scripts/infisical-run.sh", "--", "sh", "-c", \
-  "TURBO_DB_SKIP_DOTENV=1 node node_modules/@turbo/db/scripts/drizzle.mjs migrate && exec tsx src/index.ts"]
+  "node dist/migrate.mjs && exec node --enable-source-maps dist/index.mjs"]

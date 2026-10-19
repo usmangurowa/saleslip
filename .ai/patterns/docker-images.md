@@ -8,8 +8,9 @@ deploy path next to Vercel (web) and a plain `pnpm start:server` process
 (server); nothing in the non-Docker paths changes. Introduced 2026-09-05
 (spec: `.ai/specs/active/slim-docker-images.spec.md`).
 
-Runtime behavior matches the existing scripts: the server still applies
-`drizzle-kit migrate` on boot and still runs from `src/` with `tsx`; the web
+Runtime behavior matches the existing scripts: the server still migrates on
+boot and then starts (both from an esbuild bundle instead of drizzle-kit +
+`tsx` over `src/`); the web
 app serves Next's own standalone `server.js`. Both boot through
 `scripts/infisical-run.sh`, so Infisical remains the secrets source in
 production exactly as `pnpm with-secrets` makes it locally.
@@ -21,9 +22,8 @@ production exactly as `pnpm with-secrets` makes it locally.
 | `base`      | `node:22.21.0-alpine` + `libc6-compat` + `pnpm@10.34.5` (via `npm i -g`)   | same                                                                 |
 | `manifests` | every workspace `package.json` + lockfile, nothing else                    | same                                                                 |
 | `deps`      | `pnpm install --frozen-lockfile --ignore-scripts --filter "@turbo/web..."` | same with `@turbo/server...`                                         |
-| `build`     | `CI=1 SKIP_ENV_VALIDATION=1 DOCKER_BUILD=1 pnpm turbo build -F @turbo/web` | `pnpm turbo build -F @turbo/server`                                  |
-| `prune`     | — (Next `output: "standalone"` does the tracing)                           | `pnpm deploy --filter @turbo/server --prod --legacy /out` + `rdfind` |
-| `runner`    | `.next/standalone` + `.next/static` + `public`                             | `/out` + pnpm                                                        |
+| `build`     | `CI=1 SKIP_ENV_VALIDATION=1 DOCKER_BUILD=1 pnpm turbo build -F @turbo/web` | `pnpm -F @turbo/server bundle` (esbuild → `dist/*.mjs`)              |
+| `runner`    | `.next/standalone` + `.next/static` + `public`                             | `dist/` + `packages/db/drizzle` + `iproute2 su-exec tini`            |
 
 ## Invariants
 
@@ -58,20 +58,23 @@ production exactly as `pnpm with-secrets` makes it locally.
    `SENTRY_AUTH_TOKEN` is an optional BuildKit secret; without it Sentry skips
    source-map upload.
 6. **`NEXT_PUBLIC_*` are build args.** They are inlined into the client
-   bundle, so every key in `apps/web/src/env.ts` has an `ARG` line in the web
+   bundle, so every key in `apps/web/src/env.ts` (and every `NEXT_PUBLIC_*`
+   read in `apps/web/instrumentation-client.ts`) has an `ARG` line in the web
    Dockerfile. Adding a `NEXT_PUBLIC_*` env var means adding an `ARG`. The
-   same check fails when `apps/web/src/env.ts` `client` keys and the web
-   Dockerfile `ARG`s differ.
-7. **Runtime deps must be `dependencies`.** `pnpm deploy --prod` drops
-   `devDependencies`, so `tsx` (`apps/server`) and `drizzle-kit`
-   (`packages/db`) live in `dependencies`. Anything new the server needs at
-   boot must too.
-8. **Server boot chain.** `pnpm deploy` flattens the workspace, so
-   `packages/db` sits at `/app/node_modules/@turbo/db`. The CMD mirrors root
-   `start:server` by path:
-   `TURBO_DB_SKIP_DOTENV=1 node node_modules/@turbo/db/scripts/drizzle.mjs migrate && exec tsx src/index.ts`.
-   `drizzle.mjs` spawns `pnpm drizzle-kit migrate`, which is why pnpm stays
-   in the runner and `/app/node_modules/.bin` is on `PATH`.
+   same check fails when those keys and the web Dockerfile `ARG`s differ.
+7. **Server is a bundle.** `apps/server/build.mjs` (esbuild, run by
+   `pnpm -F @turbo/server bundle`) inlines every workspace package and npm
+   dependency into `dist/index.mjs` and `dist/migrate.mjs`; the runner ships
+   no `node_modules`, pnpm, tsx, or drizzle-kit. A new dependency that reads
+   its own files at runtime or ships a native addon must be marked
+   `external` in `build.mjs` and installed in the runner.
+8. **Server boot chain.** The CMD mirrors root `start:server`:
+   `node dist/migrate.mjs && exec node --enable-source-maps dist/index.mjs`.
+   `dist/migrate.mjs` runs drizzle-orm's migrator (`@turbo/db/migrate`) over
+   `/app/drizzle` (a copy of `packages/db/drizzle`) with drizzle-kit's
+   defaults (`drizzle.__drizzle_migrations`) and the same `:6543` → `:5432`
+   rewrite as `drizzle.config.ts`, so it picks up where `drizzle-kit migrate`
+   left off. `tini` is PID 1 so SIGTERM reaches node.
 9. **Web boot.** Next standalone `server.js` reads `PORT`/`HOSTNAME`; the
    image sets `3000`/`0.0.0.0`.
 
@@ -114,7 +117,7 @@ including `.ai/` and README edits.
 docker build -f apps/web/Dockerfile -t turbo-web .
 docker run --rm -p 3000:3000 -e SKIP_ENV_VALIDATION=1 turbo-web
 docker build -f apps/server/Dockerfile -t turbo-server .
-docker run --rm --entrypoint sh turbo-server -c 'which pnpm tsx drizzle-kit infisical; ls node_modules/@turbo/db/drizzle'
+docker run --rm --entrypoint sh turbo-server -c 'which infisical tini; ls dist drizzle'
 ```
 
 The `docker` job in `.github/workflows/ci.yml` builds both images on every

@@ -2,6 +2,8 @@ import { readJson, readText } from "./_lib.mjs";
 
 const DOCKERFILES = ["apps/web/Dockerfile", "apps/server/Dockerfile"];
 const ENV_FILE = "apps/web/src/env.ts";
+// Read via process.env directly (not through env.ts), so also build args.
+const CLIENT_INSTRUMENTATION_FILE = "apps/web/instrumentation-client.ts";
 const SERVER_ENTRYPOINT = "apps/server/docker-entrypoint.sh";
 
 const findLine = (lines, regex) => {
@@ -105,7 +107,16 @@ const main = async () => {
 
       const envText = await readText(ENV_FILE);
       const envLines = envText.split("\n");
-      const expectedArgs = extractClientKeys(envLines);
+      const envClientKeys = extractClientKeys(envLines);
+      const instrumentationKeys = [
+        ...(await readText(CLIENT_INSTRUMENTATION_FILE)).matchAll(
+          /process\.env\.(NEXT_PUBLIC_[A-Z0-9_]+)/g,
+        ),
+      ].map((match) => match[1]);
+      const expectedArgs =
+        envClientKeys === null
+          ? null
+          : [...new Set([...envClientKeys, ...instrumentationKeys])];
 
       if (expectedArgs === null) {
         findings.push({
@@ -124,7 +135,7 @@ const main = async () => {
               file: dockerfile,
               line: lastNextPublicLine,
               rule: "build-arg-missing",
-              message: `apps/web/src/env.ts declares ${key} but apps/web/Dockerfile has no ARG for it`,
+              message: `${key} is a client env var (apps/web/src/env.ts or ${CLIENT_INSTRUMENTATION_FILE}) but apps/web/Dockerfile has no ARG for it`,
             });
           }
         }
@@ -134,7 +145,7 @@ const main = async () => {
               file: dockerfile,
               line: arg.line,
               rule: "build-arg-extra",
-              message: `apps/web/Dockerfile declares ARG ${arg.name} but apps/web/src/env.ts has no matching client key`,
+              message: `apps/web/Dockerfile declares ARG ${arg.name} but neither apps/web/src/env.ts nor ${CLIENT_INSTRUMENTATION_FILE} reads it`,
             });
           }
         }

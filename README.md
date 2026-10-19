@@ -325,7 +325,7 @@ Requirements:
 
 ### Docker (Coolify / any container host)
 
-`apps/web/Dockerfile` and `apps/server/Dockerfile` build slim multi-stage images (Next.js standalone for web, `pnpm deploy --prod` output for the server). Docker is an additional path: Vercel ignores Dockerfiles and the `output: "standalone"` switch (it is gated on `DOCKER_BUILD=1`, which only the web Dockerfile sets), and `pnpm start:server` keeps working on a plain VPS. Both targets coexist.
+`apps/web/Dockerfile` and `apps/server/Dockerfile` build slim multi-stage images (Next.js standalone for web, an esbuild bundle with no `node_modules` for the server). Docker is an additional path: Vercel ignores Dockerfiles and the `output: "standalone"` switch (it is gated on `DOCKER_BUILD=1`, which only the web Dockerfile sets), and `pnpm start:server` keeps working on a plain VPS. Both targets coexist.
 
 Build from the repo root — the context must be the monorepo, not the app folder:
 
@@ -339,9 +339,9 @@ docker run --rm -p 3001:3001 -e POSTGRES_URL=... -e AUTH_SECRET=... -e RESEND_AP
 
 What the images do:
 
-- **web** serves `node apps/web/server.js` on port 3000. `NEXT_PUBLIC_*` values are inlined at build time, so pass them as `--build-arg` (every key in `apps/web/src/env.ts` has an `ARG`). `SENTRY_AUTH_TOKEN` is an optional BuildKit secret (`--secret id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN`); the build succeeds without it.
-- **server** runs the same chain as `pnpm start:server` — `drizzle-kit migrate` then `tsx src/index.ts` — on port 3001 with `GET /health`.
-- Both images boot through `scripts/infisical-run.sh` with the Infisical CLI on `PATH`. Set `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_ID` (or commit `.infisical.json`), and `INFISICAL_ENV` (e.g. `prod`) on the platform and the container pulls every other secret from Infisical at start. Leave them unset and the container runs on platform-injected env vars alone — there is no `.env` in the image either way.
+- **web** serves `node apps/web/server.js` on port 3000. `NEXT_PUBLIC_*` values are inlined at build time, so pass them as `--build-arg` (every key in `apps/web/src/env.ts` and `apps/web/instrumentation-client.ts` has an `ARG`). `SENTRY_AUTH_TOKEN` is an optional BuildKit secret (`--secret id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN`); the build succeeds without it.
+- **server** runs the same chain as `pnpm start:server` — migrate, then start — from a bundle: `node dist/migrate.mjs` (drizzle-orm's migrator over `packages/db/drizzle`, same `drizzle.__drizzle_migrations` table as `drizzle-kit migrate`) then `node dist/index.mjs`, on port 3001 with `GET /health`. `pnpm -F @turbo/server bundle` builds `dist/` locally.
+- Both images boot through `scripts/infisical-run.sh` with the Infisical CLI on `PATH`. Set `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_ID` (or commit `.infisical.json`), and `INFISICAL_ENV` (e.g. `prod`) on the platform and the container pulls every other secret from Infisical at start. Leave them unset and the container runs on platform-injected env vars alone — there is no `.env` in the image either way. Build with `--build-arg INSTALL_INFISICAL_CLI=0` to leave the ~90 MB CLI binary out when Infisical is not used.
 - Neither image installs `apps/mobile`, dev toolchains, `.git`, or docs (see `.dockerignore`).
 
 Coolify settings per app:

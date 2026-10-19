@@ -15,6 +15,7 @@
 - `GOOGLE_GENERATIVE_AI_API_KEY`
 - `GROQ_API_KEY`
 - `MAIL_FROM`
+- `MIGRATIONS_FOLDER`
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_PORT`
 - `NEXT_PUBLIC_POSTHOG_KEY`
@@ -110,7 +111,7 @@
 
 ### In turbo.json but missing from .env.example
 
-- None
+- `MIGRATIONS_FOLDER`
 
 ### In .env.example but missing from turbo.json globalEnv
 
