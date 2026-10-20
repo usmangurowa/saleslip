@@ -59,13 +59,15 @@ export const OverviewStatRow = ({ revenueRange }: OverviewStatRowProps) => {
   // "unreachable" now comes from the payload itself, not a failed query.
   const routerUnreachable = sessions.isError || !sessions.data?.routerReachable;
   const connected = sessions.data?.connected ?? 0;
+  // Null when the router could not list its hosts; the caption then hides.
+  const withoutVoucher = sessions.data?.withoutVoucher ?? null;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
         size="hero"
         label="Connected now"
-        hint="Clients on the hotspot right now, reported by the router every 15 seconds."
+        hint="Clients logged in with a voucher right now, reported by the router every 15 seconds. Below it: devices on the WiFi that have not logged in yet."
         icon={UserGroupIcon}
         value={routerUnreachable ? "—" : connected}
         valueCaption={
@@ -73,7 +75,16 @@ export const OverviewStatRow = ({ revenueRange }: OverviewStatRowProps) => {
             ? undefined
             : `${connected} ${connected === 1 ? "client" : "clients"}`
         }
-        caption={routerUnreachable ? "Router unreachable" : undefined}
+        caption={
+          routerUnreachable
+            ? "Router unreachable"
+            : withoutVoucher === null
+              ? undefined
+              : `${withoutVoucher} on WiFi without a voucher`
+        }
+        captionTone={
+          !routerUnreachable && withoutVoucher ? "warning" : undefined
+        }
         dim={routerUnreachable || connected === 0}
       />
       <StatCard

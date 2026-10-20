@@ -394,6 +394,7 @@ export const createWifiRouterApp = ({
           routerReachable: false,
           wanReachable: null as boolean | null,
           connected: 0,
+          withoutVoucher: null as number | null,
           revenueKoboToday: today.revenueKobo,
           total: page.total,
           rows: page.rows.map(baseRow),
@@ -419,7 +420,16 @@ export const createWifiRouterApp = ({
           )
           .catch(() => undefined);
         // A failed heartbeat means "assume no internet", not "fail the board".
-        const wanReachable = await hotspot.wanReachable().catch(() => false);
+        // A failed host list only blanks its own count.
+        const [wanReachable, hosts] = await Promise.all([
+          hotspot.wanReachable().catch(() => false),
+          hotspot.listHosts().catch(() => null),
+        ]);
+        // Devices on the WiFi stuck at the login page. Bypassed hosts (staff
+        // phones, the POS) never need a voucher, so they are not counted.
+        const withoutVoucher =
+          hosts?.filter((host) => !host.authorized && !host.bypassed).length ??
+          null;
 
         const byCode = new Map(sessions.map((s) => [s.user, s]));
         const rows = page.rows.map((voucher) => {
@@ -484,6 +494,7 @@ export const createWifiRouterApp = ({
           routerReachable: true,
           wanReachable,
           connected: sessions.length,
+          withoutVoucher,
           rows: [...rows, ...foreign],
         });
       })

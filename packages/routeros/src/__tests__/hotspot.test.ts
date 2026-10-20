@@ -4,6 +4,7 @@ import type { RouterOsRow, RouterOsTransport } from "../types";
 import {
   createHotspotService,
   parseActiveSession,
+  parseHotspotHost,
   parseHotspotProfile,
   parseHotspotUser,
   parseSystemResource,
@@ -294,5 +295,47 @@ describe("createHotspotService", () => {
     await expect(createHotspotService(noReply).wanReachable()).resolves.toBe(
       false,
     );
+  });
+
+  it("lists hotspot hosts with their authorized flag", async () => {
+    const transport = makeTransport({
+      "/ip/hotspot/host/print": [
+        {
+          ".id": "*A",
+          "mac-address": "AA:BB:CC:DD:EE:01",
+          address: "10.5.50.7",
+          authorized: "true",
+          bypassed: "false",
+        },
+        {
+          ".id": "*B",
+          "mac-address": "AA:BB:CC:DD:EE:02",
+          authorized: "false",
+        },
+      ],
+    });
+    const hosts = await createHotspotService(transport).listHosts();
+    expect(transport.write).toHaveBeenCalledWith("/ip/hotspot/host/print");
+    expect(hosts).toEqual([
+      {
+        id: "*A",
+        macAddress: "AA:BB:CC:DD:EE:01",
+        address: "10.5.50.7",
+        authorized: true,
+        bypassed: false,
+      },
+      {
+        id: "*B",
+        macAddress: "AA:BB:CC:DD:EE:02",
+        authorized: false,
+        bypassed: false,
+      },
+    ]);
+  });
+
+  it("reads a bypassed host as bypassed", () => {
+    expect(
+      parseHotspotHost({ ".id": "*C", authorized: "false", bypassed: "true" }),
+    ).toMatchObject({ authorized: false, bypassed: true });
   });
 });

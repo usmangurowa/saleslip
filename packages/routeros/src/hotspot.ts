@@ -1,5 +1,6 @@
 import type {
   HotspotActiveSession,
+  HotspotHost,
   HotspotProfile,
   HotspotProfileInput,
   HotspotUser,
@@ -85,6 +86,14 @@ export const parseActiveSession = (row: RouterOsRow): HotspotActiveSession => ({
   bytesOut: toInt(row["bytes-out"]),
 });
 
+export const parseHotspotHost = (row: RouterOsRow): HotspotHost => ({
+  id: row[".id"] ?? "",
+  macAddress: row["mac-address"],
+  address: row.address,
+  authorized: row.authorized === "true",
+  bypassed: row.bypassed === "true",
+});
+
 export const parseSystemResource = (row: RouterOsRow): SystemResource => ({
   uptime: row.uptime,
   version: row.version,
@@ -103,6 +112,8 @@ export interface HotspotService {
   /** Looks a hotspot user up by exact name. */
   findUser: (name: string) => Promise<HotspotUser | undefined>;
   listActive: () => Promise<HotspotActiveSession[]>;
+  /** Every device the hotspot has seen, including ones not logged in. */
+  listHosts: () => Promise<HotspotHost[]>;
   /** Lists the hotspot user profiles configured on the router. */
   listProfiles: () => Promise<HotspotProfile[]>;
   /** Adds a hotspot user profile and returns its RouterOS `.id`. */
@@ -153,6 +164,11 @@ export const createHotspotService = (
   async listActive() {
     const rows = await transport.write("/ip/hotspot/active/print");
     return rows.map(parseActiveSession);
+  },
+
+  async listHosts() {
+    const rows = await transport.write("/ip/hotspot/host/print");
+    return rows.map(parseHotspotHost);
   },
 
   async listProfiles() {

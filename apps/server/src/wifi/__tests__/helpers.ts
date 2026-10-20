@@ -188,6 +188,10 @@ export const createFakeHotspot = () => {
       await guard();
       return [];
     },
+    listHosts: async () => {
+      await guard();
+      return [];
+    },
     removeUser: async (idOrName) => {
       await guard();
       users.delete(idOrName);

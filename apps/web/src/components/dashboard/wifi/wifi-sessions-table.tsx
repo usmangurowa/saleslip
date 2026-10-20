@@ -139,6 +139,11 @@ export const WifiSessionsTable = () => {
           <Badge variant="secondary" className="rounded-full font-normal">
             {data?.connected ?? 0} online
           </Badge>
+          {data?.withoutVoucher ? (
+            <Badge variant="warning" className="rounded-full font-normal">
+              {data.withoutVoucher} without a voucher
+            </Badge>
+          ) : null}
         </div>
       }
       footer={

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type {
   HotspotActiveSession,
+  HotspotHost,
   HotspotProfile,
   HotspotService,
   HotspotUser,
@@ -83,11 +84,16 @@ const createFakeHotspot = () => {
   const state: {
     fail: Error | undefined;
     active: HotspotActiveSession[];
+    hosts: HotspotHost[];
+    /** Makes only `listHosts` reject, leaving the rest of the router up. */
+    hostsFail: Error | undefined;
     /** Whether the fake router can reach the internet. */
     wan: boolean;
   } = {
     fail: undefined,
     active: [],
+    hosts: [],
+    hostsFail: undefined,
     wan: true,
   };
   let seq = 0;
@@ -126,6 +132,11 @@ const createFakeHotspot = () => {
     listActive: async () => {
       await guard();
       return state.active;
+    },
+    listHosts: async () => {
+      await guard();
+      if (state.hostsFail) throw state.hostsFail;
+      return state.hosts;
     },
     listProfiles: async () => {
       await guard();
@@ -558,6 +569,45 @@ describe("attendance board", () => {
     });
   });
 
+  it("counts devices on the hotspot that have not used a voucher", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [sampleSession({ sessionTimeLeft: "23h" })];
+    fake.state.hosts = [
+      { id: "*A", macAddress: "AA:01", authorized: true, bypassed: false },
+      { id: "*B", macAddress: "AA:02", authorized: false, bypassed: false },
+      { id: "*C", macAddress: "AA:03", authorized: false, bypassed: false },
+      // Bypassed hosts (staff devices, the POS) never need a voucher.
+      { id: "*D", macAddress: "AA:04", authorized: false, bypassed: true },
+    ];
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher()]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect(body.connected).toBe(1);
+    expect(body.withoutVoucher).toBe(2);
+  });
+
+  it("reports no without-voucher count when the host list fails", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [sampleSession({ sessionTimeLeft: "23h" })];
+    fake.state.hostsFail = new RouterOsCommandError(
+      "/ip/hotspot/host/print",
+      "no such command",
+    );
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher()]),
+    });
+
+    const res = await app.request("/sessions");
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.connected).toBe(1);
+    expect(body.withoutVoucher).toBe(null);
+  });
+
   it("degrades to an all-black board when the router is unreachable", async () => {
     const fake = createFakeHotspot();
     fake.state.fail = new RouterOsUnavailableError("timeout");
@@ -570,6 +620,7 @@ describe("attendance board", () => {
     expect(body.routerReachable).toBe(false);
     expect(body.wanReachable).toBe(null);
     expect(body.connected).toBe(0);
+    expect(body.withoutVoucher).toBe(null);
     expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
       status: "disconnected",
       indicator: "black",

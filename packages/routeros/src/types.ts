@@ -48,6 +48,19 @@ export interface HotspotActiveSession {
   bytesOut?: number;
 }
 
+/**
+ * A `/ip/hotspot/host` entry: every device the hotspot has seen, logged in or
+ * not. `authorized` is false until the device logs in with a voucher.
+ */
+export interface HotspotHost {
+  id: string;
+  macAddress?: string;
+  address?: string;
+  authorized: boolean;
+  /** IP-binding bypass: the device skips the login page entirely. */
+  bypassed: boolean;
+}
+
 /** A `/ip/hotspot/user/profile` entry as printed by the router. */
 export interface HotspotProfile {
   id: string;

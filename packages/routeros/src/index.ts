@@ -7,6 +7,7 @@ export {
 export {
   createHotspotService,
   parseActiveSession,
+  parseHotspotHost,
   parseHotspotProfile,
   parseHotspotUser,
   parseSystemResource,
@@ -15,6 +16,7 @@ export {
 export type { HotspotService } from "./hotspot";
 export type {
   HotspotActiveSession,
+  HotspotHost,
   HotspotProfile,
   HotspotUser,
   HotspotUserInput,
