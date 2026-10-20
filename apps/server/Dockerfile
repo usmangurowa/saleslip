@@ -101,10 +101,21 @@ RUN pnpm -F @turbo/server bundle
 RUN [ -f .infisical.json ] || echo '{}' > .infisical.json
 
 # ---------------------------------------------------------------------------
+# typecheck: tsc --noEmit over the server and the workspace sources it
+# imports. esbuild strips types without checking them, so this stage is what
+# fails the deploy on a type error. BuildKit runs it in parallel with `build`;
+# the runner copies its empty marker file, so TypeScript never ships.
+# ---------------------------------------------------------------------------
+FROM deps AS typecheck
+COPY . /app
+RUN pnpm -F @turbo/server typecheck && touch /typecheck.ok
+
+# ---------------------------------------------------------------------------
 # runner: the bundle, the SQL migrations, the secrets wrapper and the
 # Infisical CLI binary. No node_modules.
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine AS runner
+COPY --from=typecheck /typecheck.ok /tmp/typecheck.ok
 # iproute2 adds the WireGuard route at boot; su-exec drops root afterwards.
 # tini is PID 1 so SIGTERM reaches node (node as PID 1 ignores it).
 RUN apk add --no-cache iproute2 su-exec tini
