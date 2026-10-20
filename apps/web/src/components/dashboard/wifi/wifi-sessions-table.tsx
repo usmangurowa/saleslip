@@ -252,9 +252,13 @@ export const WifiSessionsTable = () => {
                     : formatLastSeen(row.lastConnectedAt)}
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
-                  {row.status === "connected"
-                    ? formatBytes(row.sessionBytes)
-                    : formatBytes(row.bytesUsed)}
+                  {formatBytes(row.totalBytes)}
+                  {row.status === "connected" &&
+                  row.sessionBytes !== row.totalBytes ? (
+                    <span className="text-muted-foreground/70 block text-xs">
+                      {formatBytes(row.sessionBytes)} this session
+                    </span>
+                  ) : null}
                 </TableCell>
                 <TableCell className="text-right">
                   {row.status === "connected" ? (

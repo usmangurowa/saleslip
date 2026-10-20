@@ -380,6 +380,10 @@ export const createWifiRouterApp = ({
           lastConnectedAt: voucher.lastConnectedAt?.toISOString() ?? null,
           lastSyncedAt: voucher.syncedAt?.toISOString() ?? null,
           bytesUsed: voucher.bytesUsed,
+          // Lifetime data. The router folds a session into the user's
+          // counters (and so `bytesUsed`) only when it ends, so a live row
+          // adds its open session on top.
+          totalBytes: voucher.bytesUsed,
           status: "disconnected" as const,
           indicator: "black" as const,
           reason: null,
@@ -440,6 +444,7 @@ export const createWifiRouterApp = ({
             voucher.profile,
             wanReachable,
           );
+          const sessionBytes = (session.bytesIn ?? 0) + (session.bytesOut ?? 0);
           return {
             ...baseRow(voucher),
             status: "connected" as const,
@@ -449,7 +454,8 @@ export const createWifiRouterApp = ({
             macAddress: session.macAddress ?? null,
             uptime: session.uptime ?? null,
             sessionTimeLeft: session.sessionTimeLeft ?? null,
-            sessionBytes: (session.bytesIn ?? 0) + (session.bytesOut ?? 0),
+            sessionBytes,
+            totalBytes: voucher.bytesUsed + sessionBytes,
           };
         });
 
@@ -465,6 +471,8 @@ export const createWifiRouterApp = ({
               undefined,
               wanReachable,
             );
+            const sessionBytes =
+              (session.bytesIn ?? 0) + (session.bytesOut ?? 0);
             return {
               code: session.user,
               known: false,
@@ -485,7 +493,9 @@ export const createWifiRouterApp = ({
               macAddress: session.macAddress ?? null,
               uptime: session.uptime ?? null,
               sessionTimeLeft: session.sessionTimeLeft ?? null,
-              sessionBytes: (session.bytesIn ?? 0) + (session.bytesOut ?? 0),
+              sessionBytes,
+              // No voucher row holds earlier sessions, so only this one counts.
+              totalBytes: sessionBytes,
             };
           });
 

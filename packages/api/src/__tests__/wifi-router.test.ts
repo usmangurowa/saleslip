@@ -569,6 +569,40 @@ describe("attendance board", () => {
     });
   });
 
+  it("adds the live session to the voucher's lifetime data", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [
+      sampleSession({ bytesIn: 3_000_000, bytesOut: 1_000_000 }),
+    ];
+    const app = build({
+      hotspot: fake.hotspot,
+      // Earlier sessions, already folded into the router's user counters.
+      repo: boardRepo([activatedVoucher({ bytesUsed: 50_000_000 })]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      status: "connected",
+      sessionBytes: 4_000_000,
+      totalBytes: 54_000_000,
+    });
+  });
+
+  it("uses the stored total for a disconnected voucher", async () => {
+    const fake = createFakeHotspot();
+    const app = build({
+      hotspot: fake.hotspot,
+      repo: boardRepo([activatedVoucher({ bytesUsed: 50_000_000 })]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect((body.rows as Record<string, unknown>[])[0]).toMatchObject({
+      status: "disconnected",
+      sessionBytes: null,
+      totalBytes: 50_000_000,
+    });
+  });
+
   it("counts devices on the hotspot that have not used a voucher", async () => {
     const fake = createFakeHotspot();
     fake.state.active = [sampleSession({ sessionTimeLeft: "23h" })];
