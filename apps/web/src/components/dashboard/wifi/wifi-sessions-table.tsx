@@ -127,7 +127,7 @@ export const WifiSessionsTable = () => {
       description={
         routerDown
           ? "Router unreachable — showing everyone as disconnected. The board recovers on its own."
-          : "Codes customers have actually used, live or not. Green healthy · yellow trial or expiring · red connected without internet · black disconnected. Updates every 15 seconds."
+          : "Codes customers have actually used, live or not. Green healthy · yellow trial or expiring · red connected without internet · black disconnected. New marks a first connection in the last hour. Updates every 15 seconds."
       }
       action={
         <div className="flex items-center gap-2">
@@ -196,6 +196,11 @@ export const WifiSessionsTable = () => {
                       className="text-muted-foreground size-3.5"
                     />
                     {row.code}
+                    {row.isNew ? (
+                      <Badge className="rounded-full font-sans tracking-normal">
+                        New
+                      </Badge>
+                    ) : null}
                   </span>
                 </TableCell>
                 <TableCell>

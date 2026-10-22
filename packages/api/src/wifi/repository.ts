@@ -191,7 +191,10 @@ export interface WifiConsoleRepository {
   listUsedVouchers: (
     params: ListUsedVouchersParams,
   ) => Promise<Page<UsedVoucherRow>>;
-  /** Stamps `last_connected_at` on the given codes; returns rows touched. */
+  /**
+   * Stamps `last_connected_at` (and, the first time, `first_connected_at`)
+   * on the given codes; returns rows touched.
+   */
   markVouchersConnected: (
     codes: readonly string[],
     at: Date,
@@ -528,13 +531,17 @@ export const createWifiConsoleRepository = (db: Db): WifiConsoleRepository => ({
   /**
    * Write-behind from the board poll and the connection recorder: codes seen
    * in an active hotspot session get their `last_connected_at` stamped. This
-   * is what makes "used before" observable even after the session ends.
+   * is what makes "used before" observable even after the session ends. The
+   * first stamp also sets `first_connected_at`, which later stamps keep.
    */
   markVouchersConnected: async (codes, at) => {
     if (codes.length === 0) return 0;
     const rows = await db
       .update(wifiVoucher)
-      .set({ lastConnectedAt: at })
+      .set({
+        lastConnectedAt: at,
+        firstConnectedAt: sql`coalesce(${wifiVoucher.firstConnectedAt}, ${sql.param(at, wifiVoucher.firstConnectedAt)})`,
+      })
       .where(inArray(wifiVoucher.code, [...codes]))
       .returning({ id: wifiVoucher.id });
     return rows.length;

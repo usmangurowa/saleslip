@@ -215,6 +215,7 @@ const voucherRow = (overrides: Partial<repositoryModule.WifiVoucherRow> = {}) =>
     bytesUsed: 0,
     syncedAt: null,
     lastError: null,
+    firstConnectedAt: null,
     lastConnectedAt: null,
     createdAt: new Date("2025-01-15T10:00:00Z"),
     ...overrides,
@@ -473,6 +474,48 @@ describe("attendance board", () => {
       ["SALE-1234"],
       new Date("2025-01-15T10:00:00Z"),
     );
+  });
+
+  it("flags a voucher as new within an hour of its first connection", async () => {
+    // The injected clock is 2025-01-15T10:00:00Z.
+    const app = build({
+      hotspot: createFakeHotspot().hotspot,
+      repo: boardRepo([
+        activatedVoucher({
+          code: "JUST-BOUGHT",
+          firstConnectedAt: new Date("2025-01-15T09:20:00Z"),
+        }),
+        activatedVoucher({
+          code: "REGULAR",
+          firstConnectedAt: new Date("2025-01-15T08:59:00Z"),
+        }),
+        activatedVoucher({ code: "LEGACY", firstConnectedAt: null }),
+      ]),
+    });
+
+    const body = await json(await app.request("/sessions"));
+    expect(body.rows).toMatchObject([
+      {
+        code: "JUST-BOUGHT",
+        firstConnectedAt: "2025-01-15T09:20:00.000Z",
+        isNew: true,
+      },
+      { code: "REGULAR", isNew: false },
+      { code: "LEGACY", firstConnectedAt: null, isNew: false },
+    ]);
+  });
+
+  it("never flags foreign hotspot users as new", async () => {
+    const fake = createFakeHotspot();
+    fake.state.active = [
+      sampleSession({ user: "MIKHMON-1", sessionTimeLeft: "23h" }),
+    ];
+    const app = build({ hotspot: fake.hotspot, repo: boardRepo([]) });
+
+    const body = await json(await app.request("/sessions"));
+    expect(body.rows).toMatchObject([
+      { code: "MIKHMON-1", known: false, firstConnectedAt: null, isNew: false },
+    ]);
   });
 
   it("marks a session yellow when under an hour is left", async () => {

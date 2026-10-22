@@ -63,6 +63,8 @@ const EXPIRING_SOON_MS = 60 * 60_000;
 const STALLED_UPTIME_MS = 5 * 60_000;
 /** … and moved less than this much data. */
 const STALLED_BYTES = 1_000_000;
+/** A voucher is flagged new for this long after its first connection. */
+const NEW_CONNECTION_MS = 60 * 60_000;
 /** The router's free-trial profile; its sessions are always short-lived. */
 const TRIAL_PROFILE = "trial-5m";
 
@@ -377,6 +379,12 @@ export const createWifiRouterApp = ({
           channel: voucher.channel,
           profile: voucher.profile,
           activatedAt: voucher.activatedAt?.toISOString() ?? null,
+          firstConnectedAt: voucher.firstConnectedAt?.toISOString() ?? null,
+          // A customer who just bought and connected, so staff can spot them.
+          isNew:
+            voucher.firstConnectedAt != null &&
+            clock().getTime() - voucher.firstConnectedAt.getTime() <
+              NEW_CONNECTION_MS,
           lastConnectedAt: voucher.lastConnectedAt?.toISOString() ?? null,
           lastSyncedAt: voucher.syncedAt?.toISOString() ?? null,
           bytesUsed: voucher.bytesUsed,
@@ -483,6 +491,8 @@ export const createWifiRouterApp = ({
               channel: null,
               profile: null,
               activatedAt: null,
+              firstConnectedAt: null,
+              isNew: false,
               lastConnectedAt: null,
               lastSyncedAt: null,
               bytesUsed: 0,

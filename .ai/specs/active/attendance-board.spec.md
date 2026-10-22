@@ -4,7 +4,7 @@ State: implemented
 
 ## Problem
 
-The Live tab only ever showed *currently connected* sessions, so people
+The Live tab only ever showed _currently connected_ sessions, so people
 vanished the moment they disconnected, and a dead router killed the whole
 table with a 503. Operators need to see everyone who has connected — with a
 health colour that survives disconnects and router outages.
@@ -50,7 +50,7 @@ first), overlaid with live router state. Decisions confirmed with the owner:
 - `packages/api/src/router/wifi-router.ts` — board endpoint + `connectedIndicator`
 - `apps/web/src/hooks/use-wifi-router.ts`, `overview-stat-row.tsx`, `wifi/wifi-sessions-table.tsx`
 
-## Correction (2026-10-18): the board shows *used* vouchers only
+## Correction (2026-10-18): the board shows _used_ vouchers only
 
 The first cut anchored rows on `activated_at` — but saleslip stamps that at
 minting, so every unused counter code cluttered the board as a black row. Per
@@ -69,6 +69,20 @@ owner decision, the board now lists only vouchers a customer has actually
 
 Historical vouchers whose router users Mikhmon already deleted can't be
 reconstructed — they appear from now on as usage records accumulate.
+
+## Addition (2026-10-22): "New" badge
+
+A customer who just bought a code and connected is flagged **New** next to
+the code for an hour after their first connection, so staff can spot fresh
+customers on the board.
+
+- `wifi_voucher.first_connected_at` (migration 0016) is stamped by the same
+  writers as `last_connected_at` but only once (`coalesce`). The migration
+  backfills already-used codes from their earliest known time so returning
+  customers are not flagged after deploy.
+- `/sessions` rows carry `firstConnectedAt` and a server-computed `isNew`
+  (first connection under 60 minutes ago by the injected clock). Foreign
+  hotspot users are never new.
 
 ## Validation
 
